@@ -6,8 +6,15 @@ export interface Lead {
   phone: string;
   email: string;
   propertyOwnership: 'Owner' | 'Renter';
-  status: 'New Lead' | 'In Contact' | 'Inspection Scheduled' | 'Follow-up Nurture' | 'Closed';
+  status: 'New Lead' | 'Contacted' | 'In Contact' | 'Inspection Scheduled' | 'Inspection Completed' | 'Estimate Sent' | 'Closed-Won' | 'Closed-Lost' | 'Follow-up Nurture' | 'Closed';
   scheduledDate?: string;
+  appointmentDetails?: {
+    date: string;
+    time: string;
+    notes?: string;
+  };
+  zipCode: string;
+  roofIssue: string;
   agentType: 'Chatbot' | 'Phone Call' | 'SMS Nurture' | 'Estimate Follow-Up';
   chatLog: Array<{ sender: 'User' | 'AI' | 'System'; text: string; timestamp: string }>;
 }
@@ -37,7 +44,7 @@ interface AppContextType {
   setPrompts: React.Dispatch<React.SetStateAction<AgentPrompts>>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  addLead: (lead: Omit<Lead, 'id'>) => void;
+  addLead: (lead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => void;
 }
 
 const defaultCompanySettings: CompanySettings = {
@@ -83,6 +90,13 @@ const defaultLeads: Lead[] = [
     propertyOwnership: 'Owner',
     status: 'Inspection Scheduled',
     scheduledDate: '2026-06-20 10:00 AM',
+    appointmentDetails: {
+      date: '2026-06-20',
+      time: '10:00 AM',
+      notes: 'Visible denting on gutters and asphalt shingles from severe hail.'
+    },
+    zipCode: '75201',
+    roofIssue: 'Great Hailstorm of 2026 Hail Damage',
     agentType: 'Chatbot',
     chatLog: [
       { sender: 'AI', text: 'Hello! I am your AI Roof assistant. Are you seeing any leaks or missing shingles from the recent hailstorm?', timestamp: '2026-06-14 10:01 AM' },
@@ -101,12 +115,62 @@ const defaultLeads: Lead[] = [
     email: 'm.miller@yahoo.com',
     propertyOwnership: 'Owner',
     status: 'Follow-up Nurture',
-    agentType: 'SMS Nurture',
+    zipCode: '76102',
+    roofIssue: 'Minor Ceiling Leak & Wind Damage',
+    agentType: 'SMS Nurture' as any, // 'SMS Nurture' maps to 'SMS Nurture' or 'SMS/Email Nurture' etc but here we use the lead AgentType
     chatLog: [
       { sender: 'System', text: 'Lead imported from website inquiry.', timestamp: '2026-06-12 09:00 AM' },
       { sender: 'AI', text: '[SMS Day 1] Hi Michael, this is RoofFlow AI. We saw you requested a roof inspection but haven’t scheduled it yet. The recent hailstorm damage might lead to leaks if unaddressed. Do you have 5 minutes this week?', timestamp: '2026-06-13 11:00 AM' },
       { sender: 'User', text: 'Is it really free? No strings attached?', timestamp: '2026-06-13 01:15 PM' },
       { sender: 'AI', text: '[SMS AI Agent] Absolutely 100% free with no obligation. We provide a full digital photo report for your records or insurance. Should we set it up?', timestamp: '2026-06-13 01:17 PM' }
+    ]
+  },
+  {
+    id: '3',
+    name: 'David Vance',
+    phone: '(214) 555-7281',
+    email: 'dvance@gmail.com',
+    propertyOwnership: 'Owner',
+    status: 'Inspection Completed',
+    scheduledDate: '2026-06-12 02:00 PM',
+    appointmentDetails: {
+      date: '2026-06-12',
+      time: '02:00 PM',
+      notes: 'Completed free inspection. Extensive hail impact craters found across north-facing slope. Claim filed with State Farm, pending adjuster review.'
+    },
+    zipCode: '75019',
+    roofIssue: 'Hail Damage Claim Pending',
+    agentType: 'Phone Call',
+    chatLog: [
+      { sender: 'AI', text: 'Thank you for calling RoofFlow Claim Support! This is our AI Voice Assistant. Are you calling about a roof inspection?', timestamp: '2026-06-11 02:05 PM' },
+      { sender: 'User', text: 'Yes, we had some major hail last month and State Farm wants an inspection report.', timestamp: '2026-06-11 02:06 PM' },
+      { sender: 'AI', text: 'We can certainly do that! We have direct experience with State Farm claims in Dallas. Are you the homeowner?', timestamp: '2026-06-11 02:06 PM' },
+      { sender: 'User', text: 'Yes, I am the owner, David Vance.', timestamp: '2026-06-11 02:07 PM' },
+      { sender: 'AI', text: 'Excellent, David. Let’s book the free inspection for tomorrow at 2:00 PM.', timestamp: '2026-06-11 02:07 PM' },
+      { sender: 'System', text: 'Appointment booked and logged to CRM.', timestamp: '2026-06-11 02:08 PM' }
+    ]
+  },
+  {
+    id: '4',
+    name: 'Amanda Rollins',
+    phone: '(972) 555-4920',
+    email: 'amanda.rollins@outlook.com',
+    propertyOwnership: 'Owner',
+    status: 'Estimate Sent',
+    scheduledDate: '2026-06-13 11:30 AM',
+    appointmentDetails: {
+      date: '2026-06-13',
+      time: '11:30 AM',
+      notes: 'Inspection completed, full replacement estimate of $14,800 sent to insurance and owner.'
+    },
+    zipCode: '75039',
+    roofIssue: 'Full Roof Replacement Estimate Sent',
+    agentType: 'Estimate Follow-Up',
+    chatLog: [
+      { sender: 'System', text: 'Lead imported from inspection report.', timestamp: '2026-06-13 12:00 PM' },
+      { sender: 'AI', text: 'Hi Amanda, this is RoofFlow AI estimate follower. Did you receive the replacement estimate of $14,800 for your roof?', timestamp: '2026-06-13 04:00 PM' },
+      { sender: 'User', text: 'Yes I did. I am just waiting on the deductible check from my insurance company.', timestamp: '2026-06-13 04:15 PM' },
+      { sender: 'AI', text: 'Understandable! We work directly with your insurer to align payment schedules. We also offer 0% APR financing options if needed. Let us know when the check arrives!', timestamp: '2026-06-13 04:17 PM' }
     ]
   }
 ];
@@ -143,10 +207,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('prompts', JSON.stringify(prompts));
   }, [prompts]);
 
-  const addLead = (newLead: Omit<Lead, 'id'>) => {
+  const addLead = (newLead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => {
     const leadWithId: Lead = {
-      ...newLead,
       id: Math.random().toString(36).substr(2, 9),
+      name: newLead.name,
+      phone: newLead.phone,
+      email: newLead.email || 'N/A',
+      propertyOwnership: newLead.propertyOwnership || 'Owner',
+      status: newLead.status || 'New Lead',
+      scheduledDate: newLead.scheduledDate || '',
+      appointmentDetails: newLead.appointmentDetails || (newLead.scheduledDate ? {
+        date: newLead.scheduledDate.split(' ')[0],
+        time: newLead.scheduledDate.split(' ').slice(1).join(' '),
+        notes: 'Captured by conversational assistant.'
+      } : undefined),
+      zipCode: newLead.zipCode || '75201',
+      roofIssue: newLead.roofIssue || 'Storm damage assessment',
+      agentType: newLead.agentType || 'Chatbot',
+      chatLog: newLead.chatLog || [
+        { sender: 'System', text: `Lead initialized via ${newLead.agentType || 'Chatbot'}.`, timestamp: new Date().toLocaleString() }
+      ],
     };
     setLeads((prev) => [leadWithId, ...prev]);
   };
