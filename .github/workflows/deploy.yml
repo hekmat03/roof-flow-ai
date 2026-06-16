@@ -1,0 +1,42 @@
+name: Continuous Integration & Build
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔍 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: /home/team/shared/roof-flow-ai/package-lock.json
+
+      - name: 📦 Install Dependencies
+        run: |
+          cd /home/team/shared/roof-flow-ai
+          npm ci
+
+      - name: 🚀 Run TypeScript Compile & Build
+        run: |
+          cd /home/team/shared/roof-flow-ai
+          npm run build
+
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: /home/team/shared/roof-flow-ai/dist
