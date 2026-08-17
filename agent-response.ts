@@ -1,0 +1,93 @@
+// api/agent-response.ts
+// Vercel Serverless Function — powers Agent 2 (Phone), Agent 3 (SMS/Email), Agent 4 (Closer)
+// Deploy target: /api/agent-response  (Vercel auto-detects files in /api)
+
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY; // set in Vercel Project Settings → Env Vars
+
+export type AgentType = 'phone' | 'nurturer' | 'closer';
+
+interface AgentRequestBody {
+  agentType: AgentType;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  context?: {
+    companyName?: string;
+    city?: string;
+    stormEvent?: string;
+    leadName?: string;
+  };
+}
+
+const SYSTEM_PROMPTS: Record<AgentType, (ctx: AgentRequestBody['context']) => string> = {
+  phone: (ctx) => `You are a phone intake assistant for ${ctx?.companyName || 'a roofing company'} in ${ctx?.city || 'the local area'}.
+Handle inbound roofing inquiries: answer questions about ${ctx?.stormEvent ? `the recent ${ctx.stormEvent}` : 'storm damage'}, insurance claims process, and general roofing questions.
+Collect: name, phone number, address, and whether they have existing insurance claim.
+Keep responses short (2-3 sentences), natural, and spoken-language style (this will be read aloud or shown as a call transcript).
+End by offering to schedule a free inspection.`,
+
+  nurturer: (ctx) => `You are an SMS/email follow-up assistant for ${ctx?.companyName || 'a roofing company'}.
+You are writing a follow-up message to ${ctx?.leadName || 'a lead'} who has not yet responded.
+Write ONE short, friendly follow-up message (SMS: under 300 characters, Email: under 150 words).
+Reference the roofing inspection offer. Do not sound robotic or pushy. Include a clear, low-pressure call to action.
+Return plain text only, no markdown.`,
+
+  closer: (ctx) => `You are a sales closing assistant for ${ctx?.companyName || 'a roofing company'}.
+You are helping close a deal with ${ctx?.leadName || 'a customer'} after an inspection.
+Handle price objections, insurance/financing questions, and competitor comparisons professionally and honestly.
+Never invent specific prices — ask the human rep to confirm exact numbers before quoting.
+Keep responses conversational and under 4 sentences.`,
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!MISTRAL_API_KEY) {
+    return res.status(500).json({ error: 'Missing MISTRAL_API_KEY env var on server' });
+  }
+
+  const { agentType, messages, context }: AgentRequestBody = req.body;
+
+  if (!agentType || !SYSTEM_PROMPTS[agentType]) {
+    return res.status(400).json({ error: 'Invalid or missing agentType (phone | nurturer | closer)' });
+  }
+  if (!Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages must be an array' });
+  }
+
+  const systemPrompt = SYSTEM_PROMPTS[agentType](context);
+
+  try {
+    const response = await fetch(MISTRAL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${MISTRAL_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'mistral-small-latest',
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        temperature: 0.6,
+        max_tokens: 300,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Mistral API error:', response.status, errText);
+      return res.status(502).json({ error: 'AI provider error', detail: errText });
+    }
+
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content ?? '';
+
+    return res.status(200).json({ reply, agentType });
+  } catch (err) {
+    console.error('agent-response handler error:', err);
+    return res.status(500).json({ error: 'Internal error generating response' });
+  }
+  }
+                    
