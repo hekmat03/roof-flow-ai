@@ -1,25 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { MessageSquare, Send, Bot, Calendar, Sparkles } from 'lucide-react';
+import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
+import { getAgentResponse, AgentMessage } from '../lib/agentService';
 
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead } = useApp();
-  
-  // Interactive Chat State
+
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>([
-    { sender: 'AI', text: `Hi there! 👋 I am the RoofFlow AI assistant for ${companySettings.companyName}. Are you seeing any leaks, missing shingles, or storm damage on your roof?`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+    {
+      sender: 'AI',
+      text: `Hi there! 👋 I'm the RoofFlow AI assistant for ${companySettings.companyName}. Are you seeing any leaks, missing shingles, or storm damage on your roof?`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
   ]);
   const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hasQualified, setHasQualified] = useState(false);
-  const [step, setStep] = useState(0); // Conversation flow state
+  const [showBookingForm, setShowBookingForm] = useState(false);
 
-  // Qualification Form State
+  // Booking form state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [ownership, setOwnership] = useState<'Owner' | 'Renter'>('Owner');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Interactive Quick Reply options
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const quickReplies = [
     "Yes, my roof has hail damage",
     "How much does an inspection cost?",
@@ -27,82 +35,84 @@ export const Agent1Chatbot: React.FC = () => {
     "I want to schedule a free inspection"
   ];
 
-  const handleSend = (text: string) => {
-    if (!text.trim()) return;
-    
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, showBookingForm]);
+
+  const handleSend = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
     const userMsg = {
       sender: 'User' as const,
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    
-    setMessages(prev => [...prev, userMsg]);
+
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInputText('');
+    setIsLoading(true);
+    setError(null);
 
-    // Simulated Bot Responses based on steps/queries
-    setTimeout(() => {
-      let aiText = '';
-      const lower = text.toLowerCase();
+    try {
+      const aiMessages: AgentMessage[] = updatedMessages.map(m => ({
+        role: m.sender === 'AI' ? 'assistant' : 'user',
+        content: m.text,
+      }));
 
-      if (lower.includes('hail') || lower.includes('damage') || lower.includes('yes')) {
-        aiText = `I am so sorry to hear your home was hit. The recent ${companySettings.stormName} on ${companySettings.stormDate} caused serious hail damage across our community. We are providing 100% FREE professional roof inspections to help homeowners file timely claims. Are you the homeowner of the property?`;
-        setStep(1);
-      } else if (lower.includes('cost') || lower.includes('free') || lower.includes('inspection')) {
-        aiText = "Our professional roof inspection is 100% free with absolutely zero obligation! We provide a full digital photo report detailing any hail impacts or leaks. Are you the homeowner of the property?";
-        setStep(1);
-      } else if (lower.includes('insurance')) {
-        aiText = "Yes, absolutely! We assist with the entire insurance claim process, providing documentation, photos, and meet directly with insurance adjusters. Are you the owner of the property?";
-        setStep(1);
-      } else if (step === 1) {
-        if (lower.includes('yes') || lower.includes('owner')) {
-          aiText = "Perfect! Because of active storm damage limits, we recommend inspecting it right away. What is your full name so I can create your free inspection file?";
-          setOwnership('Owner');
-          setStep(2);
-        } else {
-          aiText = "Got it. Usually, we need the homeowner's authorization to schedule our inspectors, but we can still answer general questions! What is your full name?";
-          setOwnership('Renter');
-          setStep(2);
-        }
-      } else if (step === 2) {
-        setName(text);
-        aiText = `Nice to meet you, ${text}! What is the best phone number and email address to reach you at?`;
-        setStep(3);
-      } else if (step === 3) {
-        // Simple regex or parse phone/email
-        setPhone(text);
-        setEmail('info@roof-flow-ai-demo.com');
-        aiText = `Thank you! I've created your lead profile in our system. Let's schedule your FREE inspection. We have openings this week! Would you like me to book it now?`;
-        setStep(4);
-      } else if (step === 4) {
-        aiText = `Awesome! I've automatically booked your FREE roof inspection for next Monday at 10:00 AM. Our lead specialist will call you shortly to confirm! Is there anything else I can assist you with today?`;
-        setHasQualified(true);
-        
-        // Save to CRM State
-        addLead({
-          name: name || 'Demo Lead',
-          phone: phone || text || '(214) 555-9011',
-          email: email || 'sample.owner@gmail.com',
-          propertyOwnership: ownership,
-          status: 'Inspection Scheduled',
-          agentType: 'Chatbot',
-          scheduledDate: new Date(Date.now() + 3*24*60*60*1000).toISOString().split('T')[0] + ' 10:00 AM',
-          chatLog: [
-            ...messages,
-            userMsg,
-            { sender: 'AI', text: 'Scheduled inspection and qualified homeowner.', timestamp: new Date().toLocaleTimeString() }
-          ]
-        });
-      } else {
-        aiText = "I appreciate that info! To schedule your free inspection, please let me know if you own the home or what type of damage you noticed.";
-      }
+      const reply = await getAgentResponse('chatbot', aiMessages, {
+        companyName: companySettings.companyName,
+        city: companySettings.city,
+        stormEvent: companySettings.stormName,
+        stormDate: companySettings.stormDate,
+      });
 
       setMessages(prev => [...prev, {
         sender: 'AI',
-        text: aiText,
+        text: reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
-    }, 1000);
+      // If the AI signals it's time to book, show the real form instead of guessing contact info from text
+      if (/booking form|schedule|get you scheduled/i.test(reply)) {
+        setShowBookingForm(true);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBookingSubmit = () => {
+    setFormError(null);
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      setFormError('Please fill in all fields.');
+      return;
+    }
+
+    addLead({
+      name,
+      phone,
+      email,
+      propertyOwnership: ownership,
+      status: 'Inspection Scheduled',
+      agentType: 'Chatbot',
+      scheduledDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM',
+      chatLog: messages.map(m => ({
+        sender: m.sender,
+        text: m.text,
+        timestamp: m.timestamp,
+      })),
+    });
+
+    setMessages(prev => [...prev, {
+      sender: 'AI',
+      text: `Thanks, ${name}! Your free inspection request has been submitted. Our team will confirm your appointment shortly.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setShowBookingForm(false);
+    setHasQualified(true);
   };
 
   return (
@@ -111,15 +121,15 @@ export const Agent1Chatbot: React.FC = () => {
       <div>
         <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
         <p className="text-xs text-slate-400 mt-1">
-          Simulate a homeowner visiting the company website. The AI Chatbot automatically engages, handles storm objections, and qualifies ownership.
+          Real AI-powered chat. Ask anything about storm damage, insurance, or inspections — the assistant responds live and hands off to a booking form when you're ready to schedule.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Chat Interface (7 cols) */}
-        <div className="lg:col-span-7 bg-[#1e293b] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[520px]">
+        <div className="lg:col-span-7 bg-[#1e293b] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
           {/* Top Chat Header */}
-          <div className="bg-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="bg-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-3">
               <div className="bg-orange-500/10 p-2 rounded-lg relative">
                 <Bot className="h-5 w-5 text-orange-500" />
@@ -136,7 +146,7 @@ export const Agent1Chatbot: React.FC = () => {
           </div>
 
           {/* Chat Messages Log */}
-          <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#0f172a]/60">
+          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#0f172a]/60">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
               return (
@@ -148,8 +158,8 @@ export const Agent1Chatbot: React.FC = () => {
                       </div>
                     )}
                     <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                      isAI 
-                        ? 'bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none' 
+                      isAI
+                        ? 'bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none'
                         : 'bg-orange-500 text-slate-950 font-bold rounded-tr-none'
                     }`}>
                       <p>{msg.text}</p>
@@ -161,20 +171,103 @@ export const Agent1Chatbot: React.FC = () => {
                 </div>
               );
             })}
+
+            {isLoading && (
+              <div className="flex justify-start animate-slideUp">
+                <div className="flex items-start space-x-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4 text-orange-500" />
+                  </div>
+                  <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce"></span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex justify-center">
+                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">{error}</span>
+              </div>
+            )}
+
+            {/* Inline booking form, shown when the AI signals booking intent */}
+            {showBookingForm && (
+              <div className="bg-slate-900 border border-orange-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-orange-500" /> Book Your Free Inspection
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                    <User className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                    <input
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      placeholder="Full name"
+                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                    <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                    <input
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      placeholder="Phone number"
+                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                    <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                    <input
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="Email address"
+                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setOwnership('Owner')}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-orange-500 text-slate-950 border-orange-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                    >
+                      I own the home
+                    </button>
+                    <button
+                      onClick={() => setOwnership('Renter')}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-orange-500 text-slate-950 border-orange-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                    >
+                      I rent
+                    </button>
+                  </div>
+                </div>
+                {formError && <p className="text-[10px] text-red-400">{formError}</p>}
+                <button
+                  onClick={handleBookingSubmit}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs py-2.5 rounded-lg transition"
+                >
+                  Confirm Free Inspection Request
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Quick Replies Buttons */}
-          <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
-            {quickReplies.map((reply, i) => (
-              <button
-                key={i}
-                onClick={() => handleSend(reply)}
-                className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-1.5 rounded-full transition shrink-0"
-              >
-                {reply}
-              </button>
-            ))}
-          </div>
+          {!showBookingForm && (
+            <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
+              {quickReplies.map((reply, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSend(reply)}
+                  disabled={isLoading}
+                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-1.5 rounded-full transition shrink-0 disabled:opacity-50"
+                >
+                  {reply}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input Form */}
           <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex items-center space-x-3 shrink-0">
@@ -184,11 +277,13 @@ export const Agent1Chatbot: React.FC = () => {
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend(inputText)}
-              className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-orange-500"
+              disabled={isLoading || showBookingForm}
+              className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50"
             />
             <button
               onClick={() => handleSend(inputText)}
-              className="bg-orange-500 hover:bg-orange-600 p-3 rounded-xl text-slate-950 shadow-lg shadow-orange-500/10 transition shrink-0"
+              disabled={isLoading || showBookingForm}
+              className="bg-orange-500 hover:bg-orange-600 p-3 rounded-xl text-slate-950 shadow-lg shadow-orange-500/10 transition shrink-0 disabled:opacity-50"
             >
               <Send className="h-4 w-4 stroke-[2.5]" />
             </button>
@@ -199,51 +294,43 @@ export const Agent1Chatbot: React.FC = () => {
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Lead Qualification Logic
+              <Sparkles className="h-4.5 w-4.5 text-orange-500" /> How This Works
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed mt-3">
-              This simulator guides users through Agent 1's automated sales script designed specifically for storm roofing campaigns.
+              This is a live AI assistant, not a scripted demo. It answers freely using your company info, and hands off to a real booking form once a visitor is ready to schedule.
             </p>
             <div className="mt-4 space-y-3.5 text-xs text-slate-300">
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">STEP 1</div>
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">1</div>
                 <div>
-                  <p className="font-bold text-white">Storm Assessment</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Identifies severe weather events like hail damage and leakage issues.</p>
+                  <p className="font-bold text-white">Live AI Conversation</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">STEP 2</div>
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">2</div>
                 <div>
-                  <p className="font-bold text-white">Homeowner Verification</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Ensures the lead actually owns the property before assigning local engineers.</p>
+                  <p className="font-bold text-white">Booking Handoff</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">STEP 3</div>
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
                 <div>
-                  <p className="font-bold text-white">Contact Validation</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Acquires Name, active SMS number and Email, synced directly into the CRM Board.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">STEP 4</div>
-                <div>
-                  <p className="font-bold text-white">Autonomous Booking</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Schedules calendar inspection slots instantly in our mock scheduling portal.</p>
+                  <p className="font-bold text-white">CRM Sync</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
                 </div>
               </div>
             </div>
           </div>
-          
-          {/* Quick status report */}
+
           {hasQualified && (
             <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
               <Calendar className="h-5 w-5 shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-xs font-bold text-white">Lead Transferred to CRM!</h4>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                  Homeowner was successfully qualified. Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcripts.
+                  Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcript.
                 </p>
               </div>
             </div>
