@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
-import { getAgentResponse, AgentMessage } from '../lib/agentService';
-
+import { getAgentResponse, type AgentMessage } from '../lib/agentService';
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead } = useApp();
 
