@@ -1,7 +1,5 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { AuthProvider } from './context/AuthContext';
-import { AuthGate } from './components/auth/AuthGate';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { Agent1Chatbot } from './components/Agent1Chatbot';
@@ -43,12 +41,8 @@ function MainAppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AuthGate>
-        <AppProvider>
-          <MainAppContent />
-        </AppProvider>
-      </AuthGate>
-    </AuthProvider>
+    <AppProvider>
+      <MainAppContent />
+    </AppProvider>
   );
 }

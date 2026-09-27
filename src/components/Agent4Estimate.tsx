@@ -1,10 +1,45 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import type { Lead } from '../context/AppContext';
 import { FileText, DollarSign, Calculator, Settings, Sparkles, Send, CheckCircle2, User, HelpCircle } from 'lucide-react';
-import { getAgentResponse, AgentMessage } from '../lib/agentService';
+import { getAgentResponse, detectIntent, type AgentMessage, type AgentContext } from '../lib/agentService';
 
 export const Agent4Estimate: React.FC = () => {
   const { companySettings, leads, setLeads } = useApp();
+
+  // CRM target — which estimate-stage lead this follow-up conversation belongs
+  // to. Every exchange is synced to that lead's transcript and drives its
+  // workflow status (yes → Closed-Won, no/opt-out → Closed-Lost).
+  const leadTargets = leads.filter(l =>
+    ['Estimate Sent', 'Inspection Completed', 'In Contact'].includes(l.status)
+  );
+  const [targetLeadId, setTargetLeadId] = useState<string>(() =>
+    leads.find(l => l.status === 'Estimate Sent')?.id || leads[0]?.id || ''
+  );
+
+  const syncToCRM = (userText: string, aiReply: string) => {
+    if (!targetLeadId) return;
+    setLeads(prev => prev.map(lead => {
+      if (lead.id !== targetLeadId) return lead;
+      const intent = detectIntent(userText);
+      const nextStatus: Lead['status'] =
+        intent === 'yes' ? 'Closed-Won'
+        : intent === 'no' || intent === 'optout' ? 'Closed-Lost'
+        : lead.status === 'In Contact' ? lead.status
+        : 'In Contact';
+      return {
+        ...lead,
+        status: nextStatus,
+        chatLog: [
+          ...lead.chatLog,
+          { sender: 'User', text: userText, timestamp: new Date().toLocaleString() },
+          { sender: 'AI', text: aiReply, timestamp: new Date().toLocaleString() },
+        ],
+      };
+    }));
+    setSavingSuccess(true);
+    setTimeout(() => setSavingSuccess(false), 2500);
+  };
   
   // Objection flow simulation state
   const [activeObjection, setActiveObjection] = useState<'insurance' | 'price' | 'budget'>('insurance');
@@ -20,48 +55,76 @@ export const Agent4Estimate: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Default objection scenarios (kept as scripted starting points — these are pre-written
-  // conversation openers, not AI output, so a real customer's follow-up still goes to the AI)
+  // Default objection scenarios — the user message is fixed, but the AI's
+  // reply is GENERATED live by the dynamic closer agent (settings-aware, varied),
+  // not hardcoded.
   const objections = {
     insurance: {
-      userText: "My insurance company is denying some of the shingle damage, so the payout won't cover your estimate.",
-      aiText: `We handle insurance discrepancies all the time! We can write a detailed supplement report with digital photos and direct manufacturer specifications for your adjuster. Typically, we get denied areas approved by showing code-compliance requirements in ${companySettings.city}. We'll meet them on-site if needed. Shall we set up a call with our claim supplement team?`
+      userText: "My insurance company is denying some of the shingle damage, so the payout won't cover your estimate."
     },
     price: {
-      userText: "Another local contractor gave me a bid that is $2,000 cheaper for the same roof.",
-      aiText: `I completely understand wanting the best price! We always match local bids for equivalent scopes of work. However, make sure their bid includes full synthetic underlayment, ice/water shields in valleys, and a lifetime workmanship warranty, which is standard for ${companySettings.companyName}. Would you like us to do a line-by-line comparison of their estimate to see if they're cutting corners?`
+      userText: "Another local contractor gave me a bid that is $2,000 cheaper for the same roof."
     },
     budget: {
-      userText: "I just don't have the cash to pay the deductible right now.",
-      aiText: `That is incredibly common, and you shouldn't let a active leak damage your home structure. We offer excellent financing plans: ${companySettings.financingOptions}. This allows you to get the roof fixed immediately with low, manageable monthly payments. We can run a soft-credit check that doesn't affect your score. Would you like to see if you qualify?`
+      userText: "I just don't have the cash to pay the deductible right now."
     }
   };
 
-  const handleTriggerObjection = (type: 'insurance' | 'price' | 'budget') => {
+  const agentContext: AgentContext = {
+    companyName: companySettings.companyName,
+    city: companySettings.city,
+    stormEvent: companySettings.stormName,
+    stormDate: companySettings.stormDate,
+    financingOptions: companySettings.financingOptions,
+    agentTone: companySettings.agentTone,
+  };
+
+  const generateCloserReply = async (userText: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getAgentResponse(
+        'closer',
+        [{ role: 'user', content: userText }],
+        agentContext
+      );
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTriggerObjection = async (type: 'insurance' | 'price' | 'budget') => {
     setActiveObjection(type);
     setError(null);
-    
+
     const userMsg = {
       sender: 'User' as const,
       text: objections[type].userText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // These starter scenarios keep their pre-written AI reply as an example script.
-    // Anything the person types afterward goes to the real AI (see handleCustomSend).
     setMessages([
       {
         sender: 'AI',
         text: `Hi! We sent over the roof replacement estimate for your review yesterday. I wanted to follow up and see if you had any questions regarding the scope or pricing?`,
         timestamp: 'Yesterday'
       },
-      userMsg,
-      {
-        sender: 'AI',
-        text: objections[type].aiText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
+      userMsg
     ]);
+
+    const reply = await generateCloserReply(objections[type].userText);
+    if (reply) {
+      setMessages(prev => [...prev, {
+        sender: 'AI',
+        text: reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      syncToCRM(objections[type].userText, reply);
+    }
   };
 
   const handleCustomSend = async () => {
@@ -85,10 +148,7 @@ export const Agent4Estimate: React.FC = () => {
         content: m.text,
       }));
 
-      const response = await getAgentResponse('closer', aiMessages, {
-        companyName: companySettings.companyName,
-        city: companySettings.city,
-      });
+      const response = await getAgentResponse('closer', aiMessages, agentContext);
 
       setMessages(prev => [...prev, {
         sender: 'AI',
@@ -96,8 +156,7 @@ export const Agent4Estimate: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
-      setSavingSuccess(true);
-      setTimeout(() => setSavingSuccess(false), 2500);
+      syncToCRM(userMsg.text, response);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
     } finally {
@@ -118,6 +177,34 @@ export const Agent4Estimate: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Objection Selections (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
+          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <User className="h-4.5 w-4.5 text-orange-500" /> CRM Target Lead
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+              Choose which estimate-stage lead this follow-up conversation syncs to. Each exchange updates the lead's transcript and workflow status in the CRM Board.
+            </p>
+            {leadTargets.length > 0 ? (
+              <select
+                value={targetLeadId}
+                onChange={e => setTargetLeadId(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500 font-medium mt-4"
+              >
+                {leadTargets.map(lead => (
+                  <option key={lead.id} value={lead.id}>
+                    {lead.name} ({lead.status})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-[11px] text-slate-500 italic mt-4">
+                No estimate-stage leads yet — run Agent 1/2, then move a lead to "Estimate Sent" in the CRM Board to target it here.
+              </p>
+            )}
+          </div>
+
           <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">

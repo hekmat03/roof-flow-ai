@@ -1,25 +1,53 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Phone, PhoneOff, Mic, Play, Volume2, Calendar, Sparkles, User, ShieldAlert } from 'lucide-react';
+import { Phone, PhoneOff, Mic, Play, Volume2, Calendar, Sparkles, User, ShieldAlert, Send } from 'lucide-react';
+import { getAgentResponse, type AgentContext } from '../lib/agentService';
+
+interface ScriptOption {
+  text: string;
+  next: number;
+  name?: string;
+  phone?: string;
+  owner?: 'Owner' | 'Renter';
+}
+
+interface ScriptStep {
+  step: number;
+  /** Intent the AI generator should use for the response spoken after this option is chosen. */
+  intent: 'greeting' | 'hail' | 'insurance' | 'owner' | 'renter' | 'scheduleask' | 'schedule' | 'thanks';
+  options: ScriptOption[];
+}
 
 export const Agent2PhoneCall: React.FC = () => {
   const { companySettings, addLead } = useApp();
-  
+
+  const agentContext: AgentContext = {
+    companyName: companySettings.companyName,
+    city: companySettings.city,
+    stormEvent: companySettings.stormName,
+    stormDate: companySettings.stormDate,
+    financingOptions: companySettings.financingOptions,
+    agentTone: companySettings.agentTone,
+  };
+
   // Call state
   const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'completed'>('idle');
   const [dialogue, setDialogue] = useState<Array<{ speaker: 'AI' | 'Homeowner'; text: string }>>([]);
   const [currentStep, setCurrentStep] = useState(0);
-  
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [customReply, setCustomReply] = useState('');
+
   // Lead info captured via phone call
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [propertyStatus, setPropertyStatus] = useState<'Owner' | 'Renter'>('Owner');
 
-  // Phone quick dialogue selections
-  const scriptSteps = [
+  // Phone quick dialogue flow — each step declares which AI intent voices the next response,
+  // so every line is generated (settings-aware, varied) instead of hardcoded.
+  const scriptSteps: ScriptStep[] = [
     {
       step: 0,
-      ai: `Thank you for calling ${companySettings.companyName} Claim Support! This is our AI Voice Assistant. Are you calling about a roof inspection after the recent ${companySettings.stormName}?`,
+      intent: 'greeting',
       options: [
         { text: "Yes, I need an inspection. Our roof has major storm damage.", next: 1 },
         { text: "No, I just want a general estimate.", next: 2 }
@@ -27,7 +55,7 @@ export const Agent2PhoneCall: React.FC = () => {
     },
     {
       step: 1,
-      ai: `I am so sorry to hear that. Severe hail can cause micro-cracks that lead to major water leaks down the road. To get a certified specialist out to inspect your roof for FREE, can you confirm if you are the owner of the property?`,
+      intent: 'hail',
       options: [
         { text: "Yes, I am the homeowner.", next: 3, owner: 'Owner' as const },
         { text: "No, I rent the property.", next: 4, owner: 'Renter' as const }
@@ -35,7 +63,7 @@ export const Agent2PhoneCall: React.FC = () => {
     },
     {
       step: 2,
-      ai: `We can certainly help with a general estimate! However, if your area was impacted by the recent ${companySettings.stormName}, your insurance might pay for a full replacement. Are you the property owner?`,
+      intent: 'insurance',
       options: [
         { text: "Yes, I own the home.", next: 3, owner: 'Owner' as const },
         { text: "No, I rent.", next: 4, owner: 'Renter' as const }
@@ -43,7 +71,7 @@ export const Agent2PhoneCall: React.FC = () => {
     },
     {
       step: 3,
-      ai: `Perfect. Because safety regulations require a homeowner to authorize inspection climbing, we can set this up instantly. Can I get your full name and best callback number?`,
+      intent: 'scheduleask',
       options: [
         { text: "My name is Arthur Dent, call me at (817) 555-0411", next: 5, name: "Arthur Dent", phone: "(817) 555-0411" },
         { text: "I'm Ford Prefect, phone is (214) 555-1215", next: 5, name: "Ford Prefect", phone: "(214) 555-1215" }
@@ -51,7 +79,7 @@ export const Agent2PhoneCall: React.FC = () => {
     },
     {
       step: 4,
-      ai: `Ah, I see. Since safety regulations require the property owner to authorize physical roof climbing, we would need to coordinate with your landlord. Could you provide their name or have them call us directly?`,
+      intent: 'renter',
       options: [
         { text: "I will have my landlord call you back directly.", next: 6 },
         { text: "My landlord's name is Mr. Prosser, (214) 555-0012", next: 5, name: "Mr. Prosser (Landlord)", phone: "(214) 555-0012" }
@@ -59,7 +87,7 @@ export const Agent2PhoneCall: React.FC = () => {
     },
     {
       step: 5,
-      ai: `Excellent, I've got that down. Now, let's look at scheduling. We have emergency roof inspectors available in ${companySettings.city} this week. Would a morning or afternoon slot work better for you?`,
+      intent: 'scheduleask',
       options: [
         { text: "Morning slots are best.", next: 7 },
         { text: "Afternoon slots work better.", next: 7 }
@@ -67,78 +95,122 @@ export const Agent2PhoneCall: React.FC = () => {
     },
     {
       step: 7,
-      ai: `Perfect! I've booked your Free Roof Inspection for tomorrow at 10:00 AM. A digital report with drone photography will be provided. I have also logged this under ${companySettings.companyName} profile. Is there anything else?`,
+      intent: 'schedule',
       options: [
         { text: "No, that's perfect. Thank you!", next: 8 }
       ]
     }
   ];
 
-  const handleStartCall = () => {
+  const speak = async (intent: ScriptStep['intent'], userText: string) => {
+    setIsGenerating(true);
+    try {
+      const reply = await getAgentResponse(
+        'phone',
+        [{ role: 'user', content: userText }],
+        { ...agentContext, replyIntent: intent }
+      );
+      setDialogue(prev => [...prev, { speaker: 'AI', text: reply }]);
+      return reply;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  /** Free-form reply: NO forced intent — the generator detects the intent live. */
+  const speakFreeForm = async (userText: string) => {
+    setIsGenerating(true);
+    try {
+      const reply = await getAgentResponse(
+        'phone',
+        [{ role: 'user', content: userText }],
+        agentContext
+      );
+      setDialogue(prev => [...prev, { speaker: 'AI', text: reply }]);
+      return reply;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleStartCall = async () => {
     setCallStatus('calling');
     setDialogue([]);
     setCurrentStep(0);
-    
-    setTimeout(() => {
+    setName('');
+    setPhone('');
+    setPropertyStatus('Owner');
+
+    setTimeout(async () => {
       setCallStatus('connected');
-      setDialogue([
-        { speaker: 'AI', text: scriptSteps[0].ai }
-      ]);
-    }, 1500);
+      await speak('greeting', 'incoming call');
+    }, 1200);
   };
 
-  const handleSelectOption = (option: any) => {
-    // Add homeowner speech to log
+  const handleSelectOption = async (option: ScriptOption) => {
+    if (isGenerating) return;
+
+    // Homeowner speech
     setDialogue(prev => [...prev, { speaker: 'Homeowner', text: option.text }]);
-    
-    // Process intermediate state
+
+    // Capture lead fields offered by the option
     if (option.name) setName(option.name);
     if (option.phone) setPhone(option.phone);
     if (option.owner) setPropertyStatus(option.owner);
 
     const nextStepIndex = option.next;
+    const step = scriptSteps.find(s => s.step === currentStep);
 
     if (nextStepIndex === 8) {
-      // Completed call!
-      setTimeout(() => {
-        setDialogue(prev => [...prev, { speaker: 'AI', text: "Thank you for calling! Goodbye!" }]);
-        setCallStatus('completed');
-        
-        // Push lead to CRM Board
-        addLead({
-          name: name || 'Arthur Dent',
-          phone: phone || '(817) 555-0411',
-          email: `${(name || 'arthur').toLowerCase().replace(/\s/g, '')}@gmail.com`,
-          propertyOwnership: propertyStatus,
-          status: 'Inspection Scheduled',
-          agentType: 'Phone Call',
-          scheduledDate: new Date(Date.now() + 1*24*60*60*1000).toISOString().split('T')[0] + ' 10:00 AM',
-          chatLog: dialogue.map(d => ({
-            sender: d.speaker === 'AI' ? 'AI' : 'User',
-            text: d.text,
-            timestamp: new Date().toLocaleTimeString()
-          }))
-        });
-      }, 1000);
+      // Completed call — book inspection and push lead to CRM with the FULL transcript
+      const confirmLine = await speak(step?.intent ?? 'schedule', option.text);
+      const goodbyeMsg = 'Thank you for calling! Goodbye!';
+      const fullTranscript: Array<{ speaker: 'AI' | 'Homeowner'; text: string }> = [
+        ...dialogue,
+        { speaker: 'Homeowner', text: option.text },
+        { speaker: 'AI', text: confirmLine },
+        { speaker: 'AI', text: goodbyeMsg },
+      ];
+      setDialogue(fullTranscript);
+      setCallStatus('completed');
+      addLead({
+        name: name || 'Arthur Dent',
+        phone: phone || '(817) 555-0411',
+        email: `${(name || 'arthur').toLowerCase().replace(/\s/g, '')}@gmail.com`,
+        propertyOwnership: propertyStatus,
+        status: 'Inspection Scheduled',
+        agentType: 'Phone Call',
+        scheduledDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM',
+        chatLog: fullTranscript.map(d => ({
+          sender: d.speaker === 'AI' ? 'AI' : 'User',
+          text: d.text,
+          timestamp: new Date().toLocaleTimeString()
+        }))
+      });
       return;
     }
 
     if (nextStepIndex === 6) {
-      setTimeout(() => {
-        setDialogue(prev => [...prev, { speaker: 'AI', text: "No problem at all! We'll wait for their call. Have a wonderful day!" }]);
-        setCallStatus('completed');
-      }, 1000);
+      // Landlord will call back — cordial close, no booking
+      await speak('thanks', option.text);
+      setCallStatus('completed');
       return;
     }
 
-    // Move to next step
+    // Move to next step and voice it with that step's intent
     const nextStep = scriptSteps.find(s => s.step === nextStepIndex);
     if (nextStep) {
       setCurrentStep(nextStepIndex);
-      setTimeout(() => {
-        setDialogue(prev => [...prev, { speaker: 'AI', text: nextStep.ai }]);
-      }, 1000);
+      await speak(nextStep.intent, option.text);
     }
+  };
+
+  const handleCustomReply = async () => {
+    if (!customReply.trim() || isGenerating || callStatus !== 'connected') return;
+    const text = customReply.trim();
+    setCustomReply('');
+    setDialogue(prev => [...prev, { speaker: 'Homeowner', text }]);
+    await speakFreeForm(text);
   };
 
   const handleEndCall = () => {
@@ -146,13 +218,15 @@ export const Agent2PhoneCall: React.FC = () => {
     setDialogue([]);
   };
 
+  const currentScriptStep = scriptSteps.find(s => s.step === currentStep);
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
         <p className="text-xs text-slate-400 mt-1">
-          Interactive voice call simulation. Experience how the AI Voice Handler answers incoming homeowner calls, overcomes insurance pushbacks, and books inspections.
+          Interactive voice call simulation. Every AI line is generated live from your company settings — experience how the AI Voice Handler answers incoming homeowner calls, overcomes insurance pushbacks, and books inspections.
         </p>
       </div>
 
@@ -283,26 +357,53 @@ export const Agent2PhoneCall: React.FC = () => {
                     <p className="text-xs">Dialogue log is empty. Place a callback line simulation to connect.</p>
                   </div>
                 )}
+                {isGenerating && (
+                  <div className="flex justify-start">
+                    <span className="text-[10px] text-slate-500 italic">AI is speaking…</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Telephone options select */}
-            {callStatus === 'connected' && scriptSteps.find(s => s.step === currentStep) && (
+            {callStatus === 'connected' && currentScriptStep && (
               <div className="mt-6 border-t border-slate-800 pt-4 shrink-0 space-y-3">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
                   <ShieldAlert className="h-3.5 w-3.5 text-orange-500" /> Select dialogue reply option:
                 </p>
                 <div className="grid grid-cols-1 gap-2">
-                  {scriptSteps.find(s => s.step === currentStep)?.options.map((option, i) => (
+                  {currentScriptStep.options.map((option, i) => (
                     <button
                       key={i}
                       onClick={() => handleSelectOption(option)}
-                      className="bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs text-left px-4 py-2.5 rounded-xl text-slate-300 transition duration-150 hover:text-white"
+                      disabled={isGenerating}
+                      className="bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs text-left px-4 py-2.5 rounded-xl text-slate-300 transition duration-150 hover:text-white disabled:opacity-50"
                     >
                       {option.text}
                     </button>
                   ))}
                 </div>
+
+                {/* Free-form reply → live intent detection */}
+                <div className="flex space-x-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Type your own reply (AI answers live)..."
+                    value={customReply}
+                    onChange={e => setCustomReply(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCustomReply()}
+                    disabled={isGenerating}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                  />
+                  <button
+                    onClick={handleCustomReply}
+                    disabled={isGenerating}
+                    className="bg-orange-500 hover:bg-orange-600 px-3.5 rounded-xl text-slate-950 text-xs font-bold transition disabled:opacity-50"
+                  >
+                    <Send className="h-4 w-4 stroke-[2.5]" />
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-500">Free-form replies stay in the transcript — the script only advances via the options above.</p>
               </div>
             )}
             
