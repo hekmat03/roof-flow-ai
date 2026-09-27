@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
-import { getAgentResponse, type AgentMessage } from '../lib/agentService';
+import { getAgentResponse, detectLatestIntent, type AgentMessage } from '../lib/agentService';
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead } = useApp();
 
@@ -64,6 +64,8 @@ export const Agent1Chatbot: React.FC = () => {
         city: companySettings.city,
         stormEvent: companySettings.stormName,
         stormDate: companySettings.stormDate,
+        financingOptions: companySettings.financingOptions,
+        agentTone: companySettings.agentTone,
       });
 
       setMessages(prev => [...prev, {
@@ -72,8 +74,9 @@ export const Agent1Chatbot: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
-      // If the AI signals it's time to book, show the real form instead of guessing contact info from text
-      if (/booking form|schedule|get you scheduled/i.test(reply)) {
+      // Open the booking form when the visitor's latest message signals booking intent
+      // (schedule detection from the same intent engine that drives the reply).
+      if (detectLatestIntent(aiMessages) === 'schedule') {
         setShowBookingForm(true);
       }
     } catch (err) {

@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquarePlus, Mail, Clock, Send, Play, Sparkles, Smartphone, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { getAgentResponse, AgentMessage } from '../lib/agentService';
+import { getAgentResponse, type AgentMessage } from '../lib/agentService';
 
 export const Agent3SMSEmail: React.FC = () => {
   const { companySettings, leads, setLeads } = useApp();
   
   // Selection/Simulation states
   const [selectedDay, setSelectedDay] = useState<1 | 2 | 4 | 7>(1);
-  const [simulatedLead, setSimulatedLead] = useState<string>('Michael Miller');
+
+  // Target recipient dropdown — derived live from the CRM so nurture always
+  // targets real leads (cold/follow-up statuses first, then any lead as a fallback).
+  const coldStatuses = ['New Lead', 'Contacted', 'In Contact', 'Follow-up Nurture'];
+  const targetableLeads = leads.filter(l => coldStatuses.includes(l.status));
+  const selectorLeads = targetableLeads.length > 0 ? targetableLeads : leads;
+
+  const [simulatedLead, setSimulatedLead] = useState<string>(() => leads[0]?.name || 'Michael Miller');
   const [simulationActive, setSimulationActive] = useState(false);
   const [userReplyText, setUserReplyText] = useState('');
   const [simulationLogs, setSimulationLogs] = useState<Array<{ sender: 'AI' | 'User' | 'System'; text: string; timestamp: string }>>([]);
@@ -30,7 +37,7 @@ export const Agent3SMSEmail: React.FC = () => {
     4: {
       sms: `Hi {{name}}, we have a tech near {{city}} this Friday. We can check your roof for leaks in 15 mins while you are at work. No need to be home! Can we grab your address?`,
       emailSubject: `Drone Inspection - No Need to Be Home`,
-      emailBody: `Hi {{name}},\n\nWe know you are busy. That's why ${companySettings.companyName} offers contact-free drone inspections.\n\nOur technician can scan your roof and send a complete damage damage report directly to your email without you needing to take off work.\n\nIs this Friday morning a good time for us to stop by?\n\nBest,\n${companySettings.companyName}`
+      emailBody: `Hi {{name}},\n\nWe know you are busy. That's why ${companySettings.companyName} offers contact-free drone inspections.\n\nOur technician can scan your roof and send a complete damage report directly to your email without you needing to take off work.\n\nIs this Friday morning a good time for us to stop by?\n\nBest,\n${companySettings.companyName}`
     },
     7: {
       sms: `Hey {{name}}, last try! Insurance filing limit for the ${companySettings.stormName} is approaching. Let us inspect it for free before your claim eligibility expires. Reply YES to book.`,
@@ -80,7 +87,10 @@ export const Agent3SMSEmail: React.FC = () => {
         companyName: companySettings.companyName,
         city: companySettings.city,
         stormEvent: companySettings.stormName,
+        stormDate: companySettings.stormDate,
         leadName: simulatedLead,
+        financingOptions: companySettings.financingOptions,
+        agentTone: companySettings.agentTone,
       });
 
       setSimulationLogs(prev => [...prev, {
@@ -199,17 +209,26 @@ export const Agent3SMSEmail: React.FC = () => {
                     </p>
                   </div>
                   
-                  {/* Select Lead dropdown */}
+                  {/* Select Lead dropdown (live from CRM) */}
                   <div className="w-full max-w-xs text-left">
                     <label className="text-[10px] text-slate-500 block mb-1.5 font-bold uppercase tracking-wider">Target CRM Recipient</label>
-                    <select
-                      value={simulatedLead}
-                      onChange={e => setSimulatedLead(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
-                    >
-                      <option value="Michael Miller">Michael Miller (Unscheduled Lead)</option>
-                      <option value="Sarah Jenkins">Sarah Jenkins (Scheduled Lead)</option>
-                    </select>
+                    {selectorLeads.length > 0 ? (
+                      <select
+                        value={simulatedLead}
+                        onChange={e => setSimulatedLead(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
+                      >
+                        {selectorLeads.map(lead => (
+                          <option key={lead.id} value={lead.name}>
+                            {lead.name} ({lead.status})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-[11px] text-slate-500 italic">
+                        No leads in the CRM yet — run Agent 1 or add a lead in the CRM Board first.
+                      </div>
+                    )}
                   </div>
 
                   <button
