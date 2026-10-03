@@ -221,7 +221,7 @@ export const Agent2PhoneCall: React.FC = () => {
   const currentScriptStep = scriptSteps.find(s => s.step === currentStep);
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
@@ -232,7 +232,7 @@ export const Agent2PhoneCall: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Telephone UI (5 cols) */}
-        <div className="lg:col-span-5 bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center space-y-6">
+        <div className="lg:col-span-5 glass rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center space-y-6">
           <div className="text-center">
             <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2.5 py-1 rounded-full font-bold font-mono uppercase tracking-wider">
               Inbound Line Simulator
@@ -242,7 +242,7 @@ export const Agent2PhoneCall: React.FC = () => {
           </div>
 
           {/* Smartphone Render Frame */}
-          <div className="w-full max-w-[280px] bg-slate-900 border-4 border-slate-800 rounded-[36px] p-6 shadow-2xl relative flex flex-col justify-between h-[420px] overflow-hidden">
+          <div className="w-full max-w-[280px] call-glass border-4 border-slate-700/50 rounded-[36px] p-6 shadow-2xl relative flex flex-col justify-between h-[440px] overflow-hidden call-screen-blur">
             {/* Phone notch */}
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-4 bg-slate-800 rounded-full"></div>
 
@@ -293,19 +293,19 @@ export const Agent2PhoneCall: React.FC = () => {
 
                 <div className="grid grid-cols-3 gap-4 my-6">
                   <div className="flex flex-col items-center">
-                    <button className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <button className="min-h-0 h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
                       <Mic className="h-4 w-4" />
                     </button>
                     <span className="text-[9px] text-slate-500 mt-1.5">Mute</span>
                   </div>
                   <div className="flex flex-col items-center col-span-1">
-                    <button className="h-10 w-10 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 transition animate-pulse">
+                    <button className="min-h-0 h-10 w-10 rounded-full bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-400 transition animate-pulse">
                       <Volume2 className="h-4 w-4" />
                     </button>
                     <span className="text-[9px] text-orange-400 mt-1.5 font-bold">Speaker</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <button className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <button className="min-h-0 h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
                       <User className="h-4 w-4" />
                     </button>
                     <span className="text-[9px] text-slate-500 mt-1.5">Keypad</span>
@@ -325,14 +325,14 @@ export const Agent2PhoneCall: React.FC = () => {
 
         {/* Call Transcript Scroll View (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md h-[500px] flex flex-col justify-between">
+          <div className="glass rounded-2xl p-6 h-[500px] flex flex-col justify-between">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
                 <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Call Transcript & Dialogue Log
               </h3>
 
               {/* Log view */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-850/80">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 premium-scroll">
                 {dialogue.length > 0 ? (
                   dialogue.map((item, index) => {
                     const isAI = item.speaker === 'AI';
@@ -340,8 +340,8 @@ export const Agent2PhoneCall: React.FC = () => {
                       <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
                         <div className={`max-w-md rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                           isAI 
-                            ? 'bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none' 
-                            : 'bg-orange-500 text-slate-950 font-bold rounded-tr-none'
+                            ? 'chat-bubble-ai rounded-tl-none' 
+                            : 'chat-bubble-user rounded-tr-none'
                         }`}>
                           <span className="text-[9px] opacity-40 font-black uppercase tracking-wider block mb-1">
                             {isAI ? 'AI Agent Voice' : 'Homeowner Speech'}
@@ -359,7 +359,7 @@ export const Agent2PhoneCall: React.FC = () => {
                 )}
                 {isGenerating && (
                   <div className="flex justify-start">
-                    <span className="text-[10px] text-slate-500 italic">AI is speaking…</span>
+                    <div className="flex items-center gap-2"><div className="typing-indicator"><span></span><span></span><span></span></div><span className="text-[10px] text-slate-500 italic">AI is speaking…</span></div>
                   </div>
                 )}
               </div>
@@ -377,7 +377,7 @@ export const Agent2PhoneCall: React.FC = () => {
                       key={i}
                       onClick={() => handleSelectOption(option)}
                       disabled={isGenerating}
-                      className="bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs text-left px-4 py-2.5 rounded-xl text-slate-300 transition duration-150 hover:text-white disabled:opacity-50"
+                      className="btn-ghost text-xs text-left px-4 py-2.5 justify-start disabled:opacity-50"
                     >
                       {option.text}
                     </button>
@@ -393,12 +393,12 @@ export const Agent2PhoneCall: React.FC = () => {
                     onChange={e => setCustomReply(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCustomReply()}
                     disabled={isGenerating}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                    className="flex-1 input-premium px-3 py-2 text-xs disabled:opacity-50"
                   />
                   <button
                     onClick={handleCustomReply}
                     disabled={isGenerating}
-                    className="bg-orange-500 hover:bg-orange-600 px-3.5 rounded-xl text-slate-950 text-xs font-bold transition disabled:opacity-50"
+                    className="btn-accent px-3.5 rounded-xl text-xs font-bold min-h-0 disabled:opacity-50"
                   >
                     <Send className="h-4 w-4 stroke-[2.5]" />
                   </button>

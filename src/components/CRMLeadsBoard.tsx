@@ -49,30 +49,21 @@ export const CRMLeadsBoard: React.FC = () => {
   const [editApptTime, setEditApptTime] = useState('');
   const [editApptNotes, setEditApptNotes] = useState('');
 
-  // Status style helper
+  // Status style helper — maps the 10 CRM statuses to premium pill tokens
   const getStatusStyles = (status: Lead['status']) => {
     switch (status) {
-      case 'New Lead':
-        return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
-      case 'Contacted':
-        return 'text-blue-400 border-blue-500/20 bg-blue-500/5';
-      case 'In Contact':
-        return 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5';
-      case 'Inspection Scheduled':
-        return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold';
-      case 'Inspection Completed':
-        return 'text-cyan-400 border-cyan-500/20 bg-cyan-500/5';
-      case 'Estimate Sent':
-        return 'text-fuchsia-400 border-fuchsia-500/20 bg-fuchsia-500/5';
-      case 'Closed-Won':
-        return 'text-green-400 border-green-500/30 bg-green-500/10 font-extrabold';
-      case 'Closed-Lost':
-        return 'text-red-400 border-red-500/20 bg-red-500/5';
-      case 'Follow-up Nurture':
-        return 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5';
+      case 'New Lead': return 'st-new';
+      case 'Contacted': return 'st-contacted';
+      case 'In Contact': return 'st-incontact';
+      case 'Inspection Scheduled': return 'st-scheduled';
+      case 'Inspection Completed': return 'st-inspected';
+      case 'Estimate Sent': return 'st-estimate';
+      case 'Closed-Won': return 'st-won';
+      case 'Closed-Lost': return 'st-lost';
+      case 'Follow-up Nurture': return 'st-nurture';
       case 'Closed':
       default:
-        return 'text-slate-500 border-slate-800 bg-slate-900/50';
+        return 'st-closed';
     }
   };
 
@@ -249,7 +240,7 @@ export const CRMLeadsBoard: React.FC = () => {
         
         <button
           onClick={() => setIsAddOpen(!isAddOpen)}
-          className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-lg shadow-orange-500/20 flex items-center gap-2 self-start"
+          className="btn-accent px-4 py-2.5 text-sm flex items-center gap-2 self-start"
         >
           <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
           Add Manual Lead
@@ -258,7 +249,7 @@ export const CRMLeadsBoard: React.FC = () => {
 
       {/* Manual Add Form (Collapsible Card) */}
       {isAddOpen && (
-        <form onSubmit={handleCreateLead} className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-xl max-w-3xl animate-slideDown">
+        <form onSubmit={handleCreateLead} className="glass rounded-2xl p-6 shadow-xl max-w-3xl animate-slideDown">
           <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Plus className="h-4 w-4 text-orange-500" /> Create New Lead Profile
@@ -277,7 +268,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 placeholder="Sarah Connor"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               />
             </div>
             <div>
@@ -288,7 +279,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 placeholder="(214) 555-0100"
                 value={newPhone}
                 onChange={e => setNewPhone(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               />
             </div>
             <div>
@@ -298,7 +289,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 placeholder="s.connor@sky.net (or leave empty)"
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               />
             </div>
           </div>
@@ -309,7 +300,7 @@ export const CRMLeadsBoard: React.FC = () => {
               <select
                 value={newOwnership}
                 onChange={e => setNewOwnership(e.target.value as 'Owner' | 'Renter')}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               >
                 <option value="Owner">Property Owner</option>
                 <option value="Renter">Renter / Tenant</option>
@@ -320,7 +311,7 @@ export const CRMLeadsBoard: React.FC = () => {
               <select
                 value={newStatus}
                 onChange={e => setNewStatus(e.target.value as Lead['status'])}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               >
                 <option value="New Lead">New Lead</option>
                 <option value="Contacted">Contacted</option>
@@ -339,7 +330,7 @@ export const CRMLeadsBoard: React.FC = () => {
               <select
                 value={newAgentType}
                 onChange={e => setNewAgentType(e.target.value as Lead['agentType'])}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               >
                 <option value="Chatbot">Agent 1: Website Chatbot</option>
                 <option value="Phone Call">Agent 2: Phone Call Handler</option>
@@ -357,7 +348,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 placeholder="75201"
                 value={newZipCode}
                 onChange={e => setNewZipCode(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               />
             </div>
             <div>
@@ -367,7 +358,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 placeholder="Storm damage replacement estimate, leak assessment, etc."
                 value={newRoofIssue}
                 onChange={e => setNewRoofIssue(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+                className="input-premium"
               />
             </div>
           </div>
@@ -386,7 +377,7 @@ export const CRMLeadsBoard: React.FC = () => {
                     required
                     value={newApptDate}
                     onChange={e => setNewApptDate(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                    className="w-full input-premium-sm"
                   />
                 </div>
                 <div>
@@ -397,7 +388,7 @@ export const CRMLeadsBoard: React.FC = () => {
                     placeholder="10:00 AM"
                     value={newApptTime}
                     onChange={e => setNewApptTime(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                    className="w-full input-premium-sm"
                   />
                 </div>
               </div>
@@ -408,7 +399,7 @@ export const CRMLeadsBoard: React.FC = () => {
                   value={newApptNotes}
                   onChange={e => setNewApptNotes(e.target.value)}
                   rows={2}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                  className="w-full input-premium-sm"
                 />
               </div>
             </div>
@@ -418,13 +409,13 @@ export const CRMLeadsBoard: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAddOpen(false)}
-              className="bg-slate-800 text-slate-300 font-semibold px-4 py-2 rounded-xl text-sm transition border border-slate-700 hover:bg-slate-700"
+              className="btn-ghost px-4 py-2 text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="bg-orange-500 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition shadow-lg shadow-orange-500/10 hover:bg-orange-600"
+              className="btn-accent px-5 py-2 text-sm"
             >
               Save Lead to Database
             </button>
@@ -433,7 +424,7 @@ export const CRMLeadsBoard: React.FC = () => {
       )}
 
       {/* Filter and Search Dashboard Card */}
-      <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+      <div className="glass card-hover rounded-2xl p-5 md:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
@@ -443,7 +434,7 @@ export const CRMLeadsBoard: React.FC = () => {
               placeholder="Search by name, phone, email, zip or issue..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+              className="input-premium pl-11"
             />
           </div>
 
@@ -467,10 +458,10 @@ export const CRMLeadsBoard: React.FC = () => {
         </div>
 
         {/* Leads Table Container */}
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/30">
+        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-900/20 premium-scroll table-sticky-header">
           <table className="w-full border-collapse text-left text-sm text-slate-300">
             <thead>
-              <tr className="border-b border-slate-800 bg-[#1e293b]/50 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <tr className="border-b border-slate-800/80 bg-slate-950/85 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 <th className="px-6 py-4">Homeowner Name</th>
                 <th className="px-6 py-4">Roof Issue / Zip</th>
                 <th className="px-6 py-4">Acquisition Source</th>
@@ -479,7 +470,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 bg-slate-900/10">
+            <tbody className="divide-y divide-slate-800/70 row-stripe bg-slate-900/10">
               {filteredLeads.length > 0 ? (
                 filteredLeads.map((lead) => (
                   <tr 
@@ -491,7 +482,7 @@ export const CRMLeadsBoard: React.FC = () => {
                     <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center space-x-3">
                         <div 
-                          className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-orange-500 cursor-pointer"
+                          className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/60 flex items-center justify-center font-bold text-accent-300 shadow-lg cursor-pointer"
                           onClick={() => setSelectedLeadForChat(lead)}
                         >
                           {lead.name.split(' ').map(n => n[0]).join('')}
@@ -527,7 +518,7 @@ export const CRMLeadsBoard: React.FC = () => {
                       <select
                         value={lead.status}
                         onChange={e => handleStatusChange(lead.id, e.target.value as Lead['status'])}
-                        className={`text-xs font-bold px-2.5 py-1.5 rounded-full border bg-[#1e293b] text-slate-200 border-slate-700 focus:outline-none ${getStatusStyles(lead.status)}`}
+                        className={`status-pill cursor-pointer ${getStatusStyles(lead.status)}`}
                       >
                         <option value="New Lead">New Lead</option>
                         <option value="Contacted">Contacted</option>
@@ -563,7 +554,7 @@ export const CRMLeadsBoard: React.FC = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => setSelectedLeadForChat(lead)}
-                          className="bg-orange-500/10 hover:bg-orange-500 hover:text-slate-950 text-orange-400 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1"
+                          className="bg-accent-500/10 hover:bg-accent-500 hover:text-slate-950 text-accent-400 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1 min-h-0"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
                           View Log ({lead.chatLog.length})
@@ -594,10 +585,10 @@ export const CRMLeadsBoard: React.FC = () => {
       {/* Slide-over Conversation Audit Panel */}
       {selectedLeadForChat && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
-          <div className="w-full max-w-2xl bg-[#1e293b] border-l border-slate-800 h-full flex flex-col justify-between shadow-2xl animate-slideLeft">
+          <div className="w-full max-w-2xl glass-strong border-l border-slate-800/80 h-full flex flex-col justify-between shadow-2xl animate-slideLeft">
             
             {/* Panel Header */}
-            <div className="p-6 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between">
+            <div className="p-6 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="h-11 w-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-orange-500 text-lg">
                   {selectedLeadForChat.name.split(' ').map(n => n[0]).join('')}
@@ -694,7 +685,7 @@ export const CRMLeadsBoard: React.FC = () => {
                         type="date"
                         value={editApptDate}
                         onChange={e => setEditApptDate(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                        className="w-full input-premium-sm"
                       />
                     </div>
                     <div>
@@ -703,7 +694,7 @@ export const CRMLeadsBoard: React.FC = () => {
                         type="text"
                         value={editApptTime}
                         onChange={e => setEditApptTime(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                        className="w-full input-premium-sm"
                       />
                     </div>
                   </div>
@@ -714,7 +705,7 @@ export const CRMLeadsBoard: React.FC = () => {
                       onChange={e => setEditApptNotes(e.target.value)}
                       rows={2}
                       placeholder="Enter details, customer preferences, shingle issues, or claims information."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                      className="w-full input-premium-sm"
                     />
                   </div>
                   <div className="flex justify-end space-x-2">
@@ -736,7 +727,7 @@ export const CRMLeadsBoard: React.FC = () => {
             </div>
 
             {/* Conversations Transcripts Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#0f172a]/60">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/50 premium-scroll">
               {selectedLeadForChat.chatLog.map((log, index) => {
                 const isAI = log.sender === 'AI';
                 const isSystem = log.sender === 'System';
@@ -755,8 +746,8 @@ export const CRMLeadsBoard: React.FC = () => {
                   <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'}`}>
                     <div className={`max-w-md rounded-2xl px-4 py-3 text-xs leading-relaxed ${
                       isAI 
-                        ? 'bg-slate-800 text-slate-100 border border-slate-700/80 rounded-tl-none' 
-                        : 'bg-orange-500 text-slate-950 font-bold rounded-tr-none'
+                        ? 'chat-bubble-ai rounded-tl-none' 
+                        : 'chat-bubble-user rounded-tr-none'
                     }`}>
                       <div className="flex justify-between items-center gap-4 mb-1 border-b border-slate-700/30 pb-0.5">
                         <span className="text-[10px] font-black uppercase tracking-wider opacity-60">
@@ -774,7 +765,7 @@ export const CRMLeadsBoard: React.FC = () => {
             </div>
 
             {/* Conversation footer details */}
-            <div className="p-4 border-t border-slate-800 bg-[#0f172a] text-xs text-slate-500 flex items-center justify-between">
+            <div className="p-4 border-t border-slate-800/80 bg-slate-950/60 text-xs text-slate-500 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <ShieldCheck className="h-4 w-4 text-emerald-500" /> Lead Audit Trail verified
               </span>

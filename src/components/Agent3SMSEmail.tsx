@@ -124,7 +124,7 @@ export const Agent3SMSEmail: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 3: Follow-Up & Nurture SMS/Email</h2>
@@ -136,7 +136,7 @@ export const Agent3SMSEmail: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Sequence Timelines (7 cols) */}
-        <div className="lg:col-span-7 bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="lg:col-span-7 glass rounded-2xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Clock className="h-4.5 w-4.5 text-orange-500" /> Automated Sequence Timeline
@@ -193,7 +193,7 @@ export const Agent3SMSEmail: React.FC = () => {
 
         {/* Nurture Trigger Playground (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md flex flex-col justify-between h-[520px]">
+          <div className="glass card-hover rounded-2xl p-6 flex flex-col justify-between h-[520px]">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
                 <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Sequence Trigger Simulator
@@ -216,7 +216,7 @@ export const Agent3SMSEmail: React.FC = () => {
                       <select
                         value={simulatedLead}
                         onChange={e => setSimulatedLead(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
+                        className="input-premium text-xs font-medium"
                       >
                         {selectorLeads.map(lead => (
                           <option key={lead.id} value={lead.name}>
@@ -225,7 +225,7 @@ export const Agent3SMSEmail: React.FC = () => {
                         ))}
                       </select>
                     ) : (
-                      <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-[11px] text-slate-500 italic">
+                      <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-4 py-2.5 text-[11px] text-slate-500 italic">
                         No leads in the CRM yet — run Agent 1 or add a lead in the CRM Board first.
                       </div>
                     )}
@@ -233,7 +233,7 @@ export const Agent3SMSEmail: React.FC = () => {
 
                   <button
                     onClick={handleStartSequenceSim}
-                    className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-orange-500/20 transition flex items-center gap-1.5"
+                    className="btn-accent px-5 py-2.5 text-xs flex items-center gap-1.5"
                   >
                     <Play className="h-3.5 w-3.5 fill-slate-950" />
                     Launch Sequence
@@ -262,7 +262,7 @@ export const Agent3SMSEmail: React.FC = () => {
                           <div className={`max-w-xs rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
                             isAI 
                               ? 'bg-slate-850 text-slate-100 border border-slate-750 rounded-tl-none' 
-                              : 'bg-orange-500 text-slate-950 font-bold rounded-tr-none'
+                              : 'chat-bubble-user rounded-tr-none'
                           }`}>
                             <p>{log.text}</p>
                           </div>
@@ -291,12 +291,12 @@ export const Agent3SMSEmail: React.FC = () => {
                         onChange={e => setUserReplyText(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUserReply()}
                         disabled={isLoading}
-                        className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                        className="flex-1 input-premium px-3 py-2 text-xs disabled:opacity-50"
                       />
                       <button
                         onClick={handleUserReply}
                         disabled={isLoading}
-                        className="bg-orange-500 hover:bg-orange-600 px-4 rounded-xl text-slate-950 text-xs font-bold transition disabled:opacity-50"
+                        className="btn-accent px-4 rounded-xl text-xs font-bold min-h-0 disabled:opacity-50"
                       >
                         <Send className="h-4 w-4 stroke-[2.5]" />
                       </button>

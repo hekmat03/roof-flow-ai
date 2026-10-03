@@ -36,7 +36,13 @@ function MainAppContent() {
     }
   };
 
-  return <Layout>{renderContent()}</Layout>;
+  return (
+    <Layout>
+      <div key={activeTab} className="animate-tab-in h-full">
+        {renderContent()}
+      </div>
+    </Layout>
+  );
 }
 
 export default function App() {
