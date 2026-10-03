@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useCountUp } from '../utils/useCountUp';
 import { 
   Users, 
   Calendar, 
@@ -14,16 +15,39 @@ import {
   BadgeDollarSign
 } from 'lucide-react';
 
+/** Maps a CRM status to its premium .st-* pill class (10 statuses). */
+export function statusPillClass(status: string): string {
+  switch (status) {
+    case 'New Lead': return 'st-new';
+    case 'Contacted': return 'st-contacted';
+    case 'In Contact': return 'st-incontact';
+    case 'Inspection Scheduled': return 'st-scheduled';
+    case 'Inspection Completed': return 'st-inspected';
+    case 'Estimate Sent': return 'st-estimate';
+    case 'Closed-Won': return 'st-won';
+    case 'Closed-Lost': return 'st-lost';
+    case 'Follow-up Nurture': return 'st-nurture';
+    default: return 'st-closed';
+  }
+}
+
 export const Dashboard: React.FC = () => {
   const { leads, setActiveTab, companySettings } = useApp();
 
   const totalLeads = leads.length;
   const scheduledInspections = leads.filter(l => l.status === 'Inspection Scheduled').length;
   const followUpLeads = leads.filter(l => l.status === 'Follow-up Nurture').length;
-  
+
   // Calculate a realistic pipeline estimation
   // Assuming a 35% close rate on scheduled inspections and $12,000 average roof job value
   const estimatedRevenue = scheduledInspections * 12000 * 0.35;
+  const bookingRate = totalLeads > 0 ? Math.round((scheduledInspections / totalLeads) * 100) : 0;
+
+  // Count-up animated KPIs
+  const animTotal = useCountUp(totalLeads);
+  const animScheduled = useCountUp(scheduledInspections);
+  const animFollowUp = useCountUp(followUpLeads);
+  const animRevenue = useCountUp(estimatedRevenue);
 
   const agents = [
     {
@@ -33,7 +57,8 @@ export const Dashboard: React.FC = () => {
       description: 'Conversational web-widget that captures storm leads 24/7 and qualifies homeowner status.',
       status: 'Active',
       metric: '35% booking rate',
-      color: 'from-amber-500 to-orange-600',
+      color: 'from-amber-400 to-orange-600',
+      glow: 'shadow-amber-500/25',
       icon: MessageSquare,
     },
     {
@@ -44,6 +69,7 @@ export const Dashboard: React.FC = () => {
       status: 'Active',
       metric: '<15s avg response',
       color: 'from-orange-500 to-red-600',
+      glow: 'shadow-orange-500/25',
       icon: PhoneCall,
     },
     {
@@ -53,7 +79,8 @@ export const Dashboard: React.FC = () => {
       description: 'Automated 7-day multi-channel follow-up sequencers reacting to user replies instantly.',
       status: 'Active',
       metric: '18% reactivation',
-      color: 'from-yellow-500 to-amber-600',
+      color: 'from-yellow-400 to-amber-600',
+      glow: 'shadow-yellow-500/25',
       icon: MessageSquarePlus,
     },
     {
@@ -63,39 +90,84 @@ export const Dashboard: React.FC = () => {
       description: 'Follow-up on repair estimates to handle financing, budget, and competitor objections.',
       status: 'Active',
       metric: '+25% closing boost',
-      color: 'from-amber-600 to-red-600',
+      color: 'from-amber-500 to-red-600',
+      glow: 'shadow-amber-500/25',
       icon: FileText,
     }
   ];
 
+  const kpis = [
+    {
+      label: 'Captured Leads',
+      value: Math.round(animTotal),
+      display: String(Math.round(animTotal)),
+      sub: '24/7 Automated capture',
+      subIcon: Zap,
+      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/20',
+      icon: Users,
+      iconColor: 'text-accent-400',
+    },
+    {
+      label: 'Inspections Scheduled',
+      value: Math.round(animScheduled),
+      display: String(Math.round(animScheduled)),
+      sub: `${bookingRate}% Lead-to-Booking Rate`,
+      subIcon: null,
+      chip: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+      icon: Calendar,
+      iconColor: 'text-emerald-400',
+    },
+    {
+      label: 'Reactivation Queue',
+      value: Math.round(animFollowUp),
+      display: String(Math.round(animFollowUp)),
+      sub: 'SMS/Email nurture sequences',
+      subIcon: null,
+      chip: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+      icon: MessageSquarePlus,
+      iconColor: 'text-yellow-400',
+    },
+    {
+      label: 'Est. Booking Revenue',
+      value: Math.round(animRevenue),
+      display: `$${Math.round(animRevenue).toLocaleString()}`,
+      sub: 'Based on 35% close / $12k avg repair',
+      subIcon: null,
+      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/20',
+      icon: BadgeDollarSign,
+      iconColor: 'text-accent-400',
+    },
+  ];
+
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-[#1e293b] to-slate-900 border border-slate-800 rounded-2xl p-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <TrendingUp className="h-48 w-48 text-orange-500" />
+      <div className="glass hero-glow rounded-3xl p-6 md:p-10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-6 opacity-[0.07] animate-float-slow">
+          <TrendingUp className="h-44 w-44 md:h-56 md:w-56 text-accent-400" />
         </div>
         <div className="relative z-10 max-w-2xl">
-          <span className="bg-orange-500/10 text-orange-400 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border border-orange-500/20">
+          <span className="inline-flex items-center gap-2 bg-accent-500/10 text-accent-300 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider border border-accent-500/25 animate-pop-in">
+            <Zap className="h-3 w-3" />
             RoofFlow Sales Console
           </span>
-          <h2 className="text-3xl font-extrabold text-white mt-4">
-            Maximize Storm Damage Leads with <span className="text-orange-500">Autonomous Sales Agents</span>
+          <h2 className="text-fluid-hero font-extrabold text-white mt-4 tracking-tight">
+            Maximize Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-orange-500 bg-clip-text text-transparent">Autonomous Sales Agents</span>
           </h2>
-          <p className="text-slate-300 mt-2 text-sm leading-relaxed">
+          <p className="text-slate-300 mt-2 text-fluid-body leading-relaxed">
             RoofFlow AI automatically monitors, qualifies, and follows up with homeowners in the <span className="font-bold text-white">{companySettings.city}</span> market, keeping scheduling books filled after severe events like the <span className="font-bold text-white">{companySettings.stormName}</span>.
           </p>
-          <div className="mt-6 flex space-x-4">
+          <div className="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-3 sm:space-y-0">
             <button 
               onClick={() => setActiveTab('agent1')}
-              className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-lg shadow-orange-500/20 flex items-center gap-2 group"
+              className="btn-accent px-5 py-3 text-sm flex items-center justify-center gap-2 group"
             >
               Simulate Chatbot 
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
             </button>
             <button 
               onClick={() => setActiveTab('crm')}
-              className="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition border border-slate-700"
+              className="btn-ghost px-5 py-3 text-sm flex items-center justify-center gap-2"
             >
               View Leads Board
             </button>
@@ -104,101 +176,56 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Main KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md hover:border-slate-700 transition duration-150">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Captured Leads</p>
-              <h3 className="text-3xl font-black font-mono text-white mt-1">{totalLeads}</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+        {kpis.map((kpi) => {
+          const SubIcon = kpi.subIcon;
+          return (
+            <div key={kpi.label} className="glass card-hover rounded-2xl p-5 md:p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{kpi.label}</p>
+                  <h3 className="text-3xl font-black font-mono text-white mt-1 count-up-flash">{kpi.display}</h3>
+                </div>
+                <div className={`p-3 rounded-xl ${kpi.chip}`}>
+                  <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-xs text-slate-400">
+                {SubIcon ? <SubIcon className="h-3.5 w-3.5 text-accent-400 mr-1" /> : null}
+                <span>{kpi.sub}</span>
+              </div>
             </div>
-            <div className="bg-orange-500/10 p-3 rounded-xl">
-              <Users className="h-6 w-6 text-orange-500" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-xs text-slate-400">
-            <Zap className="h-3.5 w-3.5 text-orange-400 mr-1" />
-            <span>24/7 Automated capture</span>
-          </div>
-        </div>
-
-        <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md hover:border-slate-700 transition duration-150">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Inspections Scheduled</p>
-              <h3 className="text-3xl font-black font-mono text-white mt-1">{scheduledInspections}</h3>
-            </div>
-            <div className="bg-emerald-500/10 p-3 rounded-xl">
-              <Calendar className="h-6 w-6 text-emerald-400" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-xs text-slate-400">
-            <span className="text-emerald-400 font-bold mr-1 font-mono">
-              {totalLeads > 0 ? Math.round((scheduledInspections / totalLeads) * 100) : 0}%
-            </span>
-            <span>Lead-to-Booking Rate</span>
-          </div>
-        </div>
-
-        <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md hover:border-slate-700 transition duration-150">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Reactivation Queue</p>
-              <h3 className="text-3xl font-black font-mono text-white mt-1">{followUpLeads}</h3>
-            </div>
-            <div className="bg-yellow-500/10 p-3 rounded-xl">
-              <MessageSquarePlus className="h-6 w-6 text-yellow-400" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-xs text-slate-400">
-            <span>SMS/Email nurture sequences</span>
-          </div>
-        </div>
-
-        <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md hover:border-slate-700 transition duration-150">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Est. Booking Revenue</p>
-              <h3 className="text-3xl font-black font-mono text-orange-500 mt-1">
-                ${estimatedRevenue.toLocaleString()}
-              </h3>
-            </div>
-            <div className="bg-orange-500/10 p-3 rounded-xl">
-              <BadgeDollarSign className="h-6 w-6 text-orange-500" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-xs text-slate-400">
-            <span>Based on 35% close / $12k avg repair</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Roster of 4 AI Sales Agents */}
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h3 className="text-xl font-bold text-white">Interactive AI Agent Suite</h3>
+            <h3 className="text-fluid-title font-bold text-white">Interactive AI Agent Suite</h3>
             <p className="text-xs text-slate-400 mt-1">Four specialized AI agents working together across the roofing sales pipeline</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
           {agents.map((agent) => {
             const Icon = agent.icon;
             return (
               <div 
                 key={agent.id}
-                className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md hover:border-slate-700 transition duration-200 flex flex-col justify-between group"
+                className="glass card-hover rounded-2xl p-6 flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${agent.color} shadow-lg shadow-orange-500/5`}>
+                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${agent.color} shadow-lg ${agent.glow} group-hover:scale-105 transition-transform duration-200`}>
                       <Icon className="h-5 w-5 text-slate-950 stroke-[2.5]" />
                     </div>
-                    <span className="text-xs bg-slate-900 border border-slate-800 text-slate-400 font-mono font-bold px-2 py-0.5 rounded-md uppercase">
+                    <span className="text-xs bg-slate-900/70 border border-slate-700/70 text-slate-400 font-mono font-bold px-2 py-0.5 rounded-md uppercase">
                       Agent {agent.number}
                     </span>
                   </div>
-                  <h4 className="text-base font-bold text-white group-hover:text-orange-400 transition">
+                  <h4 className="text-base font-bold text-white group-hover:text-accent-300 transition-colors duration-200">
                     {agent.title}
                   </h4>
                   <p className="text-xs text-slate-400 mt-2 leading-relaxed">
@@ -206,14 +233,14 @@ export const Dashboard: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs">
+                <div className="mt-6 pt-4 border-t border-slate-800/70 flex items-center justify-between text-xs">
                   <div>
                     <span className="text-slate-500 block font-semibold uppercase tracking-wider text-[9px]">KPI Metric</span>
                     <span className="text-slate-200 font-bold font-mono">{agent.metric}</span>
                   </div>
                   <button 
                     onClick={() => setActiveTab(agent.id)}
-                    className="bg-slate-800 hover:bg-orange-500 hover:text-slate-950 text-slate-300 font-bold px-3 py-1.5 rounded-lg transition-all duration-150 flex items-center gap-1"
+                    className="btn-ghost px-3 py-2 rounded-lg flex items-center gap-1 text-xs"
                   >
                     Simulate
                     <ArrowRight className="h-3 w-3" />
@@ -226,9 +253,9 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Bottom Row: Recent Leads & Active Storm Warnings */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Recent Leads (Left/Mid) */}
-        <div className="md:col-span-2 bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+        <div className="lg:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-base font-bold text-white">Latest Pipeline Inflow</h3>
@@ -236,23 +263,23 @@ export const Dashboard: React.FC = () => {
             </div>
             <button 
               onClick={() => setActiveTab('crm')}
-              className="text-xs text-orange-500 hover:text-orange-400 font-bold flex items-center gap-1.5"
+              className="text-xs text-accent-400 hover:text-accent-300 font-bold flex items-center gap-1.5 transition-colors hover:gap-2.5"
             >
               Open CRM Board
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="divide-y divide-slate-800">
-            {leads.slice(0, 4).map((lead) => (
-              <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0">
-                <div className="flex items-center space-x-3.5">
-                  <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-bold text-orange-500">
+          <div className="divide-y divide-slate-800/70">
+            {leads.slice(0, 4).map((lead, idx) => (
+              <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0 gap-3 animate-slide-up" style={{ animationDelay: `${idx * 60}ms` }}>
+                <div className="flex items-center space-x-3.5 min-w-0">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700/70 flex items-center justify-center font-bold text-accent-300 shrink-0 shadow-lg">
                     {lead.name.split(' ').map(n => n[0]).join('')}
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{lead.name}</h4>
-                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold text-white truncate">{lead.name}</h4>
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
                       <span>{lead.email}</span>
                       <span className="text-slate-600">•</span>
                       <span>{lead.phone}</span>
@@ -260,18 +287,12 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
+                <div className="flex items-center space-x-3 shrink-0">
+                  <div className="text-right hidden sm:block">
                     <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Acquired via</span>
                     <span className="text-xs text-slate-300 font-medium">{lead.agentType}</span>
                   </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
-                    lead.status === 'Inspection Scheduled' 
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/10'
-                      : lead.status === 'Follow-up Nurture'
-                      ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/10'
-                      : 'bg-orange-500/10 text-orange-400 border-orange-500/10'
-                  }`}>
+                  <span className={`status-pill ${statusPillClass(lead.status)}`}>
                     {lead.status}
                   </span>
                 </div>
@@ -281,9 +302,9 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Storm/Objection Focus (Right) */}
-        <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md flex flex-col justify-between">
+        <div className="glass card-hover rounded-2xl p-5 md:p-6 flex flex-col justify-between">
           <div>
-            <div className="flex items-center space-x-2 text-orange-400 mb-4 bg-orange-500/10 p-3 rounded-xl border border-orange-500/20">
+            <div className="flex items-center space-x-2 text-accent-400 mb-4 bg-accent-500/10 p-3 rounded-xl border border-accent-500/25">
               <AlertTriangle className="h-5 w-5 stroke-[2.5]" />
               <span className="text-xs font-bold uppercase tracking-wider">Storm Objection Vector</span>
             </div>
@@ -291,15 +312,15 @@ export const Dashboard: React.FC = () => {
             <p className="text-xs text-slate-400 mt-2 leading-relaxed">
               AI agents are currently programmed to inject references to the <span className="text-slate-200 font-bold">{companySettings.stormName}</span> that impacted the <span className="text-slate-200 font-bold">{companySettings.city}</span> region on <span className="text-slate-200 font-bold">{companySettings.stormDate}</span>.
             </p>
-            <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 mt-4 space-y-2 font-mono leading-relaxed">
-              <p className="text-orange-400 font-bold uppercase tracking-wider text-[9px] mb-1">Active AI Objection Script</p>
+            <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-xs text-slate-300 mt-4 space-y-2 font-mono leading-relaxed">
+              <p className="text-accent-400 font-bold uppercase tracking-wider text-[9px] mb-1">Active AI Objection Script</p>
               {`Most insurance policies have a 1-year filing limit from the event date (${companySettings.stormDate}). We provide a free inspection report so you don't miss the deadline.`}
             </div>
           </div>
 
           <button 
             onClick={() => setActiveTab('config')}
-            className="w-full mt-6 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs py-2.5 rounded-xl border border-slate-700 transition"
+            className="w-full mt-6 btn-ghost text-xs py-3"
           >
             Adjust Target Event Settings
           </button>

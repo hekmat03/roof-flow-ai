@@ -50,7 +50,7 @@ export const Configuration: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">System Configuration</h2>
@@ -61,7 +61,7 @@ export const Configuration: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Editor Form */}
-        <div className="lg:col-span-2 bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+        <div className="lg:col-span-2 glass card-hover rounded-2xl p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
               <Settings className="h-4.5 w-4.5 text-orange-500" /> Identity & Campaign Parameters
@@ -75,7 +75,7 @@ export const Configuration: React.FC = () => {
                   type="text"
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
+                  className="input-premium text-sm font-medium"
                 />
               </div>
               <div>
@@ -84,7 +84,7 @@ export const Configuration: React.FC = () => {
                   type="text"
                   value={city}
                   onChange={e => setCity(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
+                  className="input-premium text-sm font-medium"
                 />
               </div>
             </div>
@@ -97,7 +97,7 @@ export const Configuration: React.FC = () => {
                   type="text"
                   value={stormName}
                   onChange={e => setStormName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
+                  className="input-premium text-sm font-medium"
                 />
               </div>
               <div>
@@ -106,7 +106,7 @@ export const Configuration: React.FC = () => {
                   type="text"
                   value={stormDate}
                   onChange={e => setStormDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 font-medium"
+                  className="input-premium text-sm font-medium"
                 />
               </div>
             </div>
@@ -118,7 +118,7 @@ export const Configuration: React.FC = () => {
                 rows={2}
                 value={financingOptions}
                 onChange={e => setFinancingOptions(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 font-medium leading-relaxed"
+                className="input-premium text-sm font-medium leading-relaxed"
               />
               <span className="text-[10px] text-slate-500 mt-1.5 block">Used by Phone/Estimate Agents to answer "How will I pay for my deductible?"</span>
             </div>
@@ -130,7 +130,7 @@ export const Configuration: React.FC = () => {
                 rows={2}
                 value={agentTone}
                 onChange={e => setAgentTone(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 font-medium leading-relaxed"
+                className="input-premium text-sm font-medium leading-relaxed"
               />
               <span className="text-[10px] text-slate-500 mt-1.5 block">Overrides default response parameters across active models.</span>
             </div>
@@ -154,7 +154,7 @@ export const Configuration: React.FC = () => {
                 )}
                 <button
                   type="submit"
-                  className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black px-6 py-2.5 rounded-xl text-sm transition shadow-lg shadow-orange-500/20"
+                  className="btn-accent px-6 py-2.5 text-sm"
                 >
                   Save Global Configurations
                 </button>
@@ -165,7 +165,7 @@ export const Configuration: React.FC = () => {
 
         {/* Info sidebar helper */}
         <div className="space-y-6">
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+          <div className="glass card-hover rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-3">Settings Synchronization</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
               Updates saved in this configuration panel are instantly propagated across all four simulators.

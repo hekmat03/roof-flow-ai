@@ -43,11 +43,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex h-screen bg-[#0f172a] text-slate-100 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans relative panel-bg">
       {/* Mobile overlay (click to close menu) */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-30 md:hidden"
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -55,34 +55,35 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static z-40 h-full w-72 md:w-80 bg-[#1e293b] border-r border-slate-800
-          flex flex-col justify-between shrink-0 transition-transform duration-200
-          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+          fixed md:static z-40 h-full w-72 md:w-80 bg-slate-950/85 md:bg-slate-950 backdrop-blur-xl
+          border-r border-slate-800/80 flex flex-col justify-between shrink-0
+          transition-transform duration-300 ease-out
+          ${mobileMenuOpen ? 'translate-x-0 drawer-in' : '-translate-x-full'} md:translate-x-0
         `}
       >
         <div>
           {/* Sidebar Header */}
-          <div className="p-4 md:p-6 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-[#1e293b] to-slate-900">
+          <div className="p-4 md:p-6 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900/70 to-slate-900/20">
             <div className="flex items-center space-x-3">
-              <div className="bg-orange-500 p-2.5 rounded-lg shadow-lg shadow-orange-500/20">
+              <div className="bg-gradient-to-br from-accent-400 to-accent-600 p-2.5 rounded-xl shadow-lg shadow-accent-500/30 animate-glow-breathe">
                 <CloudLightning className="h-6 w-6 text-slate-950 stroke-[2.5]" />
               </div>
               <div>
                 <h1 className="text-lg md:text-xl font-black tracking-tight text-white flex items-center gap-1">
-                  Roof<span className="text-orange-500">Flow</span>
-                  <span className="text-xs bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">AI</span>
+                  Roof<span className="text-accent-400">Flow</span>
+                  <span className="text-[10px] bg-accent-500/10 text-accent-300 px-1.5 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider border border-accent-500/20">AI</span>
                 </h1>
                 <p className="text-xs text-slate-400 font-medium">Contractor Sales Suite</p>
               </div>
             </div>
             {/* Close button, mobile only */}
-            <button className="md:hidden text-slate-400" onClick={() => setMobileMenuOpen(false)}>
+            <button className="md:hidden text-slate-300 hover:text-white transition min-h-0" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
               <X className="h-6 w-6" />
             </button>
           </div>
 
           {/* Navigation Menu */}
-          <nav className="p-4 space-y-1">
+          <nav className="p-3 md:p-4 space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -90,14 +91,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <button
                   key={item.id}
                   onClick={() => handleTabSelect(item.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-orange-500 text-slate-950 font-bold shadow-lg shadow-orange-500/20'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                  }`}
+                  className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
                 >
-                  <Icon className={`h-5 w-5 ${isActive ? 'text-slate-950 stroke-[2.5]' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-accent-400' : 'text-slate-500'}`} />
+                  <span className="truncate">{item.label}</span>
                 </button>
               );
             })}
@@ -105,8 +102,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/40 text-xs text-slate-500 flex items-center justify-between">
-          <span>v1.0.0 Ratified Plan</span>
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-500 flex items-center justify-between">
+          <span className="font-semibold tracking-wide">v1.0.0 Premium Suite</span>
           <span className="flex h-2 w-2 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -117,10 +114,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top Header */}
-        <header className="h-auto md:h-20 bg-[#1e293b] border-b border-slate-800 flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 shadow-sm z-10 gap-4">
+        <header className="relative z-20 h-auto md:h-20 glass-strong flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 gap-4">
           {/* Hamburger, mobile only */}
-          <button className="md:hidden text-slate-300 shrink-0" onClick={() => setMobileMenuOpen(true)}>
-            <Menu className="h-6 w-6" />
+          <button
+            className="md:hidden text-slate-200 shrink-0 bg-slate-800/70 border border-slate-700/70 rounded-xl px-3 flex items-center justify-center hover:bg-slate-700/70 transition active:scale-95"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
           </button>
 
           {/* Company Context — scrolls horizontally on small screens instead of overflowing */}
@@ -129,14 +130,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">Contractor Profile</span>
               <span className="text-white font-bold text-base">{companySettings.companyName}</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-800 hidden sm:block shrink-0"></div>
+            <div className="h-8 w-[1px] bg-slate-700/70 hidden sm:block shrink-0"></div>
             <div className="shrink-0 hidden sm:block">
               <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">Service Market</span>
               <span className="text-white font-semibold">{companySettings.city}</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-800 hidden lg:block shrink-0"></div>
+            <div className="h-8 w-[1px] bg-slate-700/70 hidden lg:block shrink-0"></div>
             <div className="flex items-center space-x-2 shrink-0 hidden lg:flex">
-              <div className="bg-red-500/10 text-red-400 p-1 rounded">
+              <div className="bg-red-500/10 text-red-400 p-1 rounded-lg border border-red-500/10">
                 <CloudLightning className="h-4 w-4" />
               </div>
               <div>
@@ -150,15 +151,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Quick Metrics Badge — hidden on the smallest screens to save space */}
           <div className="hidden sm:flex items-center space-x-3 shrink-0">
-            <div className="bg-slate-900/50 border border-slate-800 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3">
-              <Users className="h-4 w-4 text-orange-500" />
+            <div className="bg-slate-900/50 border border-slate-800/80 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3 backdrop-blur-md">
+              <Users className="h-4 w-4 text-accent-400" />
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">Total Leads</span>
                 <span className="text-sm text-slate-100 font-bold font-mono">{totalLeads}</span>
               </div>
             </div>
-            <div className="hidden md:flex bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-xl items-center space-x-3">
-              <Calendar className="h-4 w-4 text-emerald-500" />
+            <div className="hidden md:flex bg-slate-900/50 border border-slate-800/80 px-4 py-2 rounded-xl items-center space-x-3 backdrop-blur-md">
+              <Calendar className="h-4 w-4 text-emerald-400" />
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">Scheduled Inspections</span>
                 <span className="text-sm text-slate-100 font-bold font-mono">{scheduledInspections}</span>
@@ -168,7 +169,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </header>
 
         {/* Main Panel Viewport */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#0f172a]">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 premium-scroll">
           <div className="max-w-7xl mx-auto h-full">
             {children}
           </div>

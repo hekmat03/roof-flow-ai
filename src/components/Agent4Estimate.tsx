@@ -165,7 +165,7 @@ export const Agent4Estimate: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 4: Estimate Follow-Up Agent</h2>
@@ -177,7 +177,7 @@ export const Agent4Estimate: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Objection Selections (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+          <div className="glass card-hover rounded-2xl p-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <User className="h-4.5 w-4.5 text-orange-500" /> CRM Target Lead
@@ -190,7 +190,7 @@ export const Agent4Estimate: React.FC = () => {
               <select
                 value={targetLeadId}
                 onChange={e => setTargetLeadId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500 font-medium mt-4"
+                className="input-premium text-xs font-medium mt-4"
               >
                 {leadTargets.map(lead => (
                   <option key={lead.id} value={lead.id}>
@@ -205,7 +205,7 @@ export const Agent4Estimate: React.FC = () => {
             )}
           </div>
 
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+          <div className="glass card-hover rounded-2xl p-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <DollarSign className="h-4.5 w-4.5 text-orange-500" /> Objection Scenarios
@@ -259,7 +259,7 @@ export const Agent4Estimate: React.FC = () => {
         </div>
 
         {/* Live Simulation Logs (7 cols) */}
-        <div className="lg:col-span-7 bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[520px] justify-between">
+        <div className="lg:col-span-7 glass rounded-2xl p-6 shadow-xl flex flex-col h-[520px] justify-between">
           <div className="flex-1 flex flex-col overflow-hidden space-y-4">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
               <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Interactive Negotiation Panel
@@ -279,8 +279,8 @@ export const Agent4Estimate: React.FC = () => {
                       )}
                       <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                         isAI 
-                          ? 'bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none' 
-                          : 'bg-orange-500 text-slate-950 font-bold rounded-tr-none'
+                          ? 'chat-bubble-ai rounded-tl-none' 
+                          : 'chat-bubble-user rounded-tr-none'
                       }`}>
                         <span className="text-[9px] opacity-40 font-black uppercase tracking-wider block mb-1">
                           {isAI ? 'Agent 4 Estimate AI' : 'Homeowner User'}
@@ -314,12 +314,12 @@ export const Agent4Estimate: React.FC = () => {
                 onChange={e => setInputText(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCustomSend()}
                 disabled={isLoading}
-                className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                className="flex-1 input-premium px-4 py-2.5 text-xs disabled:opacity-50"
               />
               <button
                 onClick={handleCustomSend}
                 disabled={isLoading}
-                className="bg-orange-500 hover:bg-orange-600 px-4 py-2.5 rounded-xl text-slate-950 text-xs font-black transition disabled:opacity-50"
+                className="btn-accent px-4 py-2.5 rounded-xl text-xs font-black min-h-0 disabled:opacity-50"
               >
                 Send Objections
               </button>

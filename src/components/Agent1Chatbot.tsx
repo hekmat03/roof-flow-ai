@@ -118,7 +118,7 @@ export const Agent1Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
@@ -129,9 +129,9 @@ export const Agent1Chatbot: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Chat Interface (7 cols) */}
-        <div className="lg:col-span-7 bg-[#1e293b] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
+        <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
           {/* Top Chat Header */}
-          <div className="bg-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+          <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-3">
               <div className="bg-orange-500/10 p-2 rounded-lg relative">
                 <Bot className="h-5 w-5 text-orange-500" />
@@ -148,7 +148,7 @@ export const Agent1Chatbot: React.FC = () => {
           </div>
 
           {/* Chat Messages Log */}
-          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#0f172a]/60">
+          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
               return (
@@ -159,10 +159,10 @@ export const Agent1Chatbot: React.FC = () => {
                         <Bot className="h-4 w-4 text-orange-500" />
                       </div>
                     )}
-                    <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    <div className={`px-4 py-2.5 text-xs leading-relaxed ${
                       isAI
-                        ? 'bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none'
-                        : 'bg-orange-500 text-slate-950 font-bold rounded-tr-none'
+                        ? 'chat-bubble-ai rounded-tl-none'
+                        : 'chat-bubble-user rounded-tr-none'
                     }`}>
                       <p>{msg.text}</p>
                       <span className="text-[9px] opacity-40 block text-right mt-1.5 font-mono">
@@ -180,10 +180,8 @@ export const Agent1Chatbot: React.FC = () => {
                   <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
                     <Bot className="h-4 w-4 text-orange-500" />
                   </div>
-                  <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                    <span className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                    <span className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce"></span>
+                  <div className="typing-indicator">
+                    <span></span><span></span><span></span>
                   </div>
                 </div>
               </div>
@@ -197,7 +195,7 @@ export const Agent1Chatbot: React.FC = () => {
 
             {/* Inline booking form, shown when the AI signals booking intent */}
             {showBookingForm && (
-              <div className="bg-slate-900 border border-orange-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
+              <div className="bg-slate-900/80 backdrop-blur-md border border-accent-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-orange-500" /> Book Your Free Inspection
                 </h4>
@@ -232,13 +230,13 @@ export const Agent1Chatbot: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setOwnership('Owner')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-orange-500 text-slate-950 border-orange-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
                     >
                       I own the home
                     </button>
                     <button
                       onClick={() => setOwnership('Renter')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-orange-500 text-slate-950 border-orange-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
                     >
                       I rent
                     </button>
@@ -247,7 +245,7 @@ export const Agent1Chatbot: React.FC = () => {
                 {formError && <p className="text-[10px] text-red-400">{formError}</p>}
                 <button
                   onClick={handleBookingSubmit}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs py-2.5 rounded-lg transition"
+                  className="w-full btn-accent text-xs py-3"
                 >
                   Confirm Free Inspection Request
                 </button>
@@ -263,7 +261,7 @@ export const Agent1Chatbot: React.FC = () => {
                   key={i}
                   onClick={() => handleSend(reply)}
                   disabled={isLoading}
-                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-1.5 rounded-full transition shrink-0 disabled:opacity-50"
+                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-2.5 rounded-full transition shrink-0 disabled:opacity-50"
                 >
                   {reply}
                 </button>
@@ -280,12 +278,12 @@ export const Agent1Chatbot: React.FC = () => {
               onChange={e => setInputText(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend(inputText)}
               disabled={isLoading || showBookingForm}
-              className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+              className="flex-1 input-premium disabled:opacity-50"
             />
             <button
               onClick={() => handleSend(inputText)}
               disabled={isLoading || showBookingForm}
-              className="bg-orange-500 hover:bg-orange-600 p-3 rounded-xl text-slate-950 shadow-lg shadow-orange-500/10 transition shrink-0 disabled:opacity-50"
+              className="btn-accent p-3 rounded-xl shrink-0 disabled:opacity-50 min-h-0"
             >
               <Send className="h-4 w-4 stroke-[2.5]" />
             </button>
@@ -294,9 +292,9 @@ export const Agent1Chatbot: React.FC = () => {
 
         {/* Sidebar Simulator explanation (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md">
+          <div className="glass card-hover rounded-2xl p-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Sparkles className="h-4.5 w-4.5 text-orange-500" /> How This Works
+              <Sparkles className="h-4.5 w-4.5 text-accent-400" /> How This Works
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed mt-3">
               This is a live AI assistant, not a scripted demo. It answers freely using your company info, and hands off to a real booking form once a visitor is ready to schedule.

@@ -75,7 +75,7 @@ Your goals:
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn h-full flex flex-col">
+    <div className="space-y-6 h-full flex flex-col">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">System Prompt Playground</h2>
@@ -86,7 +86,7 @@ Your goals:
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
         {/* Editor (7 cols) */}
-        <div className="lg:col-span-7 bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md flex flex-col justify-between">
+        <div className="lg:col-span-7 glass card-hover rounded-2xl p-6 flex flex-col justify-between">
           <div className="space-y-6 flex-1 flex flex-col">
             {/* Tab Selector */}
             <div className="flex bg-slate-900 p-1.5 rounded-xl border border-slate-800">
@@ -123,7 +123,7 @@ Your goals:
               <textarea
                 value={promptText}
                 onChange={e => setPromptText(e.target.value)}
-                className="w-full flex-1 bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-mono text-emerald-400 focus:outline-none focus:border-orange-500 leading-relaxed resize-none h-full"
+                className="input-premium flex-1 p-4 text-xs font-mono text-emerald-400 leading-relaxed resize-none h-full"
                 placeholder="Enter system prompts here..."
               />
             </div>
@@ -147,7 +147,7 @@ Your goals:
               )}
               <button
                 onClick={handleSave}
-                className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-orange-500/20 flex items-center gap-1.5"
+                className="btn-accent px-5 py-2 text-xs flex items-center gap-1.5"
               >
                 <Save className="h-4 w-4" />
                 Apply Prompts
@@ -158,7 +158,7 @@ Your goals:
 
         {/* Live Preview (5 cols) */}
         <div className="lg:col-span-5 flex flex-col space-y-6">
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md flex-1 flex flex-col">
+          <div className="glass card-hover rounded-2xl p-6 flex-1 flex flex-col">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
               <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Compiled System Prompt
             </h3>
@@ -171,7 +171,7 @@ Your goals:
             </div>
           </div>
 
-          <div className="bg-[#1e293b] border border-slate-800 rounded-2xl p-6 shadow-md text-xs space-y-3">
+          <div className="glass card-hover rounded-2xl p-6 text-xs space-y-3">
             <h4 className="text-sm font-bold text-white">Dynamic Variables Key</h4>
             <p className="text-slate-400">You can use these brackets in any system prompt to pull values instantly from system configurations:</p>
             <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
