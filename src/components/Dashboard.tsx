@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { useCountUp } from '../utils/useCountUp';
+import { AnalyticsCharts } from './AnalyticsCharts';
 import { 
   Users, 
   Calendar, 
@@ -199,6 +200,8 @@ export const Dashboard: React.FC = () => {
         })}
       </div>
 
+      {/* Live Analytics: Revenue Attribution + Conversion Funnel */}
+      <AnalyticsCharts />
       {/* Roster of 4 AI Sales Agents */}
       <div>
         <div className="flex items-center justify-between mb-4 md:mb-6">

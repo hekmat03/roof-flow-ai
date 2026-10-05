@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Phone, PhoneOff, Mic, Play, Volume2, Calendar, Sparkles, User, ShieldAlert, Send } from 'lucide-react';
+import { Phone, PhoneOff, Mic, MicOff, Play, Volume2, VolumeX, Calendar, Sparkles, User, ShieldAlert, Send, AudioLines } from 'lucide-react';
 import { getAgentResponse, type AgentContext } from '../lib/agentService';
+import {
+  speakText,
+  stopSpeaking,
+  startListening,
+  isSpeechSynthesisSupported,
+  isSpeechRecognitionSupported,
+} from '../utils/speech';
 
 interface ScriptOption {
   text: string;
@@ -41,6 +48,80 @@ export const Agent2PhoneCall: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [propertyStatus, setPropertyStatus] = useState<'Owner' | 'Renter'>('Owner');
+
+  // ---- Voice AI (Web Speech API) ----
+  // TTS speaks every AI reply; STT transcribes the homeowner when the mic
+  // button is held. Both feature-detect gracefully (Firefox → text fallback).
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState('');
+  const listenHandle = useRef<{ stop: () => void } | null>(null);
+  const ttsSupported = useRef(isSpeechSynthesisSupported());
+  const sttSupported = useRef(isSpeechRecognitionSupported());
+
+  // Stop any audio/recognition when the component unmounts.
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      listenHandle.current?.stop();
+    };
+  }, []);
+
+  /** Speak an AI reply aloud when voice is enabled. Never blocks or throws. */
+  const speakAloud = async (text: string) => {
+    if (!voiceOn || !ttsSupported.current) return;
+    setIsSpeaking(true);
+    await speakText(text);
+    setIsSpeaking(false);
+  };
+
+  const stopListening = () => {
+    listenHandle.current?.stop();
+    listenHandle.current = null;
+    setIsListening(false);
+  };
+
+  /** Microphone press: listen once, transcribe, then reply as free-form. */
+  const handleMicToggle = () => {
+    if (isListening) {
+      stopListening();
+      return;
+    }
+    if (!sttSupported.current) {
+      setVoiceNotice('Speech recognition is not available in this browser — use the text reply below.');
+      setTimeout(() => setVoiceNotice(''), 5000);
+      return;
+    }
+    setVoiceNotice('');
+    const handle = startListening({
+      onFinal: transcript => {
+        setDialogue(prev => [...prev, { speaker: 'Homeowner', text: transcript }]);
+        speakFreeForm(transcript);
+      },
+      onError: code => {
+        const friendly =
+          code === 'not-allowed' || code === 'service-not-allowed'
+            ? 'Microphone permission denied — allow mic access to use voice input.'
+            : code === 'no-speech'
+              ? 'No speech detected — try again or type your reply.'
+              : 'Voice input error — use the text reply below.';
+        setVoiceNotice(friendly);
+        setTimeout(() => setVoiceNotice(''), 5000);
+      },
+      onEnd: () => {
+        listenHandle.current = null;
+        setIsListening(false);
+      },
+    });
+    if (handle) {
+      listenHandle.current = handle;
+      setIsListening(true);
+    } else {
+      setVoiceNotice('Speech recognition is not available in this browser — use the text reply below.');
+      setTimeout(() => setVoiceNotice(''), 5000);
+    }
+  };
 
   // Phone quick dialogue flow — each step declares which AI intent voices the next response,
   // so every line is generated (settings-aware, varied) instead of hardcoded.
@@ -111,6 +192,7 @@ export const Agent2PhoneCall: React.FC = () => {
         { ...agentContext, replyIntent: intent }
       );
       setDialogue(prev => [...prev, { speaker: 'AI', text: reply }]);
+      await speakAloud(reply);
       return reply;
     } finally {
       setIsGenerating(false);
@@ -127,6 +209,7 @@ export const Agent2PhoneCall: React.FC = () => {
         agentContext
       );
       setDialogue(prev => [...prev, { speaker: 'AI', text: reply }]);
+      await speakAloud(reply);
       return reply;
     } finally {
       setIsGenerating(false);
@@ -214,6 +297,8 @@ export const Agent2PhoneCall: React.FC = () => {
   };
 
   const handleEndCall = () => {
+    stopSpeaking();
+    stopListening();
     setCallStatus('idle');
     setDialogue([]);
   };
@@ -288,21 +373,46 @@ export const Agent2PhoneCall: React.FC = () => {
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">AI Voice Active</h4>
                   <p className="text-sm font-black text-white">{name || 'Arthur Dent'}</p>
-                  <p className="text-[9px] text-emerald-400 font-mono font-bold">00:42 • Connected</p>
+                  <p className="text-[9px] text-emerald-400 font-mono font-bold">
+                    {isSpeaking ? 'Speaking…' : isListening ? 'Listening…' : '00:42 • Connected'}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 my-6">
                   <div className="flex flex-col items-center">
-                    <button className="min-h-0 h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
-                      <Mic className="h-4 w-4" />
+                    <button
+                      onClick={handleMicToggle}
+                      disabled={callStatus !== 'connected'}
+                      title={sttSupported.current ? 'Talk to the AI (speech recognition)' : 'Speech recognition unavailable in this browser'}
+                      className={`min-h-0 h-10 w-10 rounded-full border flex items-center justify-center transition ${
+                        isListening
+                          ? 'bg-red-500/20 border-red-500/40 text-red-400 animate-pulse'
+                          : sttSupported.current
+                            ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                            : 'bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed'
+                      }`}
+                    >
+                      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                     </button>
-                    <span className="text-[9px] text-slate-500 mt-1.5">Mute</span>
+                    <span className={`text-[9px] mt-1.5 font-bold ${isListening ? 'text-red-400' : 'text-slate-500'}`}>
+                      {isListening ? 'Listening' : 'Mic'}
+                    </span>
                   </div>
                   <div className="flex flex-col items-center col-span-1">
-                    <button className="min-h-0 h-10 w-10 rounded-full bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-400 transition animate-pulse">
-                      <Volume2 className="h-4 w-4" />
+                    <button
+                      onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn(v => !v); }}
+                      title={voiceOn ? 'Mute AI voice (text only)' : 'Enable AI voice (text-to-speech)'}
+                      className={`min-h-0 h-10 w-10 rounded-full border flex items-center justify-center transition ${
+                        voiceOn
+                          ? 'bg-accent-500/10 border-accent-500/20 text-accent-400'
+                          : 'bg-slate-800 border-slate-700 text-slate-500'
+                      } ${isSpeaking ? 'animate-pulse' : ''}`}
+                    >
+                      {voiceOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                     </button>
-                    <span className="text-[9px] text-orange-400 mt-1.5 font-bold">Speaker</span>
+                    <span className={`text-[9px] mt-1.5 font-bold ${voiceOn ? 'text-orange-400' : 'text-slate-500'}`}>
+                      {voiceOn ? 'Voice On' : 'Muted'}
+                    </span>
                   </div>
                   <div className="flex flex-col items-center">
                     <button className="min-h-0 h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
@@ -359,7 +469,15 @@ export const Agent2PhoneCall: React.FC = () => {
                 )}
                 {isGenerating && (
                   <div className="flex justify-start">
-                    <div className="flex items-center gap-2"><div className="typing-indicator"><span></span><span></span><span></span></div><span className="text-[10px] text-slate-500 italic">AI is speaking…</span></div>
+                    <div className="flex items-center gap-2"><div className="typing-indicator"><span></span><span></span><span></span></div><span className="text-[10px] text-slate-500 italic">{isSpeaking ? 'AI is speaking…' : 'AI is thinking…'}</span></div>
+                  </div>
+                )}
+                {isListening && (
+                  <div className="flex justify-end">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-red-400 italic font-semibold">Listening — speak now…</span>
+                      <AudioLines className="h-4 w-4 text-red-400 animate-pulse" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -403,7 +521,15 @@ export const Agent2PhoneCall: React.FC = () => {
                     <Send className="h-4 w-4 stroke-[2.5]" />
                   </button>
                 </div>
-                <p className="text-[9px] text-slate-500">Free-form replies stay in the transcript — the script only advances via the options above.</p>
+                {voiceNotice && (
+                  <p className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                    {voiceNotice}
+                  </p>
+                )}
+                <p className="text-[9px] text-slate-500">
+                  Free-form replies stay in the transcript — the script only advances via the options above.
+                  {!sttSupported.current && ' Voice input needs Chrome, Edge, or Safari — type your replies here instead.'}
+                </p>
               </div>
             )}
             

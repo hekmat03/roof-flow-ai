@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { postLeadToWebhook } from '../utils/webhook';
 
 export interface Lead {
   id: string;
@@ -229,6 +230,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ],
     };
     setLeads((prev) => [leadWithId, ...prev]);
+
+    // Real CRM push: fire-and-forget POST to the configured Google Sheets
+    // webhook (no-op when the URL isn't set in Configuration). The internal
+    // CRM board above updates instantly regardless — the webhook must never
+    // block or break lead capture.
+    postLeadToWebhook({
+      name: leadWithId.name,
+      phone: leadWithId.phone,
+      email: leadWithId.email,
+      zip: leadWithId.zipCode,
+      roofIssue: leadWithId.roofIssue,
+      status: leadWithId.status,
+      source: leadWithId.agentType,
+      timestamp: new Date().toISOString(),
+    }).catch(() => { /* postLeadToWebhook never rejects, belt-and-suspenders */ });
   };
 
   return (

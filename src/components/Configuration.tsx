@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
+import { Settings, ShieldCheck, RefreshCw, AlertCircle, KeyRound, Webhook, CheckCircle2, XCircle, PlugZap } from 'lucide-react';
+import {
+  getGroqApiKey,
+  setGroqApiKey,
+  clearGroqApiKey,
+  maskApiKey,
+  isGroqConfigured,
+  GROQ_KEY_STORAGE,
+} from '../utils/aiService';
+import {
+  getWebhookUrl,
+  setWebhookUrl,
+  WEBHOOK_URL_STORAGE,
+  postLeadToWebhook,
+} from '../utils/webhook';
 
 export const Configuration: React.FC = () => {
   const { companySettings, setCompanySettings } = useApp();
@@ -178,6 +192,165 @@ export const Configuration: React.FC = () => {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Integrations (Groq AI + Google Sheets webhook) */}
+      <IntegrationPanel />
+    </div>
+  );
+};
+
+/**
+ * IntegrationPanel — live free-tier backend wiring.
+ *  - Groq API key: stored in localStorage under "roofflow_groq_key" (masked on
+ *    display, never logged). When present, all 4 agents answer via the Groq
+ *    API (llama-3.3-70b-versatile); when absent they use the built-in engine.
+ *  - Google Sheets Webhook URL: stored under "roofflow_webhook_url". When
+ *    present, every lead captured by ANY simulator is POSTed to it as JSON.
+ */
+const IntegrationPanel: React.FC = () => {
+  const [keyInput, setKeyInput] = useState('');
+  const [keyConfigured, setKeyConfigured] = useState(isGroqConfigured());
+  const [keyMask, setKeyMask] = useState(maskApiKey(getGroqApiKey()));
+
+  const [urlInput, setUrlInput] = useState(getWebhookUrl());
+  const [urlConfigured, setUrlConfigured] = useState(getWebhookUrl().length > 0);
+  const [testing, setTesting] = useState<'idle' | 'running' | 'ok' | 'fail'>('idle');
+
+  const handleSaveKey = () => {
+    if (keyInput.trim()) {
+      setGroqApiKey(keyInput.trim());
+    }
+    setKeyConfigured(isGroqConfigured());
+    setKeyMask(maskApiKey(getGroqApiKey()));
+    setKeyInput('');
+  };
+
+  const handleClearKey = () => {
+    clearGroqApiKey();
+    setKeyConfigured(false);
+    setKeyMask('');
+  };
+
+  const handleSaveUrl = () => {
+    setWebhookUrl(urlInput.trim());
+    setUrlConfigured(getWebhookUrl().length > 0);
+  };
+
+  const handleTestWebhook = async () => {
+    setTesting('running');
+    const ok = await postLeadToWebhook({
+      name: 'Webhook Test',
+      phone: '(000) 000-0000',
+      email: 'test@roofflow.ai',
+      zip: '00000',
+      roofIssue: 'Integration test ping',
+      status: 'New Lead',
+      source: 'Configuration Panel',
+      timestamp: new Date().toISOString(),
+    });
+    setTesting(ok ? 'ok' : 'fail');
+    setTimeout(() => setTesting('idle'), 4000);
+  };
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <PlugZap className="h-4.5 w-4.5 text-orange-500" /> Live Integrations (Free Tier)
+          </h3>
+          <p className="text-xs text-slate-400 mt-1.5">
+            Wire real AI inference and real CRM storage into the simulators. Everything degrades gracefully —
+            the built-in engine keeps working when these are empty.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        {/* Groq API Key */}
+        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-slate-300 font-bold flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-amber-400" /> Groq API Key
+              <span className="font-mono text-[9px] text-slate-500 hidden sm:inline">({GROQ_KEY_STORAGE})</span>
+            </label>
+            {keyConfigured ? (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="h-3 w-3" /> LIVE AI ON
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-800/60 border border-slate-700 px-2 py-0.5 rounded-full">
+                <XCircle className="h-3 w-3" /> BUILT-IN ENGINE
+              </span>
+            )}
+          </div>
+          {keyConfigured && (
+            <p className="text-[10px] text-slate-500 font-mono">Stored key: {keyMask} (masked)</p>
+          )}
+          <div className="flex space-x-2">
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="gsk_… paste your Groq key"
+              value={keyInput}
+              onChange={e => setKeyInput(e.target.value)}
+              className="flex-1 input-premium px-3 py-2 text-xs font-mono"
+            />
+            <button onClick={handleSaveKey} disabled={!keyInput.trim()} className="btn-accent px-4 py-2 text-xs font-bold min-h-0 disabled:opacity-40">
+              Save
+            </button>
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-500">
+            <span>Free key at <span className="text-amber-400 font-semibold">console.groq.com</span> → API Keys</span>
+            {keyConfigured && (
+              <button onClick={handleClearKey} className="text-slate-400 hover:text-red-400 font-semibold transition-colors">
+                Remove key
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Google Sheets Webhook URL */}
+        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-slate-300 font-bold flex items-center gap-2">
+              <Webhook className="h-4 w-4 text-blue-400" /> Google Sheets Webhook URL
+              <span className="font-mono text-[9px] text-slate-500 hidden sm:inline">({WEBHOOK_URL_STORAGE})</span>
+            </label>
+            {urlConfigured ? (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="h-3 w-3" /> CRM PUSH ON
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-800/60 border border-slate-700 px-2 py-0.5 rounded-full">
+                <XCircle className="h-3 w-3" /> LOCAL CRM ONLY
+              </span>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            <input
+              type="url"
+              placeholder="https://script.google.com/macros/s/…/exec"
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              className="flex-1 input-premium px-3 py-2 text-xs font-mono"
+            />
+            <button onClick={handleSaveUrl} className="btn-accent px-4 py-2 text-xs font-bold min-h-0">
+              Save
+            </button>
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-500">
+            <span>Apps Script Web App URL (deploy: "Anyone") — appends each captured lead as a Sheet row</span>
+            <button
+              onClick={handleTestWebhook}
+              disabled={!urlConfigured || testing === 'running'}
+              className="btn-ghost px-2.5 py-1 rounded-md text-[10px] min-h-0 disabled:opacity-40"
+            >
+              {testing === 'running' ? 'Testing…' : testing === 'ok' ? 'Sent ✓' : testing === 'fail' ? 'Failed ✗' : 'Send test row'}
+            </button>
           </div>
         </div>
       </div>

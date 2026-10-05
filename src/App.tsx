@@ -9,6 +9,7 @@ import { Agent4Estimate } from './components/Agent4Estimate';
 import { CRMLeadsBoard } from './components/CRMLeadsBoard';
 import { Configuration } from './components/Configuration';
 import { PromptPlayground } from './components/PromptPlayground';
+import { FallbackNotice } from './components/FallbackNotice';
 
 function MainAppContent() {
   const { activeTab } = useApp();
@@ -41,6 +42,8 @@ function MainAppContent() {
       <div key={activeTab} className="animate-tab-in h-full">
         {renderContent()}
       </div>
+      {/* Non-intrusive "built-in engine" toast when live AI is unavailable */}
+      <FallbackNotice />
     </Layout>
   );
 }
