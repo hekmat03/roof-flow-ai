@@ -570,6 +570,23 @@ export const CRMLeadsBoard: React.FC = () => {
                     </td>
                   </tr>
                 ))
+              ) : leads.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-14 text-center">
+                    <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
+                      <div className="h-12 w-12 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-slate-500" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-300">Your CRM is live and waiting</h4>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        No leads yet. Every lead captured by the AI agents — chat, phone, SMS/email nurture, or estimate follow-up — lands here instantly with its full conversation transcript.
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-semibold">
+                        Start with Agent 1 on the Dashboard → "Simulate Chatbot".
+                      </p>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">

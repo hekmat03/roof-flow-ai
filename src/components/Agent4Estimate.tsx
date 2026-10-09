@@ -3,40 +3,69 @@ import { useApp } from '../context/AppContext';
 import type { Lead } from '../context/AppContext';
 import { FileText, DollarSign, Calculator, Settings, Sparkles, Send, CheckCircle2, User, HelpCircle } from 'lucide-react';
 import { getAgentResponse, detectIntent, type AgentMessage, type AgentContext } from '../lib/agentService';
+import { extractEmail, extractPhone, extractZip } from '../utils/leadExtract';
 
 export const Agent4Estimate: React.FC = () => {
-  const { companySettings, leads, setLeads } = useApp();
+  const { companySettings, leads, setLeads, addLead } = useApp();
 
   // CRM target — which estimate-stage lead this follow-up conversation belongs
   // to. Every exchange is synced to that lead's transcript and drives its
   // workflow status (yes → Closed-Won, no/opt-out → Closed-Lost).
+  // With NO estimate-stage leads in the CRM, a homeowner name can be typed
+  // instead and the conversation CREATES that lead on first sync — so the
+  // closer flow produces a real CRM record from an empty board too.
   const leadTargets = leads.filter(l =>
     ['Estimate Sent', 'Inspection Completed', 'In Contact'].includes(l.status)
   );
   const [targetLeadId, setTargetLeadId] = useState<string>(() =>
     leads.find(l => l.status === 'Estimate Sent')?.id || leads[0]?.id || ''
   );
+  const [coldLeadName, setColdLeadName] = useState('');
 
   const syncToCRM = (userText: string, aiReply: string) => {
-    if (!targetLeadId) return;
-    setLeads(prev => prev.map(lead => {
-      if (lead.id !== targetLeadId) return lead;
-      const intent = detectIntent(userText);
-      const nextStatus: Lead['status'] =
-        intent === 'yes' ? 'Closed-Won'
-        : intent === 'no' || intent === 'optout' ? 'Closed-Lost'
-        : lead.status === 'In Contact' ? lead.status
-        : 'In Contact';
-      return {
-        ...lead,
+    const intent = detectIntent(userText);
+    const nextStatus: Lead['status'] =
+      intent === 'yes' ? 'Closed-Won'
+      : intent === 'no' || intent === 'optout' ? 'Closed-Lost'
+      : 'In Contact';
+    const exchange = [
+      { sender: 'User' as const, text: userText, timestamp: new Date().toLocaleString() },
+      { sender: 'AI' as const, text: aiReply, timestamp: new Date().toLocaleString() },
+    ];
+
+    if (targetLeadId) {
+      setLeads(prev => prev.map(lead => {
+        if (lead.id !== targetLeadId) return lead;
+        const status: Lead['status'] =
+          intent === 'yes' ? 'Closed-Won'
+          : intent === 'no' || intent === 'optout' ? 'Closed-Lost'
+          : lead.status === 'In Contact' ? lead.status
+          : 'In Contact';
+        return {
+          ...lead,
+          status,
+          chatLog: [...lead.chatLog, ...exchange],
+        };
+      }));
+    } else if (coldLeadName.trim()) {
+      // No estimate-stage lead targeted — capture the follow-up as a new lead.
+      addLead({
+        name: coldLeadName.trim(),
+        phone: extractPhone(userText) || 'N/A',
+        email: extractEmail(userText) || 'N/A',
+        propertyOwnership: 'Owner',
         status: nextStatus,
+        agentType: 'Estimate Follow-Up',
+        zipCode: extractZip(userText),
+        roofIssue: 'Roof replacement estimate follow-up',
         chatLog: [
-          ...lead.chatLog,
-          { sender: 'User', text: userText, timestamp: new Date().toLocaleString() },
-          { sender: 'AI', text: aiReply, timestamp: new Date().toLocaleString() },
+          { sender: 'System', text: 'Post-estimate follow-up conversation (simulated recipient).', timestamp: new Date().toLocaleString() },
+          ...exchange,
         ],
-      };
-    }));
+      });
+    } else {
+      return; // nothing to sync to
+    }
     setSavingSuccess(true);
     setTimeout(() => setSavingSuccess(false), 2500);
   };
@@ -199,9 +228,21 @@ export const Agent4Estimate: React.FC = () => {
                 ))}
               </select>
             ) : (
-              <p className="text-[11px] text-slate-500 italic mt-4">
-                No estimate-stage leads yet — run Agent 1/2, then move a lead to "Estimate Sent" in the CRM Board to target it here.
-              </p>
+              <div className="mt-4 space-y-2">
+                <label className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
+                  No estimate-stage leads yet — enter the homeowner to follow up with
+                </label>
+                <input
+                  type="text"
+                  value={coldLeadName}
+                  onChange={e => setColdLeadName(e.target.value)}
+                  placeholder="Homeowner name (e.g. Dana Whitfield)"
+                  className="input-premium text-xs font-medium"
+                />
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  This conversation creates a new lead in the CRM (source "Estimate Follow-Up") with the reply's outcome as its status.
+                </p>
+              </div>
             )}
           </div>
 

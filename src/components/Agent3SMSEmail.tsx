@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquarePlus, Mail, Clock, Send, Play, Sparkles, Smartphone, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { getAgentResponse, type AgentMessage } from '../lib/agentService';
+import { getAgentResponse, detectLatestIntent, type AgentMessage } from '../lib/agentService';
+import { extractEmail, extractPhone, extractZip, deriveRoofIssue } from '../utils/leadExtract';
 
 export const Agent3SMSEmail: React.FC = () => {
-  const { companySettings, leads, setLeads } = useApp();
-  
+  const { companySettings, leads, setLeads, addLead } = useApp();
+
   // Selection/Simulation states
   const [selectedDay, setSelectedDay] = useState<1 | 2 | 4 | 7>(1);
 
   // Target recipient dropdown — derived live from the CRM so nurture always
   // targets real leads (cold/follow-up statuses first, then any lead as a fallback).
+  // NO hardcoded fallback name: with an empty CRM the Launch button is disabled
+  // and the empty state explains how to get a lead.
   const coldStatuses = ['New Lead', 'Contacted', 'In Contact', 'Follow-up Nurture'];
   const targetableLeads = leads.filter(l => coldStatuses.includes(l.status));
   const selectorLeads = targetableLeads.length > 0 ? targetableLeads : leads;
 
-  const [simulatedLead, setSimulatedLead] = useState<string>(() => leads[0]?.name || 'Michael Miller');
+  const [simulatedLead, setSimulatedLead] = useState<string>(() => leads[0]?.name || '');
   const [simulationActive, setSimulationActive] = useState(false);
   const [userReplyText, setUserReplyText] = useState('');
   const [simulationLogs, setSimulationLogs] = useState<Array<{ sender: 'AI' | 'User' | 'System'; text: string; timestamp: string }>>([]);
@@ -54,6 +57,7 @@ export const Agent3SMSEmail: React.FC = () => {
   };
 
   const handleStartSequenceSim = () => {
+    if (selectorLeads.length === 0 || !simulatedLead) return;
     setSimulationActive(true);
     setError(null);
     setSimulationLogs([
@@ -99,23 +103,51 @@ export const Agent3SMSEmail: React.FC = () => {
         timestamp: new Date().toLocaleTimeString()
       }]);
 
-      // Sync sequence results with the CRM leads list if the lead exists
-      setLeads(prev => prev.map(lead => {
-        if (lead.name === simulatedLead) {
+      // Conversion = the homeowner's reply signals booking intent (same intent
+      // engine that drives the AI). A conversion books the inspection; any
+      // other engaged reply just marks the lead as In Contact.
+      const intent = detectLatestIntent(aiMessages);
+      const converted = intent === 'yes' || intent === 'schedule' || intent === 'scheduleask';
+      const nextStatus = converted ? 'Inspection Scheduled' : 'In Contact';
+      const scheduledDate = converted
+        ? new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM'
+        : undefined;
+
+      const sequenceLog = [
+        { sender: 'System' as const, text: `Day ${selectedDay} sequence triggered. Reply received.`, timestamp: new Date().toLocaleString() },
+        { sender: 'AI' as const, text: getRenderedTemplate(selectedDay, 'sms', simulatedLead), timestamp: new Date().toLocaleString() },
+        { sender: 'User' as const, text: userReplyText, timestamp: new Date().toLocaleString() },
+        { sender: 'AI' as const, text: aiResponseText, timestamp: new Date().toLocaleString() },
+      ];
+
+      const existingLead = leads.find(l => l.name === simulatedLead);
+      if (existingLead) {
+        // Known CRM lead — advance its workflow in place.
+        setLeads(prev => prev.map(lead => {
+          if (lead.name !== simulatedLead) return lead;
           return {
             ...lead,
-            status: 'In Contact',
-            chatLog: [
-              ...lead.chatLog,
-              { sender: 'System', text: `Day ${selectedDay} sequence triggered. Reply received.`, timestamp: new Date().toLocaleString() },
-              { sender: 'AI', text: getRenderedTemplate(selectedDay, 'sms', simulatedLead), timestamp: new Date().toLocaleString() },
-              { sender: 'User', text: userReplyText, timestamp: new Date().toLocaleString() },
-              { sender: 'AI', text: aiResponseText, timestamp: new Date().toLocaleString() }
-            ]
+            status: nextStatus,
+            scheduledDate: scheduledDate ?? lead.scheduledDate,
+            chatLog: [...lead.chatLog, ...sequenceLog],
           };
-        }
-        return lead;
-      }));
+        }));
+      } else if (simulatedLead.trim()) {
+        // Nurture reply from a lead that isn't in the CRM yet — capture it now
+        // so every Agent 3 conversation produces a real CRM record.
+        addLead({
+          name: simulatedLead.trim(),
+          phone: extractPhone(userReplyText) || 'N/A',
+          email: extractEmail(userReplyText) || 'N/A',
+          propertyOwnership: 'Owner',
+          status: nextStatus,
+          agentType: 'SMS Nurture',
+          scheduledDate,
+          zipCode: extractZip(userReplyText),
+          roofIssue: deriveRoofIssue(updatedLogs.map(l => l.text).join(' ')),
+          chatLog: sequenceLog,
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
     } finally {
@@ -233,7 +265,8 @@ export const Agent3SMSEmail: React.FC = () => {
 
                   <button
                     onClick={handleStartSequenceSim}
-                    className="btn-accent px-5 py-2.5 text-xs flex items-center gap-1.5"
+                    disabled={selectorLeads.length === 0 || !simulatedLead}
+                    className="btn-accent px-5 py-2.5 text-xs flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Play className="h-3.5 w-3.5 fill-slate-950" />
                     Launch Sequence
