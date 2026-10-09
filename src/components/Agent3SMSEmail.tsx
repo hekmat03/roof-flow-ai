@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquarePlus, Mail, Clock, Send, Play, Sparkles, Smartphone, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { getAgentResponse, detectLatestIntent, type AgentMessage } from '../lib/agentService';
@@ -20,6 +20,16 @@ export const Agent3SMSEmail: React.FC = () => {
 
   const [simulatedLead, setSimulatedLead] = useState<string>(() => leads[0]?.name || '');
   const [simulationActive, setSimulationActive] = useState(false);
+
+  // Keep the selected recipient in sync with the dropdown's actual options —
+  // otherwise the select can DISPLAY one lead while the state still points at
+  // another (e.g. after the CRM gained a booked lead that left the cold list).
+  useEffect(() => {
+    if (selectorLeads.length > 0 && !selectorLeads.some(l => l.name === simulatedLead)) {
+      setSimulatedLead(selectorLeads[0].name);
+    }
+  }, [selectorLeads, simulatedLead]);
+
   const [userReplyText, setUserReplyText] = useState('');
   const [simulationLogs, setSimulationLogs] = useState<Array<{ sender: 'AI' | 'User' | 'System'; text: string; timestamp: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
