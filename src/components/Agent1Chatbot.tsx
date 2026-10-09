@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
 import { getAgentResponse, detectLatestIntent, type AgentMessage } from '../lib/agentService';
+import { extractEmail, extractPhone, extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
 export const Agent1Chatbot: React.FC = () => {
-  const { companySettings, addLead } = useApp();
+  const { companySettings, addLead, leads, setLeads } = useApp();
 
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>([
     {
@@ -37,6 +38,64 @@ export const Agent1Chatbot: React.FC = () => {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, showBookingForm]);
+
+  // ---- Free-form lead capture ------------------------------------------------
+  // Scan ONLY the visitor's own messages for contact details. As soon as the
+  // conversation yields a name AND a phone AND an email, the lead is captured
+  // to the CRM with status 'New Lead' — no form required. Extraction runs on
+  // user text only, so it behaves identically on the Groq path and the local
+  // fallback engine. capturedRef makes it strictly once-per-conversation.
+  const capturedRef = useRef(false);
+
+  const extracted = useMemo(() => {
+    const userTexts = messages.filter(m => m.sender === 'User').map(m => m.text);
+    const joined = userTexts.join('\n');
+    return {
+      email: userTexts.map(t => extractEmail(t)).find(Boolean),
+      phone: userTexts.map(t => extractPhone(t)).find(Boolean),
+      name: userTexts.map(t => extractName(t)).find(Boolean),
+      zip: extractZip(joined),
+      roofIssue: userTexts.map(t => deriveRoofIssue(t)).find(Boolean),
+    };
+  }, [messages]);
+
+  useEffect(() => {
+    if (capturedRef.current || showBookingForm) return;
+    if (extracted.email && extracted.phone && extracted.name) {
+      capturedRef.current = true;
+      addLead({
+        name: extracted.name,
+        phone: extracted.phone,
+        email: extracted.email,
+        propertyOwnership: 'Owner',
+        status: 'New Lead',
+        agentType: 'Chatbot',
+        zipCode: extracted.zip,
+        roofIssue: extracted.roofIssue,
+        chatLog: messages.map(m => ({
+          sender: m.sender,
+          text: m.text,
+          timestamp: m.timestamp,
+        })),
+      });
+      setMessages(prev => [...prev, {
+        sender: 'AI',
+        text: `Got it, ${extracted.name} — I've saved your details and a specialist will reach out at ${extracted.phone}. Would you like me to book your free inspection now?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extracted, showBookingForm]);
+
+  // Prefill the booking form with anything the visitor already typed.
+  useEffect(() => {
+    if (showBookingForm) {
+      if (extracted.name && !name) setName(extracted.name);
+      if (extracted.phone && !phone) setPhone(extracted.phone);
+      if (extracted.email && !email) setEmail(extracted.email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBookingForm]);
 
   const handleSend = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -93,20 +152,34 @@ export const Agent1Chatbot: React.FC = () => {
       return;
     }
 
-    addLead({
-      name,
-      phone,
-      email,
-      propertyOwnership: ownership,
-      status: 'Inspection Scheduled',
-      agentType: 'Chatbot',
-      scheduledDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM',
-      chatLog: messages.map(m => ({
-        sender: m.sender,
-        text: m.text,
-        timestamp: m.timestamp,
-      })),
-    });
+    const scheduledDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM';
+    const chatLog = messages.map(m => ({
+      sender: m.sender,
+      text: m.text,
+      timestamp: m.timestamp,
+    }));
+
+    // If the free-form capture already saved this contact (same phone), UPDATE
+    // that lead to booked instead of creating a duplicate.
+    const existing = leads.find(l => l.phone.replace(/\D/g, '') === phone.replace(/\D/g, ''));
+    if (existing) {
+      setLeads(prev => prev.map(l =>
+        l.id === existing.id
+          ? { ...l, status: 'Inspection Scheduled', scheduledDate, propertyOwnership: ownership, appointmentDetails: { date: scheduledDate.split(' ')[0], time: '10:00 AM', notes: 'Booked via Agent 1 chat.' } }
+          : l
+      ));
+    } else {
+      addLead({
+        name,
+        phone,
+        email,
+        propertyOwnership: ownership,
+        status: 'Inspection Scheduled',
+        agentType: 'Chatbot',
+        scheduledDate,
+        chatLog,
+      });
+    }
 
     setMessages(prev => [...prev, {
       sender: 'AI',

@@ -20,6 +20,13 @@ import {
   speakText,
   startListening,
 } from '../src/utils/speech.ts';
+import {
+  extractEmail,
+  extractPhone,
+  extractName,
+  extractZip,
+  deriveRoofIssue,
+} from '../src/utils/leadExtract.ts';
 
 let passed = 0;
 let failed = 0;
@@ -132,6 +139,21 @@ const handle = startListening({
 });
 check('startListening returns handle with mock', handle !== null && typeof handle.stop === 'function');
 handle?.stop();
+
+// ------------------------------------------------------------------
+// 5. leadExtract — free-form contact extraction (Agent 1/3/4 capture)
+// ------------------------------------------------------------------
+console.log('\n[5] leadExtract: free-form contact extraction');
+const sample = 'Hi, I am Dana Whitfield, my email is dana.w@example.com, call me at (214) 555-0177, zip 75201';
+check('email extracted', extractEmail(sample) === 'dana.w@example.com');
+check('phone extracted', (extractPhone(sample) || '').replace(/\D/g, '') === '2145550177');
+check('name extracted (I am …)', extractName(sample) === 'Dana Whitfield');
+check('zip extracted (not phone digits)', extractZip(sample) === '75201');
+check('roof issue: hail', deriveRoofIssue('we have hail damage and leaks') === 'Hail / storm damage');
+check('roof issue: leak', deriveRoofIssue('water dripping from the ceiling') === 'Active roof leak');
+check('no name from generic text', extractName('Yes I am free tomorrow afternoon') === undefined);
+check('rejects repeating-digit phone', extractPhone('call 000-000-0000') === undefined);
+check('name via "X here"', extractName('John Miller here — lorem ipsum') === 'John Miller');
 
 // ------------------------------------------------------------------
 console.log(`\n==================================================`);
