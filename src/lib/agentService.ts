@@ -1,4 +1,3 @@
-
 /**
  * agentService.ts — Central AI response router for all 4 agents.
  * ----------------------------------------------------------------------------
@@ -51,12 +50,13 @@ function boundedLatency(seed: string): Promise<void> {
 export async function getAgentResponse(
   agentType: AgentType,
   messages: AgentMessage[],
-  context?: AgentContext
+  context?: AgentContext,
+  options?: { skipLive?: boolean }
 ): Promise<string> {
   const ctx: AgentContext = context || {};
 
   // ---- Tier 1: live AI via the server endpoint ----
-  const live = await callAgentApi({
+  const live = options?.skipLive ? null : await callAgentApi({
     agentType,
     // Keep the conversation window bounded — last 6 turns is plenty.
     messages: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
@@ -72,11 +72,10 @@ export async function getAgentResponse(
     },
   });
   if (live) return live;
-  // live === null → fallback event already dispatched by aiService.
+  // live === null → fallback event already dispatched by aiService (or skipped).
 
   // ---- Tier 2: local deterministic generator (offline fallback) ----
   const reply = generateAgentReply(agentType, messages, ctx);
   await boundedLatency(reply);
   return reply;
 }
-
