@@ -68,7 +68,9 @@ export const Agent3SMSEmail: React.FC = () => {
   };
 
   const handleStartSequenceSim = () => {
-    if (selectorLeads.length === 0 || !simulatedLead) return;
+    // A CRM recipient OR a typed cold-lead name is enough — with an empty
+    // board the typed name becomes a real captured lead on the first reply.
+    if (!simulatedLead.trim()) return;
     setSimulationActive(true);
     setError(null);
     setSimulationLogs([
@@ -268,15 +270,25 @@ export const Agent3SMSEmail: React.FC = () => {
                         ))}
                       </select>
                     ) : (
-                      <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-4 py-2.5 text-[11px] text-slate-500 italic">
-                        No leads in the CRM yet — run Agent 1 or add a lead in the CRM Board first.
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={simulatedLead}
+                          onChange={e => setSimulatedLead(e.target.value)}
+                          placeholder="Cold lead name (e.g. Chris Nolan)"
+                          className="input-premium text-xs font-medium w-full"
+                        />
+                        <p className="text-[11px] text-slate-500 italic leading-relaxed">
+                          No leads in the CRM yet — type a name to simulate a cold lead; their first
+                          reply is captured as a real lead in the CRM.
+                        </p>
                       </div>
                     )}
                   </div>
 
                   <button
                     onClick={handleStartSequenceSim}
-                    disabled={selectorLeads.length === 0 || !simulatedLead}
+                    disabled={!simulatedLead.trim()}
                     className="btn-accent px-5 py-2.5 text-xs flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Play className="h-3.5 w-3.5 fill-slate-950" />
