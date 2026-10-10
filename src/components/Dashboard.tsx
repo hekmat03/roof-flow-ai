@@ -345,3 +345,7 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 };
+
+
+====================================================================================================
+FILE PATH: roof-flow-ai-master/src/components/Agent4Estimate.tsx
