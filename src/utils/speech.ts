@@ -1,4 +1,3 @@
-
 /**
  * speech.ts — Free voice AI via the browser-native Web Speech API.
  * ----------------------------------------------------------------------------
