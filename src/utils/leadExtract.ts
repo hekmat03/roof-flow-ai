@@ -77,4 +77,3 @@ export function deriveRoofIssue(text: string): string | undefined {
   if (/storm/.test(t)) return 'Storm damage';
   return undefined;
 }
-
