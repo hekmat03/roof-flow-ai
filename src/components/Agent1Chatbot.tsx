@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
@@ -43,7 +44,7 @@ export const Agent1Chatbot: React.FC = () => {
   // Scan ONLY the visitor's own messages for contact details. As soon as the
   // conversation yields a name AND a phone AND an email, the lead is captured
   // to the CRM with status 'New Lead' — no form required. Extraction runs on
-  // user text only, so it behaves identically on the Groq path and the local
+  // user text only, so it behaves identically on the live-AI path and the local
   // fallback engine. capturedRef makes it strictly once-per-conversation.
   const capturedRef = useRef(false);
 
