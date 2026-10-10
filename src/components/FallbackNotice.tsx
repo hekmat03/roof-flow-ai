@@ -1,4 +1,3 @@
-
 /**
  * FallbackNotice — non-intrusive toast shown whenever the live AI tier is
  * unavailable and the built-in deterministic engine takes over.
@@ -47,3 +46,4 @@ export const FallbackNotice: React.FC = () => {
     </div>
   );
 };
+
