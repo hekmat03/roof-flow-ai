@@ -1,10 +1,11 @@
+
 /**
  * FallbackNotice — non-intrusive toast shown whenever the live AI tier is
  * unavailable and the built-in deterministic engine takes over.
  *
  * Listens for the "roofflow:fallback" CustomEvent dispatched by
- * src/utils/aiService.ts (no key configured, HTTP error, timeout, or empty
- * reply). The toast self-dismisses after a few seconds and never blocks the
+ * src/utils/aiService.ts (server unreachable or not configured, HTTP error,
+ * timeout, or empty reply). The toast self-dismisses after a few seconds and never blocks the
  * conversation UI.
  */
 import React, { useEffect, useRef, useState } from 'react';
