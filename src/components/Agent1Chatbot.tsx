@@ -1,8 +1,10 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
-import { getAgentResponse, detectLatestIntent, type AgentMessage } from '../lib/agentService';
+import { detectLatestIntent, type AgentMessage } from '../lib/agentService';
+import { runAgentWithTools } from '../lib/agentRunner';
+import { applyActionsToLeads, type AgentAction } from '../lib/applyActions';
+import { AgentActivity } from './AgentActivity';
 import { extractEmail, extractPhone, extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead, leads, setLeads } = useApp();
@@ -19,6 +21,7 @@ export const Agent1Chatbot: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasQualified, setHasQualified] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [actionLog, setActionLog] = useState<AgentAction[]>([]);
 
   // Booking form state
   const [name, setName] = useState('');
@@ -119,7 +122,7 @@ export const Agent1Chatbot: React.FC = () => {
         content: m.text,
       }));
 
-      const reply = await getAgentResponse('chatbot', aiMessages, {
+      const { reply, actions } = await runAgentWithTools('chatbot', aiMessages, {
         companyName: companySettings.companyName,
         city: companySettings.city,
         stormEvent: companySettings.stormName,
@@ -127,6 +130,12 @@ export const Agent1Chatbot: React.FC = () => {
         financingOptions: companySettings.financingOptions,
         agentTone: companySettings.agentTone,
       });
+
+      if (actions.length > 0) {
+        setActionLog(prev => [...prev, ...actions]);
+        setLeads(prev => applyActionsToLeads(prev, actions));
+      }
+      const booked = actions.some(a => a.tool === 'book_inspection' && a.result.ok);
 
       setMessages(prev => [...prev, {
         sender: 'AI',
@@ -136,7 +145,7 @@ export const Agent1Chatbot: React.FC = () => {
 
       // Open the booking form when the visitor's latest message signals booking intent
       // (schedule detection from the same intent engine that drives the reply).
-      if (detectLatestIntent(aiMessages) === 'schedule') {
+      if (!booked && detectLatestIntent(aiMessages) === 'schedule') {
         setShowBookingForm(true);
       }
     } catch (err) {
@@ -411,6 +420,8 @@ export const Agent1Chatbot: React.FC = () => {
           )}
         </div>
       </div>
+
+      <AgentActivity actions={actionLog} />
     </div>
   );
 };
