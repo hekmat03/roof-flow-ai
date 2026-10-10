@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Settings, ShieldCheck, RefreshCw, AlertCircle, Webhook, CheckCircle2, XCircle, PlugZap } from 'lucide-react';
-import { fetchAiStatus, type AiStatus } from '../utils/aiService';
+import { fetchCapabilities, type AgentCapabilities } from '../utils/aiService';
 import {
   getWebhookUrl,
   setWebhookUrl,
@@ -204,10 +203,10 @@ export const Configuration: React.FC = () => {
  *    present, every lead captured by ANY simulator is POSTed to it as JSON.
  */
 const IntegrationPanel: React.FC = () => {
-  const [ai, setAi] = useState<AiStatus | null | 'loading'>('loading');
+  const [ai, setAi] = useState<AgentCapabilities | null | 'loading'>('loading');
   useEffect(() => {
     let alive = true;
-    fetchAiStatus().then(s => { if (alive) setAi(s); });
+    fetchCapabilities().then(s => { if (alive) setAi(s); });
     return () => { alive = false; };
   }, []);
   const aiLive = ai !== 'loading' && ai !== null && ai.live;
@@ -273,6 +272,13 @@ const IntegrationPanel: React.FC = () => {
               ? `Agents answer through the secure server endpoint (${ai !== 'loading' && ai ? ai.model : ''}). No API key is stored in this browser.`
               : 'Live AI is off. Add MISTRAL_API_KEY in your Vercel project environment variables and redeploy. Until then the built-in offline engine answers.'}
           </p>
+          {aiLive && ai !== 'loading' && ai && (
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+              <span className={ai.storage ? 'text-emerald-400' : 'text-slate-500'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
+              <span className={ai.email ? 'text-emerald-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Real email (Resend)</span>
+              <span className="text-amber-400">○ SMS: demo mode</span>
+            </div>
+          )}
         </div>
 
         {/* Google Sheets Webhook URL */}
