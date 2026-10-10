@@ -1,3 +1,4 @@
+
 # 🚀 RoofFlow AI - Production Deployment Guide
 
 RoofFlow AI is a high-performance, responsive React + TypeScript sales assistant dashboard styled with Tailwind CSS v4 and powered by Vite. Since it compiles into fully optimized static assets (`HTML`, `JS`, `CSS`, and assets), it is incredibly fast, highly secure, and extremely cost-effective to host.
@@ -80,3 +81,13 @@ npm run preview
 ```
 
 Your app will compile and launch on `http://localhost:3000` (or another port), letting you verify that everything operates flawlessly under production constraints.
+
+---
+
+## 🔑 Required: enable live AI (server-side key)
+
+1. Vercel → your project → **Settings → Environment Variables**.
+2. Add `MISTRAL_API_KEY` (and optionally `MISTRAL_MODEL`) for Production and Preview.
+3. **Redeploy.** Open the app → Configuration; the AI Engine card should read **LIVE AI ON**.
+
+The key is only ever read by `api/agent-response.ts` on the server. Never paste it into the app or commit it to GitHub.
