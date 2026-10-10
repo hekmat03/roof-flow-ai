@@ -6,13 +6,7 @@
  * Run: node --experimental-strip-types tests/integrations.check.ts
  */
 
-import {
-  callGroq,
-  isGroqConfigured,
-  setGroqApiKey,
-  maskApiKey,
-  GROQ_KEY_STORAGE,
-} from '../src/utils/aiService.ts';
+import { callAgentApi, fetchAiStatus } from '../src/utils/aiService.ts';
 import { postLeadToWebhook, setWebhookUrl, getWebhookUrl } from '../src/utils/webhook.ts';
 import {
   isSpeechSynthesisSupported,
@@ -41,42 +35,31 @@ function check(name: string, ok: boolean) {
 }
 
 // ------------------------------------------------------------------
-// 1. aiService — graceful degradation with NO key (no localStorage in node)
+// 1. aiService — graceful degradation when the server API is unreachable
+//    (in Node there is no origin, so the relative fetch always fails)
 // ------------------------------------------------------------------
-console.log('\n[1] aiService: no key configured');
-check('isGroqConfigured() is false with no storage', (await isGroqConfigured()) === false);
+console.log('\n[1] aiService: server API unreachable');
 let r1: string | null = 'sentinel';
 try {
-  r1 = await callGroq({ messages: [{ role: 'user', content: 'hello' }] });
+  r1 = await callAgentApi({ agentType: 'chatbot', messages: [{ role: 'user', content: 'hello' }] });
 } catch (e) {
   r1 = 'THREW: ' + String(e);
 }
-check('callGroq returns null (never throws) with no key', r1 === null);
+check('callAgentApi returns null (never throws) when API unreachable', r1 === null);
 
 // ------------------------------------------------------------------
-// 2. aiService — masked key storage
+// 2. aiService — status probe + no browser-held keys
 // ------------------------------------------------------------------
-console.log('\n[2] aiService: key storage + masking');
-// Minimal localStorage stub (aiService only needs getItem/setItem/removeItem).
+console.log('\n[2] aiService: status probe');
+const status = await fetchAiStatus();
+check('fetchAiStatus returns null (never throws) when API unreachable', status === null);
+// Minimal localStorage stub (webhook helpers only need getItem/setItem/removeItem).
 const store = new Map<string, string>();
 (globalThis as any).localStorage = {
   getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
   setItem: (k: string, v: string) => void store.set(k, v),
   removeItem: (k: string) => void store.delete(k),
 };
-setGroqApiKey('gsk_test_abcdef1234567890');
-check('key stored under ' + GROQ_KEY_STORAGE, store.get(GROQ_KEY_STORAGE) === 'gsk_test_abcdef1234567890');
-check('isGroqConfigured() true after set', isGroqConfigured());
-const masked = maskApiKey('gsk_test_abcdef1234567890');
-check('maskApiKey hides middle (no full key leak)', masked.startsWith('gsk_') && masked.includes('…') && masked.endsWith('7890') && !masked.includes('abcdef'));
-check('maskApiKey of short key fully hides', maskApiKey('short') === '••••••••');
-// Bad-key path against the real endpoint would need network; instead verify
-// invalid-host failure returns null (network error path) — offline-safe.
-store.set(GROQ_KEY_STORAGE, 'gsk_invalid_key_for_network_test');
-const r2 = await callGroq({ messages: [{ role: 'user', content: 'hi' }] });
-check('callGroq with unreachable/invalid API returns null (never throws)', r2 === null);
-// clean up so later phases start unconfigured
-store.delete(GROQ_KEY_STORAGE);
 
 // ------------------------------------------------------------------
 // 3. webhook — no-op on empty URL, tolerance of failed fetch
@@ -161,3 +144,4 @@ console.log(`RESULT: ${passed} passed, ${failed} failed`);
 console.log(failed === 0 ? 'ALL INTEGRATION CHECKS PASSED' : 'SOME CHECKS FAILED');
 console.log(`==================================================`);
 process.exit(failed === 0 ? 0 : 1);
+
