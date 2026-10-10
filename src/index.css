@@ -493,4 +493,3 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 @media (min-width: 1280px) {
   .container { max-width: 1200px; margin: 0 auto; }
 }
-
