@@ -273,6 +273,19 @@ export const Dashboard: React.FC = () => {
             </button>
           </div>
 
+          {leads.length === 0 && (
+            <div className="py-10 text-center">
+              <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-800/70 border border-slate-700/70 flex items-center justify-center mb-3">
+                <Users className="h-5 w-5 text-slate-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-300">No leads captured yet</p>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                Run any agent simulator above — a real lead appears here instantly, with its full
+                conversation transcript. Nothing is pre-seeded.
+              </p>
+            </div>
+          )}
+
           <div className="divide-y divide-slate-800/70">
             {leads.slice(0, 4).map((lead, idx) => (
               <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0 gap-3 animate-slide-up" style={{ animationDelay: `${idx * 60}ms` }}>
