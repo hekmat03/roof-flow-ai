@@ -19,6 +19,8 @@ export interface AgentContext {
   financingOptions?: string;
   agentTone?: string;
   replyIntent?: string;
+  leadEmail?: string;
+  leadPhone?: string;
 }
 
 export const LIMITS = {
@@ -52,6 +54,16 @@ TONE:
 - If the person writes in another language, reply in that language.
 
 If uncertain, ask one clarifying question or offer a human.
+---
+`;
+
+/** Extra rules appended when the agent is allowed to call tools. */
+export const TOOL_POLICY = `TOOLS:
+- You can take real actions with tools. Call a tool only after the customer has clearly given the details it needs and agreed to the action. Never guess or invent a phone number, email, name or time.
+- After a tool result: if status is "requested", tell the customer a request was submitted and a team member will confirm the time. Never say it is confirmed.
+- If simulated is true, never claim a message was delivered; say it is queued or in demo mode.
+- If ok is false, say you could not complete it and offer a human follow-up.
+- Never contact, or call tools for, someone who asked to stop.
 ---
 `;
 
@@ -97,6 +109,8 @@ export function sanitizeContext(raw: unknown): AgentContext {
     financingOptions: clip(r.financingOptions, m),
     agentTone: clip(r.agentTone, m),
     replyIntent: clip(r.replyIntent, 32),
+    leadEmail: clip(r.leadEmail, 120),
+    leadPhone: clip(r.leadPhone, 40),
   };
 }
 
