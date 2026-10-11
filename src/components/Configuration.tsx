@@ -269,10 +269,10 @@ const IntegrationPanel: React.FC = () => {
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed">
             {aiLive
-              ? `Agents answer through the secure server endpoint (${ai !== 'loading' && ai ? ai.model : ''}). No API key is stored in this browser.`
+              ? `Agents answer through the secure server endpoint (${ai.model ?? ''}). No API key is stored in this browser.`
               : 'Live AI is off. Add MISTRAL_API_KEY in your Vercel project environment variables and redeploy. Until then the built-in offline engine answers.'}
           </p>
-          {aiLive && ai !== 'loading' && ai && (
+          {aiLive && (
             <div className="flex flex-wrap gap-2 text-[10px] font-bold">
               <span className={ai.storage ? 'text-emerald-400' : 'text-slate-500'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
               <span className={ai.email ? 'text-emerald-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Real email (Resend)</span>

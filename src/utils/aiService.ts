@@ -1,4 +1,3 @@
-cat > src/utils/aiService.ts <<'EOF'
 export const AGENT_API_ENDPOINT = '/api/agent-response';
 export const REQUEST_TIMEOUT_MS = 15000;
 
@@ -83,5 +82,3 @@ export async function fetchCapabilities(): Promise<AgentCapabilities | null> {
     return null;
   }
 }
-EOF
-npm test && npm run build
