@@ -144,4 +144,3 @@ console.log(`RESULT: ${passed} passed, ${failed} failed`);
 console.log(failed === 0 ? 'ALL INTEGRATION CHECKS PASSED' : 'SOME CHECKS FAILED');
 console.log(`==================================================`);
 process.exit(failed === 0 ? 0 : 1);
-
