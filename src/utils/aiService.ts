@@ -1,138 +1,87 @@
-/**
- * aiService.ts — Real Groq API integration (OpenAI-compatible REST via fetch).
- * ----------------------------------------------------------------------------
- * Uses Groq's free-tier inference endpoint directly from the browser. No SDK,
- * no build-time bundling issues — plain fetch to
- *   https://api.groq.com/openai/v1/chat/completions
- *
- * This module is a THIN CLIENT: it knows nothing about RoofFlow's agent
- * personalities. System-prompt construction lives in src/lib/agentService.ts,
- * which decides when to call here and when to use the local deterministic
- * generator instead.
- *
- * Graceful degradation is a HARD requirement:
- *   - No API key configured  -> returns null (caller falls back to the local
- *                               deterministic generator; never throws)
- *   - Network/API failure    -> returns null (same fallback path)
- *   - The key is read from localStorage key "roofflow_groq_key" and is NEVER
- *     logged; only its presence/length is ever exposed.
- *
- * A "roofflow:fallback" CustomEvent fires whenever a call could not complete
- * (no key, HTTP error, timeout, empty reply) so the UI can show a small
- * non-intrusive notice explaining the built-in engine took over.
- * ----------------------------------------------------------------------------
- */
+cat > src/utils/aiService.ts <<'EOF'
+export const AGENT_API_ENDPOINT = '/api/agent-response';
+export const REQUEST_TIMEOUT_MS = 15000;
 
-export const GROQ_MODEL = 'llama-3.3-70b-versatile';
-export const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-export const GROQ_KEY_STORAGE = 'roofflow_groq_key';
-export const REQUEST_TIMEOUT_MS = 12000;
+export type ApiAgentType = 'chatbot' | 'phone' | 'nurturer' | 'closer';
 
-export interface AIChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+export interface AgentApiRequest {
+  agentType: ApiAgentType;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  context?: Record<string, string | undefined>;
 }
 
-/** Read the user's Groq key from localStorage. */
-export function getGroqApiKey(): string {
-  try {
-    return (localStorage.getItem(GROQ_KEY_STORAGE) || '').trim();
-  } catch {
-    return '';
-  }
-}
-
-export function setGroqApiKey(key: string): void {
-  try {
-    localStorage.setItem(GROQ_KEY_STORAGE, key.trim());
-  } catch {
-    /* storage unavailable — non-fatal */
-  }
-}
-
-export function clearGroqApiKey(): void {
-  try {
-    localStorage.removeItem(GROQ_KEY_STORAGE);
-  } catch {
-    /* non-fatal */
-  }
-}
-
-/** True when a non-empty key is stored — i.e. the live API path is armed. */
-export function isGroqConfigured(): boolean {
-  return getGroqApiKey().length > 0;
-}
-
-/** Mask a stored key for display: "gsk_…x7Qf" — never the full value. */
-export function maskApiKey(key: string): string {
-  if (!key) return '';
-  if (key.length <= 8) return '••••••••';
-  return `${key.slice(0, 4)}…${key.slice(-4)}`;
+export interface AiStatus {
+  live: boolean;
+  provider?: string;
+  model?: string;
 }
 
 function notifyFallback(): void {
   try {
     window.dispatchEvent(new CustomEvent('roofflow:fallback'));
   } catch {
-    /* event dispatch is best-effort */
+    /* best-effort */
   }
 }
 
-export interface GroqRequest {
-  messages: AIChatMessage[];
-  /** Optional: max tokens for the reply. */
-  maxTokens?: number;
-  temperature?: number;
-}
-
-/**
- * Call Groq. Returns the reply text, or null when the API is unavailable
- * (no key / network error / non-2xx / timeout). NEVER throws.
- */
-export async function callGroq(req: GroqRequest): Promise<string | null> {
-  const apiKey = getGroqApiKey();
-  if (!apiKey) {
-    notifyFallback();
-    return null;
-  }
-
+/** Ask the server for a reply. Returns null on any failure (never throws). */
+export async function callAgentApi(req: AgentApiRequest): Promise<string | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
-    const res = await fetch(GROQ_ENDPOINT, {
+    const res = await fetch(AGENT_API_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: req.messages,
-        temperature: req.temperature ?? 0.7,
-        max_tokens: req.maxTokens ?? 300,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
       signal: controller.signal,
     });
-
     if (!res.ok) {
-      // Non-2xx (bad key, rate limit, model retirement…) → fallback path.
       notifyFallback();
       return null;
     }
-
     const data = await res.json();
-    const text: string | undefined = data?.choices?.[0]?.message?.content;
-    if (!text || !text.trim()) {
+    const text: unknown = data?.reply;
+    if (typeof text !== 'string' || !text.trim()) {
       notifyFallback();
       return null;
     }
     return text.trim();
   } catch {
-    // Network error / abort → fallback path. Never surface to the UI.
     notifyFallback();
     return null;
   } finally {
     clearTimeout(timer);
   }
 }
+
+/** Is live AI configured on the server? Returns null if the API is unreachable. */
+export async function fetchAiStatus(): Promise<AiStatus | null> {
+  try {
+    const res = await fetch(AGENT_API_ENDPOINT, { method: 'GET' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { live: Boolean(data?.live), provider: data?.provider, model: data?.model };
+  } catch {
+    return null;
+  }
+}
+
+export interface AgentCapabilities extends AiStatus {
+  tools?: boolean;
+  storage?: boolean;
+  email?: boolean;
+}
+
+/** What the server can do right now (AI / database / real email). Null if unreachable. */
+export async function fetchCapabilities(): Promise<AgentCapabilities | null> {
+  try {
+    const res = await fetch('/api/agent-run', { method: 'GET' });
+    if (!res.ok) return null;
+    const d = await res.json();
+    return { live: Boolean(d?.live), model: d?.model, tools: Boolean(d?.tools), storage: Boolean(d?.storage), email: Boolean(d?.email) };
+  } catch {
+    return null;
+  }
+}
+EOF
+npm test && npm run build
