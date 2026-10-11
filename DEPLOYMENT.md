@@ -1,4 +1,3 @@
-
 # 🚀 RoofFlow AI - Production Deployment Guide
 
 RoofFlow AI is a high-performance, responsive React + TypeScript sales assistant dashboard styled with Tailwind CSS v4 and powered by Vite. Since it compiles into fully optimized static assets (`HTML`, `JS`, `CSS`, and assets), it is incredibly fast, highly secure, and extremely cost-effective to host.
@@ -91,3 +90,9 @@ Your app will compile and launch on `http://localhost:3000` (or another port), l
 3. **Redeploy.** Open the app → Configuration; the AI Engine card should read **LIVE AI ON**.
 
 The key is only ever read by `api/agent-response.ts` on the server. Never paste it into the app or commit it to GitHub.
+
+## 🗄️ Phase 2: database, email and tools
+
+1. Supabase → SQL Editor → paste and run `supabase/schema.sql`.
+2. Vercel env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (server only, never in the app), and optionally `RESEND_API_KEY`, `RESEND_FROM`.
+3. Redeploy. Configuration shows ✓ Database / ✓ Real email when connected. SMS stays in demo mode.
