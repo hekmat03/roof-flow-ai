@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { useCountUp } from '../utils/useCountUp';
 import { AnalyticsCharts } from './AnalyticsCharts';
+import { LiveLeadsStrip } from './LiveLeadsStrip';
 import { 
   Users, 
   Calendar, 
@@ -254,6 +255,9 @@ export const Dashboard: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Real widget leads — surfaced separately from the simulator figures */}
+      <LiveLeadsStrip />
 
       {/* Bottom Row: Recent Leads & Active Storm Warnings */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">

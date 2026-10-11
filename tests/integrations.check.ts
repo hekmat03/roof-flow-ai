@@ -22,6 +22,25 @@ import {
   deriveRoofIssue,
 } from '../src/utils/leadExtract.ts';
 
+// The widget's server logic (validation, scoring, rate limiting) is the single
+// source of truth inside the team's site app, which is where the public
+// /api/leads route runs. We import it directly rather than duplicating the
+// rules here, so these checks always exercise the code that actually serves
+// visitors. If the site directory is absent, the checks FAIL loudly instead of
+// skipping — an unrun test must never look like a passing one.
+import {
+  validateLead,
+  scoreLead,
+  rateLimit,
+  recordSuccess,
+  _resetRateLimit,
+  isValidPhone,
+  isValidEmail,
+  isValidZip,
+  cleanConversation,
+  RATE_LIMIT_MAX,
+} from '../../site/src/lib/leads-core.ts';
+
 let passed = 0;
 let failed = 0;
 function check(name: string, ok: boolean) {
@@ -137,6 +156,118 @@ check('roof issue: leak', deriveRoofIssue('water dripping from the ceiling') ===
 check('no name from generic text', extractName('Yes I am free tomorrow afternoon') === undefined);
 check('rejects repeating-digit phone', extractPhone('call 000-000-0000') === undefined);
 check('name via "X here"', extractName('John Miller here — lorem ipsum') === 'John Miller');
+
+// ------------------------------------------------------------------
+// 6. widget API: lead validation accept/reject matrix
+// ------------------------------------------------------------------
+console.log('\n[6] widget API: lead validation');
+const GOOD = {
+  name: 'Dana Whitfield',
+  phone: '(214) 555-0147',
+  email: 'dana.w@example.com',
+  zip_code: '75024',
+  roofing_need: 'Hail damage and a leak in the ceiling',
+  consent: true,
+  consent_text: 'I agree to be contacted.',
+  conversation: [{ sender: 'visitor', text: 'hail damage', timestamp: 't' }],
+};
+const bad = (over: Record<string, unknown>) => validateLead({ ...GOOD, ...over });
+
+check('accepts a complete lead', validateLead(GOOD).ok === true);
+check('accepts phone-only (email omitted)', validateLead({ ...GOOD, email: '' }).ok === true);
+check('accepts email-only (phone omitted)', validateLead({ ...GOOD, phone: '' }).ok === true);
+check("accepts ZIP as 'N/A' when refused", validateLead({ ...GOOD, zip_code: 'N/A' }).ok === true);
+check('REJECTS honeypot filled', bad({ company_website: 'http://spam.example' }).ok === false);
+check('REJECTS missing consent', bad({ consent: false }).ok === false);
+check('REJECTS consent given as string "true"', bad({ consent: 'true' }).ok === false);
+check('REJECTS no phone AND no email', bad({ phone: '', email: '' }).ok === false);
+check('REJECTS bad phone', bad({ phone: '12' }).ok === false);
+check('REJECTS bad email', bad({ email: 'not-an-email' }).ok === false);
+check('REJECTS bad phone + bad email together', bad({ phone: '555', email: 'nope@' }).ok === false);
+check('REJECTS bad ZIP', bad({ zip_code: '12' }).ok === false);
+check('REJECTS 1-char name', bad({ name: 'A' }).ok === false);
+check('REJECTS 2-char roofing_need', bad({ roofing_need: 'ok' }).ok === false);
+check('rejects and names the failing field (consent)', (() => {
+  const r = bad({ consent: false });
+  return r.ok === false && r.failure.field === 'consent';
+})());
+// Oversize: everything is LENGTH-CAPPED rather than rejected (documented
+// behaviour — a long, chatty visitor is still a real lead).
+const over = validateLead({ ...GOOD, name: 'N'.repeat(200), roofing_need: 'x'.repeat(2000) });
+check('caps oversize name at 80 (accepted, not rejected)', over.ok === true && over.lead.name.length === 80);
+check('caps oversize roofing_need at 500', over.ok === true && over.lead.roofing_need.length === 500);
+const ctrl = validateLead({ ...GOOD, name: 'Dana\u0000\u0007 Whit\u001f field' });
+check('strips control characters', ctrl.ok === true && ctrl.lead.name === 'Dana Whit field');
+check('caps conversation turns at 40', cleanConversation(Array.from({ length: 60 }, () => ({ sender: 'visitor', text: 'hi', timestamp: 't' }))).length === 40);
+check('drops empty conversation turns', cleanConversation([{ sender: 'visitor', text: '   ', timestamp: 't' }]).length === 0);
+check('non-array conversation becomes []', cleanConversation('nonsense').length === 0);
+
+// format helpers directly
+check('isValidPhone: 10 digits ok', isValidPhone('2145550147') === true);
+check('isValidPhone: 11 digits with leading 1 ok', isValidPhone('1-214-555-0147') === true);
+check('isValidPhone: 9 digits bad', isValidPhone('214555014') === false);
+check('isValidPhone: letters+digits bad', isValidPhone('aaaaaaaaaa1') === false);
+check('isValidEmail: ok', isValidEmail('a@b.co') === true);
+check('isValidEmail: no TLD bad', isValidEmail('a@b') === false);
+check('isValidZip: 5 digits ok', isValidZip('75024') === true);
+check('isValidZip: 4 digits bad', isValidZip('7502') === false);
+check("isValidZip: 'N/A' ok", isValidZip('N/A') === true);
+
+// ------------------------------------------------------------------
+// 7. widget API: lead scoring (deterministic 0–100)
+// ------------------------------------------------------------------
+console.log('\n[7] widget API: lead scoring');
+const score = (over: Record<string, unknown>) =>
+  scoreLead({ phone: null, email: null, zip_code: 'N/A', roofing_need: 'roof', conversation: [], consent: true, ...over });
+
+check('bare minimum (consent only) scores 10', score({}).score === 10);
+check('phone only adds 25 (35 total)', score({ phone: '2145550147' }).score === 35);
+check('email only adds 20 (30 total)', score({ email: 'a@b.co' }).score === 30);
+check('phone + email adds 35 (45 total)', score({ phone: '2145550147', email: 'a@b.co' }).score === 45);
+check('valid ZIP adds 15 (25 total)', score({ zip_code: '75024' }).score === 25);
+check('urgency keyword adds 5', score({ roofing_need: 'there is a leak' }).score === 15);
+check('urgency caps at 25', score({ roofing_need: 'leak water storm hail emergency tarp sagging mold missing shingles' }).score === 35);
+check('engagement: 3 turns add 9', score({ conversation: [{ text: 'a' }, { text: 'b' }, { text: 'c' }] }).score === 19);
+check('engagement caps at 15', score({ conversation: Array.from({ length: 9 }, () => ({ text: 'x' })) }).score === 25);
+const best = score({
+  phone: '2145550147',
+  email: 'a@b.co',
+  zip_code: '75024',
+  roofing_need: 'emergency leak, hail, storm, missing shingles, mold, tarp, water, sagging',
+  conversation: Array.from({ length: 9 }, () => ({ text: 'storm' })),
+});
+check('ideal lead scores exactly 100', best.score === 100);
+check('score never exceeds 100', best.score <= 100);
+check('scoring is deterministic', score({ phone: '2145550147' }).score === score({ phone: '2145550147' }).score);
+check('score explains itself (reasons)', score({ phone: '2145550147', zip_code: '75024' }).reasons.length >= 2);
+
+// ------------------------------------------------------------------
+// 8. widget API: per-IP rate limiter (in-memory; resets on restart)
+// ------------------------------------------------------------------
+console.log('\n[8] widget API: rate limiter');
+_resetRateLimit();
+const ipA = '203.0.113.7';
+const now = 1_000_000_000_000;
+let allowedCount = 0;
+for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+  if (rateLimit(ipA, now).allowed) {
+    allowedCount++;
+    recordSuccess(ipA, now);
+  }
+}
+check(`allows exactly ${String(RATE_LIMIT_MAX)} successes in the window`, allowedCount === RATE_LIMIT_MAX);
+const blocked = rateLimit(ipA, now);
+check('blocks the next submission', blocked.allowed === false);
+check('reports a Retry-After of at most 10 minutes', blocked.retryAfterSec > 0 && blocked.retryAfterSec <= 600);
+check('another IP is unaffected', rateLimit('198.51.100.9', now).allowed === true);
+check('quota frees up after the 10-minute window', rateLimit(ipA, now + 10 * 60 * 1000 + 1).allowed === true);
+_resetRateLimit();
+check('reset clears all buckets (test seam)', rateLimit(ipA, now).allowed === true);
+// A visitor who is still typing must not be punished: only successes consume quota.
+_resetRateLimit();
+for (let i = 0; i < 20; i++) rateLimit('198.51.100.44', now); // no recordSuccess
+check('failed/no-op submissions do not consume quota', rateLimit('198.51.100.44', now).allowed === true);
+_resetRateLimit();
 
 // ------------------------------------------------------------------
 console.log(`\n==================================================`);
