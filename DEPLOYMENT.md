@@ -94,5 +94,6 @@ The key is only ever read by `api/agent-response.ts` on the server. Never paste 
 ## 🗄️ Phase 2: database, email and tools
 
 1. Supabase → SQL Editor → paste and run `supabase/schema.sql`.
-2. Vercel env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (server only, never in the app), and optionally `RESEND_API_KEY`, `RESEND_FROM`.
+2. Vercel env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (server only, never in the app).
+   There is no email/SMS provider config: RoofFlow AI never delivers messages (see `api/_lib/tools.ts`).
 3. Redeploy. Configuration shows ✓ Database / ✓ Real email when connected. SMS stays in demo mode.

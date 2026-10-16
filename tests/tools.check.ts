@@ -55,13 +55,19 @@ check('email without provider key is simulated', r.ok && r.simulated);
 
 let sent: any = null;
 const fakeFetch = (async (url: string, init: any) => { sent = { url, body: JSON.parse(init.body), auth: init.headers.Authorization }; return { ok: true, json: async () => ({}) }; }) as any;
-r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, mkEnv({ resendKey: 'rk_test', fetchFn: fakeFetch, companyName: 'Acme' }));
-check('email with provider key is really sent', r.ok && !r.simulated && r.status === 'sent' && sent.url.includes('resend.com'));
-check('email carries AI disclosure + STOP footer', /AI assistant/.test(sent.body.text) && /STOP/.test(sent.body.text));
-check('provider key sent as bearer only', sent.auth === 'Bearer rk_test');
-const failFetch = (async () => ({ ok: false, json: async () => ({}) })) as any;
-r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, mkEnv({ resendKey: 'k', fetchFn: failFetch }));
-check('provider failure reported as ok:false', !r.ok && r.error === 'email_provider_error');
+// CONSTRAINT BOUNDARY: the owner's spec forbids email-sending services, so the
+// Resend integration was removed. These checks now pin that boundary: even if a
+// provider key were somehow present, nothing may be sent and no outbound
+// request may be made.
+r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, mkEnv({ fetchFn: fakeFetch, companyName: 'Acme' }));
+check('email is never really sent (no provider integration)', r.ok && r.simulated && r.status === 'simulated_sent');
+check('no outbound email request is made at all', sent === null);
+// A leftover RESEND_API_KEY in the environment must not re-enable sending.
+const legacyEnv = mkEnv({ fetchFn: fakeFetch }) as Record<string, unknown>;
+legacyEnv.resendKey = 'rk_legacy';
+legacyEnv.resendFrom = 'onboarding@resend.dev';
+r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, legacyEnv as never);
+check('a stray provider key cannot re-enable sending', r.ok && r.simulated && sent === null);
 
 const env = mkEnv({ db: mockDb });
 r = await executeTool('update_crm', { phone: '5551234567', status: 'Do Not Contact' }, env);

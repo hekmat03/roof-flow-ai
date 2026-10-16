@@ -2,8 +2,8 @@
 // POST: run the agent loop (reply + executed actions). GET: capability status.
 //
 // Env vars: MISTRAL_API_KEY (required), MISTRAL_MODEL,
-//           SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (optional, persistence),
-//           RESEND_API_KEY + RESEND_FROM (optional, real email).
+//           SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (optional, persistence).
+// NOTE: no email/SMS provider is wired — see the boundary note in api/_lib/tools.ts.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     return res.status(200).json({
-      live: Boolean(apiKey), tools: true, storage: Boolean(db), email: Boolean(process.env.RESEND_API_KEY), model,
+      live: Boolean(apiKey), tools: true, storage: Boolean(db), email: false, model,
     });
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -71,7 +71,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       agentType, systemPrompt, messages, chat,
       env: {
         db, sessionId, allowedContacts, optOuts, companyName: ctx.companyName,
-        resendKey: process.env.RESEND_API_KEY, resendFrom: process.env.RESEND_FROM,
       },
     });
     if (!reply) return res.status(502).json({ error: 'Empty AI reply' });

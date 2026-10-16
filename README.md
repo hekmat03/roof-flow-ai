@@ -36,7 +36,7 @@ See `.env.example`. Set `MISTRAL_API_KEY` in Vercel → Project Settings → Env
 | `api/agent-response.ts` | Serverless endpoint (POST = reply, GET = status) |
 | `api/agent-run.ts` | Tool-calling agent endpoint (POST = run, GET = capabilities) |
 | `api/_lib/agent.ts` | Prompts, input sanitising, rate limiter (unit-tested) |
-| `api/_lib/tools.ts` | Tools, guardrails, Supabase/Resend adapters, agent loop |
+| `api/_lib/tools.ts` | Tools, guardrails, Supabase adapter, agent loop |
 | `supabase/schema.sql` | Database tables (RLS on, server-only access) |
 | `src/lib/agentRunner.ts` | Runs an agent turn with tools, offline fallback |
 | `src/lib/applyActions.ts` | Turns executed actions into CRM updates |
@@ -51,7 +51,7 @@ See `.env.example`. Set `MISTRAL_API_KEY` in Vercel → Project Settings → Env
 | Tool | What it does | Honesty rule |
 |---|---|---|
 | `book_inspection` | Records an inspection REQUEST | Always "requested", never "confirmed" |
-| `send_message` | Email (real via Resend) or SMS (demo only) | Demo sends are labelled DEMO |
+| `send_message` | Records an outreach intent only — no email or SMS is ever delivered | Every send is labelled simulated |
 | `update_crm` | Updates the lead, handles Do Not Contact | Opt-outs block all later messages |
 | `schedule_followup` | Records a follow-up for later | Stored as "scheduled", not sent |
 

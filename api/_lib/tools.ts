@@ -171,8 +171,6 @@ export interface ToolEnv {
   allowedContacts: Set<string>;
   optOuts: Set<string>;
   companyName?: string;
-  resendKey?: string;
-  resendFrom?: string;
   fetchFn?: Fetch;
 }
 
@@ -203,24 +201,20 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
       }
       case 'send_message': {
         if (await optedOut(a.to, env)) return fail('contact opted out');
-        const footer = `\n\n— Sent by an AI assistant${env.companyName ? ` for ${env.companyName}` : ''}. Reply STOP to opt out.`;
-        let status = 'simulated_sent', simulated = true;
-        if (a.channel === 'email' && env.resendKey) {
-          const r = await (env.fetchFn || fetch)('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${env.resendKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: env.resendFrom || 'onboarding@resend.dev', to: [a.to], subject: a.subject, text: a.body + footer }),
-          });
-          if (!r.ok) return fail('email_provider_error');
-          status = 'sent'; simulated = false;
-        }
+        // BOUNDARY: RoofFlow AI does not send email or SMS. There is deliberately
+        // NO email-provider integration here (Resend was removed): the business
+        // plan's constraint is that no message ever leaves the system, so every
+        // send_message records an intent and reports itself as simulated. Wiring
+        // a real provider back in is a product decision, not a plumbing one.
+        const status = 'simulated_sent';
+        const simulated = true;
         let persisted = false, id: string | undefined;
         if (env.db) {
           const saved = await env.db.insert('messages', { session_id: env.sessionId, channel: a.channel, recipient: a.to, subject: a.subject, body: a.body, status });
           persisted = true; id = saved.id;
         }
         return { ok: true, status, simulated, persisted, id,
-          detail: simulated ? 'Demo mode: not actually delivered.' : 'Delivered to the email provider.' };
+          detail: 'Recorded only — no email or SMS is actually delivered by RoofFlow AI.' };
       }
       case 'update_crm': {
         const key = a.phone || a.email;
