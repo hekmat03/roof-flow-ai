@@ -1,6 +1,6 @@
 // api/_lib/tools.ts
 // Tool-calling for the RoofFlow agents: argument validation, guarded executors
-// (Supabase + Resend, both optional) and the bounded agent loop.
+// (Supabase only; email delivery is not available) and the bounded agent loop.
 // Only TYPE imports from other files, so tests can load this with Node directly.
 
 import type { AgentType } from './agent.js';

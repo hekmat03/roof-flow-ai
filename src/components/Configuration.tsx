@@ -275,7 +275,7 @@ const IntegrationPanel: React.FC = () => {
           {aiLive && (
             <div className="flex flex-wrap gap-2 text-[10px] font-bold">
               <span className={ai.storage ? 'text-emerald-400' : 'text-slate-500'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
-              <span className={ai.email ? 'text-emerald-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Real email (Resend)</span>
+              <span className={ai.email ? 'text-emerald-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Email delivery — not available</span>
               <span className="text-amber-400">○ SMS: demo mode</span>
             </div>
           )}
