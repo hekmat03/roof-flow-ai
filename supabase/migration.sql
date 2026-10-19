@@ -1,70 +1,197 @@
 -- ============================================================================
--- RoofFlow AI — Supabase schema for real website-widget leads
--- ============================================================================
--- HOW TO APPLY
---   1. Create a Supabase project (free tier is fine): https://supabase.com
---   2. Open the project → SQL Editor → New query.
---   3. Paste this entire file and click "Run". It is idempotent — safe to re-run.
---   4. Copy the project's URL and its **service_role** key
---      (Project Settings → API) into our site's Secrets panel as:
---          SUPABASE_URL
---          SUPABASE_SERVICE_ROLE_KEY
---      The service_role key is a SERVER secret. It is never sent to a browser,
---      never placed in the widget, and never committed to this repository.
---   5. Confirm it works: POST an empty body to /api/leads on the live site and
---      expect `{"ok":false,"error":"validation",...}` (a 400, NOT a 503) — a 503
---      means the two secrets above are still missing.
+-- RoofFlow AI — database migration
+-- ----------------------------------------------------------------------------
+-- SAFE TO RE-RUN. Every statement is idempotent, and nothing is dropped: the
+-- `leads` table already exists in this project with columns from an earlier
+-- app, so this migration ONLY adds what RoofFlow needs and leaves everything
+-- else (users, messages, followups, inspection_requests, contact_optouts)
+-- untouched.
 --
--- SECURITY MODEL
---   Row Level Security is ENABLED with NO policies. That is deliberate: it makes
---   the table deny-all to the `anon` and `authenticated` roles, so the public
---   publishable key cannot read or write leads even if it leaks. ONLY the
---   service_role key — used exclusively inside our server routes — touches this
---   table. The browser never holds a secret.
---
--- PRIVACY
---   consent + consent_text record exactly what the visitor agreed to and when the
---   row was written (created_at). Nothing else about the visitor is collected:
---   no cookies, no device fingerprint, no third-party trackers. user_agent is
---   stored only to diagnose junk submissions and can be nulled at any time.
+-- HOW TO APPLY (owner, ~1 minute):
+--   1. Open the Supabase project → SQL Editor → New query.
+--   2. Paste this whole file and press Run.
+--   3. It prints a one-row "roofflow_migration_ok" summary at the end.
+-- Until it is applied, the app runs but says "storage unavailable" instead of
+-- pretending leads were saved.
 -- ============================================================================
 
-create extension if not exists pgcrypto;
+-- ---------------------------------------------------------------------------
+-- 1. leads — the widget's lead rows
+-- ---------------------------------------------------------------------------
+-- Existing columns kept as-is: id, session_id, name, phone, email, zip,
+-- roof_issue, note, contact_key, status, updated_at.
+-- Added below: the fields the widget captures (ZIP, need, consent record,
+-- transcript, score, source, user agent) plus created_at for ordering.
+alter table if exists public.leads
+  add column if not exists zip_code      text,
+  add column if not exists roofing_need  text,
+  add column if not exists consent       boolean,
+  add column if not exists consent_text  text,
+  add column if not exists conversation  jsonb,
+  add column if not exists lead_score    integer,
+  add column if not exists source        text,
+  add column if not exists user_agent    text,
+  add column if not exists created_at    timestamptz not null default now();
 
-create table if not exists public.leads (
-  id            uuid primary key default gen_random_uuid(),
-  name          text,
-  phone         text null,
-  email         text null,
-  zip_code      text,
-  roofing_need  text,
-  consent       boolean,
-  consent_text  text,
-  -- Full widget transcript: [{ sender, text, timestamp }, ...]
-  conversation  jsonb not null default '[]'::jsonb,
-  lead_score    int,
-  status        text default 'New Lead',
-  source        text default 'Website Widget',
-  user_agent    text null,
-  created_at    timestamptz not null default now()
+-- Backfill created_at for any pre-existing rows so `order by created_at` is sane.
+update public.leads set created_at = coalesce(created_at, updated_at, now()) where created_at is null;
+
+create index if not exists leads_created_at_idx on public.leads (created_at desc);
+create index if not exists leads_status_idx     on public.leads (status);
+create index if not exists leads_score_idx      on public.leads (lead_score desc);
+
+-- ---------------------------------------------------------------------------
+-- 2. profiles — one row per account; THE authoritative plan store
+-- ---------------------------------------------------------------------------
+create table if not exists public.profiles (
+  user_id              uuid primary key references auth.users (id) on delete cascade,
+  email                text,
+  stripe_customer_id   text unique,
+  current_plan         text not null default 'free',
+  subscription_status  text not null default 'none',
+  current_period_start timestamptz,
+  current_period_end   timestamptz,
+  cancel_at_period_end boolean not null default false,
+  price_id             text,
+  downgraded_to        text,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now(),
+  constraint profiles_plan_check check (current_plan in ('free', 'starter', 'pro'))
 );
 
--- The CRM board lists newest-first, so index the sort key.
-create index if not exists leads_created_at_idx on public.leads (created_at desc);
--- Cheap de-duplication check for the same person submitting twice.
-create index if not exists leads_contact_idx on public.leads (email, phone);
+alter table public.profiles
+  add column if not exists email                text,
+  add column if not exists downgraded_to        text,
+  add column if not exists created_at           timestamptz not null default now(),
+  add column if not exists updated_at           timestamptz not null default now();
 
--- Deny-all to anon/authenticated; the service role bypasses RLS by design.
-alter table public.leads enable row level security;
+-- ---------------------------------------------------------------------------
+-- 3. usage + usage_conversations — monthly conversation quota
+-- ---------------------------------------------------------------------------
+-- usage               : one cached counter per user per billing month.
+-- usage_conversations : one row per COUNTED conversation. Its primary key IS
+--                       (user_id, conversation_id), so the same conversation can
+--                       never be counted twice even if two requests race.
+create table if not exists public.usage (
+  user_id            uuid not null references auth.users (id) on delete cascade,
+  period_start       date not null,
+  conversations_used integer not null default 0,
+  updated_at         timestamptz not null default now(),
+  primary key (user_id, period_start)
+);
 
--- Belt-and-suspenders: even if a policy is added later by mistake, these revokes
--- keep the public roles out.
-revoke all on table public.leads from anon;
-revoke all on table public.leads from authenticated;
+create table if not exists public.usage_conversations (
+  user_id         uuid not null references auth.users (id) on delete cascade,
+  conversation_id text not null,
+  period_start    date not null,
+  created_at      timestamptz not null default now(),
+  primary key (user_id, conversation_id)
+);
 
-comment on table public.leads is
-  'Real leads captured by the embeddable website widget. RLS enabled with no policies: service_role only.';
-comment on column public.leads.consent_text is
-  'Exact consent wording the visitor agreed to, stored verbatim for compliance.';
-comment on column public.leads.lead_score is
-  'Deterministic 0-100 score computed server-side at insert (see site/src/lib/leads-core.ts scoreLead).';
+create index if not exists usage_conversations_period_idx
+  on public.usage_conversations (user_id, period_start);
+
+-- ---------------------------------------------------------------------------
+-- 4. webhook_events — Stripe idempotency ledger
+-- ---------------------------------------------------------------------------
+create table if not exists public.webhook_events (
+  stripe_event_id text primary key,
+  processed_at    timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- 5. New accounts get a profile automatically
+-- ---------------------------------------------------------------------------
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (user_id, email, current_plan, subscription_status)
+  values (new.id, new.email, 'free', 'none')
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Backfill profiles for accounts that already exist.
+insert into public.profiles (user_id, email, current_plan, subscription_status)
+select u.id, u.email, 'free', 'none'
+from auth.users u
+on conflict (user_id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 6. Row level security
+-- ---------------------------------------------------------------------------
+-- Rule of the product: the browser may READ its own rows and nothing else.
+-- Anon gets nothing at all. Every authoritative write (leads, plan changes,
+-- usage counters) goes through the server with the service key, which bypasses
+-- RLS by design.
+alter table public.leads               enable row level security;
+alter table public.profiles            enable row level security;
+alter table public.usage               enable row level security;
+alter table public.usage_conversations enable row level security;
+alter table public.webhook_events      enable row level security;
+
+-- profiles: a signed-in user may read their own row and nothing else. There is
+-- deliberately NO update policy: every plan change is performed server-side with
+-- the service key, so a user cannot promote themselves. (A policy on profiles
+-- that reads profiles would also recurse in Postgres — another reason to avoid
+-- letting the browser write here at all.)
+drop policy if exists profiles_select_own on public.profiles;
+create policy profiles_select_own on public.profiles
+  for select to authenticated
+  using (auth.uid() = user_id);
+
+-- usage: read-only to the owner of the rows.
+drop policy if exists usage_select_own on public.usage;
+create policy usage_select_own on public.usage
+  for select to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists usage_conversations_select_own on public.usage_conversations;
+create policy usage_conversations_select_own on public.usage_conversations
+  for select to authenticated
+  using (auth.uid() = user_id);
+
+-- leads: no browser access at all. The CRM reads them through the server, and
+-- the widget writes them through the server. (No policy = deny.)
+-- webhook_events: server-only, never exposed.
+
+-- ---------------------------------------------------------------------------
+-- 7. Table privileges
+-- ---------------------------------------------------------------------------
+revoke all on public.profiles            from anon;
+revoke all on public.usage               from anon;
+revoke all on public.usage_conversations from anon;
+revoke all on public.webhook_events      from anon;
+revoke all on public.webhook_events      from authenticated;
+revoke insert, update, delete on public.usage               from authenticated;
+revoke insert, update, delete on public.usage_conversations from authenticated;
+revoke insert, update, delete on public.leads               from anon, authenticated;
+
+grant select on public.profiles            to authenticated;
+grant select on public.usage               to authenticated;
+grant select on public.usage_conversations to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 8. Verification — the statement below is the proof to read after applying
+-- ---------------------------------------------------------------------------
+select
+  'roofflow_migration_ok' as status,
+  (select count(*) from information_schema.tables
+     where table_schema = 'public'
+       and table_name in ('leads', 'profiles', 'usage', 'usage_conversations', 'webhook_events')) as tables_present,
+  (select count(*) from information_schema.columns
+     where table_schema = 'public' and table_name = 'leads'
+       and column_name in ('zip_code', 'roofing_need', 'consent', 'consent_text',
+                           'conversation', 'lead_score', 'source', 'user_agent', 'created_at')) as lead_columns_added,
+  (select count(*) from pg_policies
+     where schemaname = 'public' and tablename in ('profiles', 'usage', 'usage_conversations')) as rls_policies;
