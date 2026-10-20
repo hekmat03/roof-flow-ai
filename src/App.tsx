@@ -9,6 +9,7 @@ import { Agent4Estimate } from './components/Agent4Estimate';
 import { CRMLeadsBoard } from './components/CRMLeadsBoard';
 import { Configuration } from './components/Configuration';
 import { PromptPlayground } from './components/PromptPlayground';
+import { BillingGateway } from './components/BillingGateway';
 import { FallbackNotice } from './components/FallbackNotice';
 
 function MainAppContent() {
@@ -32,6 +33,9 @@ function MainAppContent() {
         return <Configuration />;
       case 'prompts':
         return <PromptPlayground />;
+      case 'pricing':
+      case 'billing':
+        return <BillingGateway view={activeTab} />;
       default:
         return <Dashboard />;
     }

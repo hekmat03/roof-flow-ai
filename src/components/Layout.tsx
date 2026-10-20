@@ -10,6 +10,8 @@ import {
   Users, 
   Settings, 
   Terminal,
+  CreditCard,
+  Wallet,
   CloudLightning,
   Calendar,
   Menu,
@@ -31,6 +33,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'agent3', label: 'Agent 3: SMS & Email', icon: MessageSquarePlus },
     { id: 'agent4', label: 'Agent 4: Estimate Follow-up', icon: FileText },
     { id: 'crm', label: 'CRM Leads Board', icon: Users },
+    { id: 'pricing', label: 'Plans & Pricing', icon: Wallet },
+    { id: 'billing', label: 'Billing & Account', icon: CreditCard },
     { id: 'config', label: 'Configuration', icon: Settings },
     { id: 'prompts', label: 'Prompt Playground', icon: Terminal },
   ];
