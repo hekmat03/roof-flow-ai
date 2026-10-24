@@ -33,6 +33,14 @@ alter table if exists public.leads
   add column if not exists user_agent    text,
   add column if not exists created_at    timestamptz not null default now();
 
+-- 1b. Legacy NOT NULL constraints on the shared `leads` table
+-- The earlier app that created this table requires `session_id`. Our inserts
+-- satisfy it with their own per-thread id, so the widget works either way; this
+-- relaxes the constraint so the column stops being a trap for future writers.
+-- (Safe: it only removes a restriction, it never deletes data.)
+alter table if exists public.leads alter column session_id  drop not null;
+alter table if exists public.leads alter column contact_key drop not null;
+
 -- Backfill created_at for any pre-existing rows so `order by created_at` is sane.
 update public.leads set created_at = coalesce(created_at, updated_at, now()) where created_at is null;
 
