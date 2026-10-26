@@ -26,21 +26,10 @@ import {
   type LeadInput,
   type LeadRow,
 } from "../../lib/leads-core";
+import { isSameOrigin } from "../../lib/http";
 
+/** GET is same-origin only: the CRM board is part of our own app. */
 const LIST_LIMIT = 200;
-
-/** Same-origin gate for GET (the CRM board is part of our own app). */
-const isSameOrigin = (request: Request): boolean => {
-  const origin = request.headers.get("origin");
-  if (!origin) return true; // direct browser navigation / SSR fetch has no Origin
-  try {
-    const originHost = new URL(origin).host;
-    const reqHost = request.headers.get("host") ?? new URL(request.url).host;
-    return originHost === reqHost;
-  } catch {
-    return false;
-  }
-};
 
 export const Route = createFileRoute("/api/leads")({
   server: {
