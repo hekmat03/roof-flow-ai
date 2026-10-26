@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Roof inspection chat</title>
+    <!--
+      widget.html — the conversation the visitor completes inside the embed
+      iframe. It POSTs to /api/leads on THIS origin. It loads no third-party
+      scripts and stores nothing locally except the visitor's own typed answers
+      (kept in memory only, so a failed submit can be retried without retyping).
+    -->
+    <style>
+      :root {
+        --accent: #f59e0b;
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --line: #334155;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 14px; display: flex; flex-direction: column; height: 100%;
+      }
+      header {
+        display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+        background: linear-gradient(180deg, #1e293b, #172033); border-bottom: 1px solid var(--line);
+      }
+      .dot { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; color: #0b1220; font-weight: 800; }
+      header h1 { font-size: 14px; margin: 0; font-weight: 800; }
+      header p { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+      .close { margin-left: auto; background: transparent; border: 0; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; }
+      #log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+      .msg { max-width: 88%; padding: 10px 12px; border-radius: 14px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+      .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+      .user { align-self: flex-end; background: var(--accent); color: #0b1220; font-weight: 600; border-bottom-right-radius: 4px; }
+      .sys { align-self: center; font-size: 11px; color: var(--muted); text-align: center; }
+      form { border-top: 1px solid var(--line); padding: 12px; background: #131c2e; }
+      label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; font-weight: 700; }
+      input[type="text"], input[type="tel"], input[type="email"] {
+        width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
+        background: #0b1220; color: var(--text); font-size: 14px; font-family: inherit;
+      }
+      input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+      .row { display: flex; gap: 8px; }
+      .grow { flex: 1; }
+      button.primary {
+        width: 100%; margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 10px;
+        background: var(--accent); color: #0b1220; font-weight: 800; font-size: 14px; cursor: pointer; font-family: inherit;
+      }
+      button.primary:disabled { opacity: .5; cursor: not-allowed; }
+      button.ghost {
+        margin-top: 8px; width: 100%; padding: 11px; border-radius: 10px; border: 1px solid var(--line);
+        background: transparent; color: var(--text); font-weight: 700; cursor: pointer; font-family: inherit;
+      }
+      .err { color: #fca5a5; font-size: 12px; margin-top: 6px; min-height: 15px; }
+      .consent { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--text); line-height: 1.4; }
+      .consent input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); }
+      footer { padding: 8px 14px 12px; font-size: 10px; color: #64748b; text-align: center; line-height: 1.4; }
+      .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+      .ok { align-self: flex-start; background: rgba(16,185,129,.14); border: 1px solid rgba(16,185,129,.45); color: #6ee7b7; }
+      .bad { align-self: flex-start; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.45); color: #fca5a5; }
+      .typing { color: var(--muted); font-size: 12px; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="dot" aria-hidden="true">RF</div>
+      <div>
+        <h1 id="biz">Roof inspection assistant</h1>
+        <p>Free inspection · no obligation</p>
+      </div>
+      <button class="close" type="button" id="close" aria-label="Close chat">&times;</button>
+    </header>
+
+    <div id="log" role="log" aria-live="polite" aria-label="Conversation"></div>
+
+    <form id="form" novalidate>
+      <!-- Honeypot: hidden from humans and screen readers; bots fill it in. -->
+      <div class="hp" aria-hidden="true">
+        <label for="company_website">Company website (leave blank)</label>
+        <input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+      <div id="step"></div>
+      <div class="err" id="err" role="alert"></div>
+      <button class="primary" type="submit" id="submit">Send</button>
+    </form>
+
+    <footer>
+      We only store what you type here to prepare your estimate and have a specialist reach out.
+      No third-party trackers, no ads.
+    </footer>
+
+    <script>
+      (function () {
+        "use strict";
+        var params = new URLSearchParams(window.location.search);
+        var ACCENT = params.get("color") || "#f59e0b";
+        if (/^#[0-9a-f]{3,8}$/i.test(ACCENT)) {
+          document.documentElement.style.setProperty("--accent", ACCENT);
+        }
+
+        var CONSENT_TEXT =
+          "I agree that the roofing company may contact me by phone, text or email about my roof " +
+          "and my free inspection request. I understand I can opt out at any time.";
+
+        var apiBase = window.location.origin;
+
+        // ---- Conversation state (in memory: a failed submit can be retried) --
+        var state = {
+          need: "",
+          zip: "",
+          name: "",
+          phone: "",
+          email: "",
+          consent: false,
+          conversation: [],
+        };
+        var step = "need";
+
+        var log = document.getElementById("log");
+        var stepEl = document.getElementById("step");
+        var errEl = document.getElementById("err");
+        var submitBtn = document.getElementById("submit");
+
+        function esc(s) {
+          return String(s).replace(/[&<>"']/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+          });
+        }
+        function height() {
+          window.parent.postMessage({ type: "roofflow:height", height: document.body.scrollHeight }, "*");
+        }
+        function push(who, text) {
+          var el = document.createElement("div");
+          el.className = "msg " + who;
+          el.textContent = text;
+          log.appendChild(el);
+          log.scrollTop = log.scrollHeight;
+          if (who === "bot" || who === "user") {
+            state.conversation.push({
+              sender: who === "bot" ? "agent" : "visitor",
+              text: text,
+              timestamp: new Date().toISOString(),
+            });
+          }
+          height();
+        }
+        function say(text) {
+          push("bot", text);
+        }
+
+        // ---- Steps ---------------------------------------------------------
+        var STEPS = {
+          need: {
+            prompt: "Hi! I'm the roofing team's assistant. What's going on with your roof?",
+            render: function () {
+              stepEl.innerHTML =
+                '<label for="f_need">What\u2019s happening with your roof?</label>' +
+                '<input id="f_need" type="text" maxlength="500" placeholder="e.g. hail damage, leak in the ceiling" value="' +
+                esc(state.need) +
+                '" />';
+            },
+            read: function () {
+              state.need = (document.getElementById("f_need").value || "").trim().slice(0, 500);
+              if (state.need.length < 3) return "Please tell me briefly what's going on with the roof.";
+              return "";
+            },
+          },
+          zip: {
+            prompt: "Got it. What's the ZIP code of the property?",
+            render: function () {
+              stepEl.innerHTML =
+                '<label for="f_zip">Property ZIP code</label>' +
+                '<div class="row"><input id="f_zip" class="grow" type="text" inputmode="numeric" maxlength="5" placeholder="75024" value="' +
+                esc(state.zip) +
+                '" />' +
+                '<button type="button" class="ghost" id="f_nozip" style="width:auto;margin:0;padding:0 12px">Prefer not to say</button></div>';
+              document.getElementById("f_nozip").addEventListener("click", function () {
+                state.zip = "N/A";
+                document.getElementById("f_zip").value = "N/A";
+              });
+            },
+            read: function () {
+              var v = (document.getElementById("f_zip").value || "").trim();
+              state.zip = v === "N/A" ? "N/A" : v.slice(0, 5);
+              if (state.zip !== "N/A" && !/^\d{5}$/.test(state.zip)) return "Please enter a 5-digit ZIP code, or choose 'Prefer not to say'.";
+              return "";
+            },
+          },
+          name: {
+            prompt: "Thanks. What name should the specialist ask for?",
+            render: function () {
+              stepEl.innerHTML =
+                '<label for="f_name">Your name</label>' +
+                '<input id="f_name" type="text" maxlength="80" autocomplete="name" value="' + esc(state.name) + '" />';
+            },
+            read: function () {
+              state.name = (document.getElementById("f_name").value || "").trim().slice(0, 80);
+              if (state.name.length < 2) return "Please enter your name (2\u201380 characters).";
+              return "";
+            },
+          },
+          contact: {
+            prompt: "Thanks, {name}. How should we reach you? A phone number, an email \u2014 or both.",
+            render: function () {
+              stepEl.innerHTML =
+                '<label for="f_phone">Phone</label>' +
+                '<input id="f_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(214) 555-0147" value="' + esc(state.phone) + '" />' +
+                '<label for="f_email" style="margin-top:10px">Email</label>' +
+                '<input id="f_email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(state.email) + '" />';
+            },
+            read: function () {
+              state.phone = (document.getElementById("f_phone").value || "").trim().slice(0, 32);
+              state.email = (document.getElementById("f_email").value || "").trim().slice(0, 254);
+              if (!state.phone && !state.email) return "Please give me a phone number or an email address.";
+              if (state.phone) {
+                var d = state.phone.replace(/\D/g, "");
+                var okPhone = (d.length === 10 || (d.length === 11 && d[0] === "1")) && /^[\d\s()+.\-]+$/.test(state.phone);
+                if (!okPhone) return "That phone number doesn't look right \u2014 10 digits, please.";
+              }
+              if (state.email && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(state.email)) return "That email address doesn't look right.";
+              return "";
+            },
+          },
+          consent: {
+            prompt: "Last step \u2014 your permission, in writing.",
+            render: function () {
+              stepEl.innerHTML =
+                '<label>Consent</label>' +
+                '<div class="consent"><input id="f_consent" type="checkbox"' + (state.consent ? " checked" : "") + " />" +
+                '<span for="f_consent">' + esc(CONSENT_TEXT) + "</span></div>";
+            },
+            read: function () {
+              state.consent = document.getElementById("f_consent").checked;
+              if (!state.consent) return "Please tick the consent box so we\u2019re allowed to contact you.";
+              return "";
+            },
+          },
+        };
+
+        function renderStep() {
+          if (step === "done") {
+            stepEl.innerHTML = "";
+            submitBtn.style.display = "none";
+            return;
+          }
+          submitBtn.style.display = "block";
+          submitBtn.textContent = step === "consent" ? "Request my free inspection" : "Send";
+          STEPS[step].render();
+          var input = stepEl.querySelector("input[type=text],input[type=tel],input[type=email]");
+          if (input) input.focus();
+          height();
+        }
+
+        function promptFor(name) {
+          return STEPS[name].prompt.replace("{name}", state.name.split(" ")[0] || "");
+        }
+
+        // ---- Optional live AI line (falls back silently) -------------------
+        function aiLineFor(message, done) {
+          var ctrl = new AbortController();
+          var t = setTimeout(function () { ctrl.abort(); }, 9000);
+          fetch(apiBase + "/api/widget-reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: ctrl.signal,
+            body: JSON.stringify({ messages: [{ role: "user", content: message }] }),
+          })
+            .then(function (r) { return r.ok ? r.json() : { fallback: true }; })
+            .then(function (d) { done(d && d.fallback === false && d.reply ? d.reply : ""); })
+            .catch(function () { done(""); })
+            .finally(function () { clearTimeout(t); });
+        }
+
+        var order = ["need", "zip", "name", "contact", "consent"];
+
+        document.getElementById("form").addEventListener("submit", function (e) {
+          e.preventDefault();
+          if (step === "done") return;
+          var error = STEPS[step].read();
+          errEl.textContent = error;
+          if (error) return;
+
+          var typed = {
+            need: state.need,
+            zip: state.zip,
+            name: state.name,
+            contact: [state.phone, state.email].filter(Boolean).join(" / "),
+            consent: "consent given",
+          }[step];
+          push("user", typed);
+
+          var next = order[order.indexOf(step) + 1];
+          if (step === "consent") {
+            submitLead();
+            return;
+          }
+          if (step === "need") {
+            // One tailored AI acknowledgement (if the server has a key), then move on.
+            say("Let me take a look\u2026");
+            aiLineFor("My roof: " + state.need + " (ZIP " + (state.zip || "unknown") + ")", function (line) {
+              log.removeChild(log.lastChild); // remove the "let me take a look" placeholder
+              say(line || "Thanks \u2014 that's exactly what we need to check.");
+              step = next;
+              say(promptFor(next));
+              renderStep();
+            });
+            return;
+          }
+          step = next;
+          say(promptFor(next));
+          renderStep();
+        });
+
+        // ---- Submit --------------------------------------------------------
+        function submitLead() {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Sending\u2026";
+          errEl.textContent = "";
+          fetch(apiBase + "/api/leads", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: state.name,
+              phone: state.phone,
+              email: state.email,
+              zip_code: state.zip,
+              roofing_need: state.need,
+              consent: state.consent === true,
+              consent_text: CONSENT_TEXT,
+              conversation: state.conversation,
+              company_website: document.getElementById("company_website").value || "",
+            }),
+          })
+            .then(function (r) {
+              return r.json().then(function (body) { return { status: r.status, body: body }; });
+            })
+            .then(function (res) {
+              submitBtn.disabled = false;
+              if (res.status === 201 || (res.body && res.body.ok)) {
+                step = "done";
+                push("msg done", "");
+                log.removeChild(log.lastChild);
+                var el = document.createElement("div");
+                el.className = "msg ok";
+                el.textContent = "Thanks \u2014 a roofing specialist will reach out.";
+                log.appendChild(el);
+                log.scrollTop = log.scrollHeight;
+                renderStep();
+                height();
+                return;
+              }
+              // Failure: keep every typed answer so Retry costs nothing.
+              showRetry(retryMessage(res));
+            })
+            .catch(function () {
+              submitBtn.disabled = false;
+              showRetry("We couldn't send that \u2014 the connection dropped. Your answers are still here.");
+            });
+        }
+
+        function retryMessage(res) {
+          if (res.status === 503) return "Lead capture is temporarily unavailable \u2014 please try again later.";
+          if (res.status === 429) return "That's a lot of requests \u2014 please try again in a few minutes.";
+          if (res.status === 400 && res.body && res.body.message) return res.body.message;
+          return "Something went wrong on our side \u2014 please try again.";
+        }
+
+        function showRetry(message) {
+          var el = document.createElement("div");
+          el.className = "msg bad";
+          el.textContent = message;
+          log.appendChild(el);
+          log.scrollTop = log.scrollHeight;
+          stepEl.innerHTML = "";
+          submitBtn.style.display = "block";
+          submitBtn.textContent = "Retry";
+          submitBtn.onclick = function (ev) {
+            ev.preventDefault();
+            submitBtn.onclick = null;
+            submitLead();
+          };
+          height();
+        }
+
+        document.getElementById("close").addEventListener("click", function () {
+          window.parent.postMessage({ type: "roofflow:close" }, "*");
+        });
+
+        // ---- Boot ----------------------------------------------------------
+        var biz = params.get("biz");
+        if (biz) document.getElementById("biz").textContent = biz;
+        say(promptFor("need"));
+        renderStep();
+        window.parent.postMessage({ type: "roofflow:ready" }, "*");
+        window.addEventListener("resize", height);
+        window.addEventListener("message", function (e) {
+          if (e.data && e.data.type === "roofflow:open") height();
+        });
+      })();
+    </script>
+  </body>
+</html>

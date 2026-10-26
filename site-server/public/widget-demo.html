@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lone Star Roofing Co. — demo page for the RoofFlow widget</title>
+    <!--
+      widget-demo.html — a stand-in for a contractor's website.
+      It is BOTH the customer-facing integration example and our end-to-end test
+      page: install the widget exactly as shown below and a visitor's answers land
+      in the RoofFlow CRM with source "Website Widget".
+    -->
+    <style>
+      :root { --ink: #0f172a; --amber: #f59e0b; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #f8fafc; }
+      header { background: var(--ink); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
+      header .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--amber); color: var(--ink); display: grid; place-items: center; font-weight: 800; }
+      header strong { font-size: 16px; }
+      main { max-width: 780px; margin: 0 auto; padding: 40px 24px 120px; }
+      h1 { font-size: clamp(26px, 5vw, 40px); line-height: 1.1; margin: 0 0 12px; }
+      p.lead { color: #475569; font-size: 17px; line-height: 1.6; }
+      .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; margin-top: 26px; }
+      .card h2 { font-size: 15px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+      pre { background: #0b1220; color: #cbd5e1; padding: 14px; border-radius: 10px; overflow-x: auto; font-size: 13px; }
+      .hint { font-size: 14px; color: #475569; }
+      footer { border-top: 1px solid #e2e8f0; padding: 20px 24px; color: #64748b; font-size: 13px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="mark">LS</div>
+      <strong>Lone Star Roofing Co. · Dallas–Fort Worth</strong>
+    </header>
+
+    <main>
+      <h1>Hail damage? Get a free roof inspection this week.</h1>
+      <p class="lead">
+        We inspect, document, and handle the insurance paperwork. No cost, no obligation —
+        and you'll have a written photo report either way.
+      </p>
+
+      <div class="card">
+        <h2>For the contractor · how to install</h2>
+        <p class="hint">Paste one line before <code>&lt;/body&gt;</code> on any page:</p>
+        <pre>&lt;script src="https://576127cef4e964ad11707bbdd13ace2d.ctonew.app/widget.js" data-color="#f59e0b" async&gt;&lt;/script&gt;</pre>
+        <p class="hint">
+          That's the whole install. The bubble appears bottom-right; visitor answers are
+          posted to RoofFlow and appear in the CRM as <strong>LIVE · Website Widget</strong>.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>This page is the live test</h2>
+        <p class="hint">
+          Click the amber bubble in the corner and complete the conversation as a visitor
+          would. This page embeds the widget with exactly the snippet above.
+        </p>
+      </div>
+    </main>
+
+    <footer>Lone Star Roofing Co. is a fictional contractor used to demonstrate the RoofFlow AI widget.</footer>
+
+    <script
+      src="/widget.js"
+      data-color="#f59e0b"
+      data-label="Get a free inspection"
+      async
+    ></script>
+  </body>
+</html>
