@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { postLeadToWebhook } from '../utils/webhook';
+import { supabase, supabaseConfigured } from '../lib/supabaseClient';
+import { defaultTabForPlan, featureAllowed, normalizePlan, tabToFeature, type PlanId } from '../lib/planAccess';
+import { isValidEmail, isValidPhone } from '../lib/contactValidation';
+import type { User } from '@supabase/supabase-js';
 
 export interface Lead {
   id: string;
@@ -18,6 +22,8 @@ export interface Lead {
   roofIssue: string;
   agentType: 'Chatbot' | 'Phone Call' | 'SMS Nurture' | 'Estimate Follow-Up';
   chatLog: Array<{ sender: 'User' | 'AI' | 'System'; text: string; timestamp: string }>;
+  createdAt?: string;
+  tenantId?: string;
 }
 
 export interface CompanySettings {
@@ -36,6 +42,16 @@ export interface AgentPrompts {
   agent4: string;
 }
 
+export interface TenantInfo {
+  id: string;
+  name: string;
+  currentPlan: PlanId;
+  chatsUsed: number;
+  chatsPeriodStart: string | null;
+  googleCalendarEmail: string | null;
+  webhookUrl: string | null;
+}
+
 interface AppContextType {
   companySettings: CompanySettings;
   setCompanySettings: React.Dispatch<React.SetStateAction<CompanySettings>>;
@@ -46,6 +62,22 @@ interface AppContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   addLead: (lead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => void;
+  user: User | null;
+  emailVerified: boolean;
+  authLoading: boolean;
+  tenant: TenantInfo | null;
+  plan: PlanId;
+  chatsLimit: number;
+  chatsUsed: number;
+  consumeChat: (conversationId: string) => Promise<{ ok: boolean; remaining: number; error?: string }>;
+  refreshTenant: () => Promise<void>;
+  signOut: () => Promise<void>;
+  upgradeOpen: boolean;
+  upgradeFeature: string;
+  openUpgrade: (featureLabel: string) => void;
+  closeUpgrade: () => void;
+  requestTab: (tab: string) => void;
+  supabaseReady: boolean;
 }
 
 const defaultCompanySettings: CompanySettings = {
@@ -82,68 +114,230 @@ Your goals:
 3. Offer low-interest payment terms: {{financingOptions}}.`
 };
 
-/**
- * Live CRM only — no mock/seed leads. A fresh browser starts with 0 leads and
- * every lead in the board comes from a real simulator capture.
- */
-const defaultLeads: Lead[] = [];
-
-/**
- * Leads storage schema version. v1 (absent key) shipped with hardcoded demo
- * leads that got persisted into localStorage; v2 discards any legacy stored
- * array exactly once so even browsers that ran the old demo (including the
- * owner's) start from a clean, live-data-only CRM. Captured leads made AFTER
- * the v2 marker is set persist normally.
- */
-const LEADS_SCHEMA_V = '2';
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+interface LeadRow {
+  id: string;
+  tenant_id?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  zip?: string | null;
+  zip_code?: string | null;
+  roof_issue?: string | null;
+  status?: string | null;
+  property_ownership?: string | null;
+  scheduled_date?: string | null;
+  appointment_details?: Lead['appointmentDetails'] | null;
+  agent_type?: string | null;
+  chat_log?: Lead['chatLog'] | null;
+  conversation?: Lead['chatLog'] | null;
+  created_at?: string | null;
+}
+
+function rowToLead(row: LeadRow): Lead {
+  const ownership = row.property_ownership === 'Renter' ? 'Renter' : 'Owner';
+  const agent = (row.agent_type as Lead['agentType']) || 'Chatbot';
+  return {
+    id: row.id,
+    name: row.name || 'Unknown',
+    phone: row.phone || '',
+    email: row.email || '',
+    propertyOwnership: ownership,
+    status: (row.status as Lead['status']) || 'New Lead',
+    scheduledDate: row.scheduled_date || '',
+    appointmentDetails: row.appointment_details || undefined,
+    zipCode: row.zip_code || row.zip || 'N/A',
+    roofIssue: row.roof_issue || 'Storm damage assessment',
+    agentType: agent,
+    chatLog: row.chat_log || row.conversation || [],
+    createdAt: row.created_at || undefined,
+    tenantId: row.tenant_id || undefined,
+  };
+}
+
+function leadToRow(lead: Lead, tenantId: string) {
+  return {
+    id: lead.id,
+    tenant_id: tenantId,
+    name: lead.name,
+    phone: lead.phone,
+    email: lead.email,
+    zip: lead.zipCode,
+    zip_code: lead.zipCode,
+    roof_issue: lead.roofIssue,
+    status: lead.status,
+    property_ownership: lead.propertyOwnership,
+    scheduled_date: lead.scheduledDate || null,
+    appointment_details: lead.appointmentDetails || null,
+    agent_type: lead.agentType,
+    chat_log: lead.chatLog,
+    conversation: lead.chatLog,
+    contact_key: lead.phone || lead.email || lead.id,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function newId(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `l${Date.now()}${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
-    const saved = localStorage.getItem('companySettings');
-    return saved ? JSON.parse(saved) : defaultCompanySettings;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [tenant, setTenant] = useState<TenantInfo | null>(null);
+  const [companySettings, setCompanySettings] = useState<CompanySettings>(defaultCompanySettings);
+  const [leads, setLeadsState] = useState<Lead[]>([]);
+  const [prompts, setPrompts] = useState<AgentPrompts>(defaultPrompts);
+  const [activeTab, setActiveTabState] = useState<string>('agent1');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState('This feature');
+  const leadsRef = useRef<Lead[]>([]);
+  leadsRef.current = leads;
 
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    try {
-      const schemaV = localStorage.getItem('leads_schema_v');
-      if (schemaV !== LEADS_SCHEMA_V) {
-        // One-time migration: the stored array predates live-data-only mode
-        // (it contains the old demo leads). Discard it and mark v2.
-        localStorage.setItem('leads_schema_v', LEADS_SCHEMA_V);
-        localStorage.removeItem('leads');
-        return [];
-      }
-      const saved = localStorage.getItem('leads');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+  const plan: PlanId = tenant?.currentPlan ?? 'free';
+  const emailVerified = Boolean(user?.email_confirmed_at);
+  const chatsLimit = plan === 'pro' ? 1000 : plan === 'starter' ? 250 : 20;
+
+  const refreshTenant = useCallback(async () => {
+    if (!supabase || !user) {
+      setTenant(null);
+      return;
     }
-  });
-
-  const [prompts, setPrompts] = useState<AgentPrompts>(() => {
-    const saved = localStorage.getItem('prompts');
-    return saved ? JSON.parse(saved) : defaultPrompts;
-  });
-
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tenant_id, current_plan, email')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!profile?.tenant_id) {
+      setTenant(null);
+      return;
+    }
+    const { data: t } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', profile.tenant_id)
+      .maybeSingle();
+    if (!t) {
+      setTenant(null);
+      return;
+    }
+    const nextPlan = normalizePlan(t.current_plan ?? profile.current_plan);
+    setTenant({
+      id: t.id,
+      name: t.name || 'My Roofing Company',
+      currentPlan: nextPlan,
+      chatsUsed: Number(t.chats_used ?? 0),
+      chatsPeriodStart: t.chats_period_start ?? null,
+      googleCalendarEmail: t.google_calendar_email ?? null,
+      webhookUrl: t.webhook_url ?? null,
+    });
+    if (t.company_settings && typeof t.company_settings === 'object') {
+      setCompanySettings({ ...defaultCompanySettings, ...(t.company_settings as CompanySettings) });
+    }
+    if (t.prompts && typeof t.prompts === 'object') {
+      setPrompts({ ...defaultPrompts, ...(t.prompts as AgentPrompts) });
+    }
+  }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('companySettings', JSON.stringify(companySettings));
-  }, [companySettings]);
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
+    let alive = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setUser(data.session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('leads', JSON.stringify(leads));
-  }, [leads]);
+    void refreshTenant();
+  }, [refreshTenant]);
 
   useEffect(() => {
-    localStorage.setItem('prompts', JSON.stringify(prompts));
-  }, [prompts]);
+    if (!supabase || !tenant?.id) {
+      setLeadsState([]);
+      return;
+    }
+    let alive = true;
+    void supabase
+      .from('leads')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error) {
+          console.warn('Could not load leads', error.message);
+          return;
+        }
+        setLeadsState((data as LeadRow[] | null)?.map(rowToLead) ?? []);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tenant?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    setActiveTabState(defaultTabForPlan(plan));
+  }, [user, plan]);
+
+  const persistSettings = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!supabase || !tenant?.id) return;
+    window.clearTimeout(persistSettings.current);
+    persistSettings.current = window.setTimeout(() => {
+      void supabase.from('tenants').update({
+        company_settings: companySettings,
+        prompts,
+        name: companySettings.companyName,
+      }).eq('id', tenant.id);
+    }, 400);
+  }, [companySettings, prompts, tenant?.id]);
+
+  const persistLeads = useRef<number | undefined>(undefined);
+  const setLeads: React.Dispatch<React.SetStateAction<Lead[]>> = (action) => {
+    setLeadsState((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      if (supabase && tenant?.id) {
+        const snapshot = prev;
+        const tid = tenant.id;
+        window.clearTimeout(persistLeads.current);
+        persistLeads.current = window.setTimeout(() => {
+          const prevMap = new Map(snapshot.map((l) => [l.id, l]));
+          const nextIds = new Set(next.map((l) => l.id));
+          const removed = [...prevMap.keys()].filter((id) => !nextIds.has(id));
+          if (removed.length) {
+            void supabase.from('leads').delete().in('id', removed).eq('tenant_id', tid);
+          }
+          const changed = next.filter((l) => JSON.stringify(prevMap.get(l.id)) !== JSON.stringify(l));
+          if (changed.length) {
+            void supabase.from('leads').upsert(changed.map((l) => leadToRow(l, tid)));
+          }
+        }, 250);
+      }
+      return next;
+    });
+  };
 
   const addLead = (newLead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => {
+    if (newLead.email && newLead.email !== 'N/A' && !isValidEmail(newLead.email)) return;
+    if (newLead.phone && !isValidPhone(newLead.phone)) return;
+
     const leadWithId: Lead = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: newId(),
       name: newLead.name,
       phone: newLead.phone,
       email: newLead.email || 'N/A',
@@ -161,13 +355,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       chatLog: newLead.chatLog || [
         { sender: 'System', text: `Lead initialized via ${newLead.agentType || 'Chatbot'}.`, timestamp: new Date().toLocaleString() }
       ],
+      createdAt: new Date().toISOString(),
+      tenantId: tenant?.id,
     };
     setLeads((prev) => [leadWithId, ...prev]);
 
-    // Real CRM push: fire-and-forget POST to the configured Google Sheets
-    // webhook (no-op when the URL isn't set in Configuration). The internal
-    // CRM board above updates instantly regardless — the webhook must never
-    // block or break lead capture.
     postLeadToWebhook({
       name: leadWithId.name,
       phone: leadWithId.phone,
@@ -177,7 +369,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: leadWithId.status,
       source: leadWithId.agentType,
       timestamp: new Date().toISOString(),
-    }).catch(() => { /* postLeadToWebhook never rejects, belt-and-suspenders */ });
+    }).catch(() => { /* postLeadToWebhook never rejects */ });
+
+    if (leadWithId.status === 'Inspection Scheduled' && supabase) {
+      void supabase.auth.getSession().then(({ data }) => {
+        const token = data.session?.access_token;
+        if (!token) return;
+        return fetch('/api/google-calendar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            lead: {
+              name: leadWithId.name,
+              phone: leadWithId.phone,
+              email: leadWithId.email,
+              zipCode: leadWithId.zipCode,
+              roofIssue: leadWithId.roofIssue,
+            },
+            scheduledDate: leadWithId.scheduledDate,
+            appointmentDetails: leadWithId.appointmentDetails,
+          }),
+        });
+      }).catch(() => { /* calendar is optional */ });
+    }
+  };
+
+  const consumeChat = async (conversationId: string) => {
+    if (!supabase || !user) {
+      return { ok: true, remaining: chatsLimit };
+    }
+    const { data, error } = await supabase.rpc('consume_chat', { p_conversation_id: conversationId });
+    if (error) {
+      return { ok: true, remaining: Math.max(chatsLimit - (tenant?.chatsUsed ?? 0), 0), error: error.message };
+    }
+    const payload = (data ?? {}) as { ok?: boolean; remaining?: number; used?: number; error?: string };
+    if (typeof payload.used === 'number') {
+      setTenant((prev) => prev ? { ...prev, chatsUsed: payload.used as number } : prev);
+    }
+    return {
+      ok: payload.ok !== false,
+      remaining: Number(payload.remaining ?? 0),
+      error: payload.error,
+    };
+  };
+
+  const openUpgrade = (featureLabel: string) => {
+    setUpgradeFeature(featureLabel);
+    setUpgradeOpen(true);
+  };
+  const closeUpgrade = () => setUpgradeOpen(false);
+
+  const requestTab = (tab: string) => {
+    const feature = tabToFeature(tab);
+    if (!featureAllowed(plan, feature)) {
+      const labels: Record<string, string> = {
+        dashboard: 'Analytics Dashboard',
+        crm: 'CRM Board',
+        agent2: 'Agent 2: Phone Call',
+        agent3: 'Agent 3: SMS & Email',
+        agent4: 'Agent 4: Estimate Follow-up',
+      };
+      openUpgrade(labels[tab] || 'This feature');
+      return;
+    }
+    setActiveTabState(tab);
+  };
+
+  const signOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setTenant(null);
+    setLeadsState([]);
+    setUser(null);
   };
 
   return (
@@ -189,8 +454,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prompts,
       setPrompts,
       activeTab,
-      setActiveTab,
-      addLead
+      setActiveTab: requestTab,
+      addLead,
+      user,
+      emailVerified,
+      authLoading,
+      tenant,
+      plan,
+      chatsLimit,
+      chatsUsed: tenant?.chatsUsed ?? 0,
+      consumeChat,
+      refreshTenant,
+      signOut,
+      upgradeOpen,
+      upgradeFeature,
+      openUpgrade,
+      closeUpgrade,
+      requestTab,
+      supabaseReady: supabaseConfigured,
     }}>
       {children}
     </AppContext.Provider>

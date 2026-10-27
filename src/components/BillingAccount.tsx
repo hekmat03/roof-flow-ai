@@ -38,8 +38,7 @@ export const PaymentFailureNotice: React.FC<{ planName: string }> = ({ planName 
       <div>
         <p className="font-semibold">There is a problem with the last payment.</p>
         <p className="mt-1 text-rose-200/90">
-          The {planName} plan is still active while Stripe retries. Update the payment method in the billing
-          portal to avoid losing access at the end of the period.
+          The {planName} plan is still marked past due. Update the payment method with Lemon Squeezy to keep access.
         </p>
       </div>
     </div>
@@ -150,7 +149,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
     if (!flag) return;
     setReturnBanner(
       flag === 'success'
-        ? 'Checkout completed. The plan updates as soon as Stripe confirms the subscription.'
+        ? 'Checkout completed. The plan updates as soon as Lemon Squeezy confirms the subscription.'
         : flag === 'cancelled'
           ? 'Checkout was cancelled. Nothing was charged.'
           : 'Returned from the billing portal.'
@@ -256,7 +255,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
                 disabled={!status.paymentsActivated || !sub?.hasCustomer || busy}
                 title={
                   !status.paymentsActivated
-                    ? 'No Stripe account is connected yet, so there is no billing portal to open. This activates on its own once payment keys exist.'
+                    ? 'Lemon Squeezy is not connected yet, so there is no customer portal to open.'
                     : !sub?.hasCustomer
                       ? 'There is no billing account for this user yet — start a subscription first.'
                       : undefined
@@ -300,8 +299,8 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
               <p className="flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
                 <Info className="h-5 w-5 mt-0.5 shrink-0 text-slate-400" aria-hidden />
                 <span>
-                  Payment state is reported by the server. While no Stripe account is connected it always reads
-                  “not activated” — this page never shows a renewal date or an invoice it cannot prove.
+                  Billing is handled by Lemon Squeezy checkout and webhooks. While checkout URLs are missing,
+                  this page will not invent a renewal date or an invoice.
                 </span>
               </p>
             )}

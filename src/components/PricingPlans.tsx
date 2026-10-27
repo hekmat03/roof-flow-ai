@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Check, Minus, ShieldAlert, Sparkles, AlertTriangle } from 'lucide-react';
 import {
-  startCheckout,
   type BillingStatus,
   type PlanView,
   type UsageView,
 } from '../lib/billingApi';
+import { lemonCheckoutUrl } from '../lib/lemonCheckout';
+import { useApp } from '../context/AppContext';
 
 /**
  * PricingPlans — the three plans, rendered from the SERVER catalogue.
@@ -118,7 +119,7 @@ const PlanCard: React.FC<{
           !paid
             ? 'Included for every account — nothing to buy.'
             : !paymentsActivated
-              ? 'No Stripe account is connected yet, so no checkout can be created. This button activates on its own once the payment keys exist.'
+              ? 'Lemon Squeezy checkout URLs are not configured yet, so no checkout can be created.'
               : !authenticated
                 ? 'Create an account first, then choose this plan.'
                 : undefined
@@ -126,13 +127,13 @@ const PlanCard: React.FC<{
         onClick={() => {
           if (paid && !current) onUpgrade(plan.id as 'starter' | 'pro');
         }}
-        className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] ${
+        className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] inline-flex items-center justify-center ${
           disabled
             ? 'bg-slate-800/70 text-slate-500 cursor-not-allowed'
             : 'bg-accent-600 hover:bg-accent-500 text-white active:scale-[0.99]'
         }`}
       >
-        {buttonLabel}
+        {busy ? 'Opening checkout…' : buttonLabel}
       </button>
       {paid && !paymentsActivated && (
         <p className="mt-2 text-[11px] text-slate-500">
@@ -149,19 +150,24 @@ export const PricingPlans: React.FC<{ status: BillingStatus; onChanged: () => vo
 }) => {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const { user, tenant } = useApp();
 
   const handleUpgrade = async (plan: 'starter' | 'pro') => {
     setBusy(true);
     setNotice(null);
     try {
-      const res = await startCheckout(plan);
-      if (res.url) {
-        window.location.href = res.url;
+      const url = lemonCheckoutUrl(plan, {
+        email: user?.email ?? undefined,
+        userId: user?.id,
+        tenantId: tenant?.id,
+      });
+      if (url) {
+        window.location.href = url;
         return;
       }
-      setNotice(res.message ?? 'That was not possible right now.');
+      setNotice('Lemon Squeezy checkout is not configured for that plan yet.');
     } catch {
-      setNotice('Could not reach the billing service.');
+      setNotice('Could not open checkout.');
     } finally {
       setBusy(false);
       onChanged();
@@ -183,9 +189,9 @@ export const PricingPlans: React.FC<{ status: BillingStatus; onChanged: () => vo
           <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
             <ShieldAlert className="h-5 w-5 mt-0.5 shrink-0" aria-hidden />
             <span>
-              <strong className="font-semibold">Payments are not activated.</strong> No Stripe account is
-              connected, so no plan can be purchased and no card can be charged. Upgrading becomes available the
-              moment payment keys are added — the buttons then work with no further changes.
+              <strong className="font-semibold">Payments are not activated.</strong> Lemon Squeezy checkout
+              URLs are not set, so no plan can be purchased yet. Add VITE_LEMON_CHECKOUT_STARTER and
+              VITE_LEMON_CHECKOUT_PRO to activate checkout.
             </span>
           </p>
         )}

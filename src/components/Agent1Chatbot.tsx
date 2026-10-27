@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
+import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail, Loader2 } from 'lucide-react';
 import { detectLatestIntent, type AgentMessage } from '../lib/agentService';
 import { runAgentWithTools } from '../lib/agentRunner';
 import { applyActionsToLeads, type AgentAction } from '../lib/applyActions';
 import { AgentActivity } from './AgentActivity';
 import { extractEmail, extractPhone, extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
+import { INVALID_EMAIL_PROMPT, INVALID_PHONE_PROMPT, isValidEmail, isValidPhone } from '../lib/contactValidation';
 export const Agent1Chatbot: React.FC = () => {
-  const { companySettings, addLead, leads, setLeads } = useApp();
+  const { companySettings, addLead, leads, setLeads, consumeChat, openUpgrade, chatsLimit } = useApp();
 
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>([
     {
@@ -31,6 +32,10 @@ export const Agent1Chatbot: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const conversationId = useRef(
+    globalThis.crypto?.randomUUID?.() ?? `c${Date.now()}${Math.random().toString(36).slice(2)}`
+  );
+  const quotaConsumed = useRef(false);
 
   const quickReplies = [
     "Yes, my roof has hail damage",
@@ -66,6 +71,9 @@ export const Agent1Chatbot: React.FC = () => {
   useEffect(() => {
     if (capturedRef.current || showBookingForm) return;
     if (extracted.email && extracted.phone && extracted.name) {
+      if (!isValidEmail(extracted.email) || !isValidPhone(extracted.phone)) {
+        return;
+      }
       capturedRef.current = true;
       addLead({
         name: extracted.name,
@@ -116,6 +124,43 @@ export const Agent1Chatbot: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    const maybeEmail = extractEmail(text);
+    const maybePhone = extractPhone(text);
+    if (maybeEmail && !isValidEmail(maybeEmail)) {
+      setMessages([...updatedMessages, {
+        sender: 'AI',
+        text: INVALID_EMAIL_PROMPT,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      setIsLoading(false);
+      return;
+    }
+    if (maybePhone && !isValidPhone(maybePhone)) {
+      setMessages([...updatedMessages, {
+        sender: 'AI',
+        text: INVALID_PHONE_PROMPT,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!quotaConsumed.current) {
+      const quota = await consumeChat(conversationId.current);
+      if (!quota.ok) {
+        quotaConsumed.current = true;
+        setMessages([...updatedMessages, {
+          sender: 'AI',
+          text: `We've hit this month's ${chatsLimit}-chat limit on your plan. Upgrade to keep capturing homeowners 24/7.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+        setIsLoading(false);
+        openUpgrade('More chatbot conversations');
+        return;
+      }
+      quotaConsumed.current = true;
+    }
+
     try {
       const aiMessages: AgentMessage[] = updatedMessages.map(m => ({
         role: m.sender === 'AI' ? 'assistant' : 'user',
@@ -159,6 +204,14 @@ export const Agent1Chatbot: React.FC = () => {
     setFormError(null);
     if (!name.trim() || !phone.trim() || !email.trim()) {
       setFormError('Please fill in all fields.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setFormError('Please enter a real email address — we cannot save a fake one to the CRM.');
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      setFormError('Please enter a valid 10-digit phone number.');
       return;
     }
 
@@ -212,7 +265,7 @@ export const Agent1Chatbot: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Chat Interface (7 cols) */}
-        <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
+        <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[min(70vh,560px)] min-h-[420px] max-w-full">
           {/* Top Chat Header */}
           <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-3">
@@ -328,7 +381,7 @@ export const Agent1Chatbot: React.FC = () => {
                 {formError && <p className="text-[10px] text-red-400">{formError}</p>}
                 <button
                   onClick={handleBookingSubmit}
-                  className="w-full btn-accent text-xs py-3"
+                  className="w-full btn-accent text-xs py-3 inline-flex items-center justify-center gap-2"
                 >
                   Confirm Free Inspection Request
                 </button>
@@ -368,7 +421,7 @@ export const Agent1Chatbot: React.FC = () => {
               disabled={isLoading || showBookingForm}
               className="btn-accent p-3 rounded-xl shrink-0 disabled:opacity-50 min-h-0"
             >
-              <Send className="h-4 w-4 stroke-[2.5]" />
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 stroke-[2.5]" />}
             </button>
           </div>
         </div>
