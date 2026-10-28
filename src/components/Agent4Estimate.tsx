@@ -198,8 +198,8 @@ export const Agent4Estimate: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 4: Estimate Follow-Up Agent</h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <h2 className="text-2xl font-black text-ink">Agent 4: Estimate Follow-Up Agent</h2>
+        <p className="text-xs text-ink-mute mt-1">
           Post-inspection estimate follower. Experience how the AI handles complex, high-friction customer objections regarding insurance claims, competitor pricing, and financing.
         </p>
       </div>
@@ -207,13 +207,13 @@ export const Agent4Estimate: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Objection Selections (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="glass card-hover rounded-2xl p-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <User className="h-4.5 w-4.5 text-orange-500" /> CRM Target Lead
+          <div className="glass-card card-hover rounded-2xl p-6">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                <User className="h-4.5 w-4.5 text-accent-500" /> CRM Target Lead
               </h3>
             </div>
-            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+            <p className="text-xs text-ink-mute mt-3 leading-relaxed">
               Choose which estimate-stage lead this follow-up conversation syncs to. Each exchange updates the lead's transcript and workflow status in the CRM Board.
             </p>
             {leadTargets.length > 0 ? (
@@ -230,7 +230,7 @@ export const Agent4Estimate: React.FC = () => {
               </select>
             ) : (
               <div className="mt-4 space-y-2">
-                <label className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
+                <label className="label-micro block">
                   No estimate-stage leads yet — enter the homeowner to follow up with
                 </label>
                 <input
@@ -240,23 +240,23 @@ export const Agent4Estimate: React.FC = () => {
                   placeholder="Homeowner name (e.g. Dana Whitfield)"
                   className="input-premium text-xs font-medium"
                 />
-                <p className="text-[10px] text-slate-500 leading-relaxed">
+                <p className="text-[10px] text-ink-mute leading-relaxed">
                   This conversation creates a new lead in the CRM (source "Estimate Follow-Up") with the reply's outcome as its status.
                 </p>
               </div>
             )}
           </div>
 
-          <div className="glass card-hover rounded-2xl p-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <DollarSign className="h-4.5 w-4.5 text-orange-500" /> Objection Scenarios
+          <div className="glass-card card-hover rounded-2xl p-6">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                <DollarSign className="h-4.5 w-4.5 text-accent-500" /> Objection Scenarios
               </h3>
-              <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
+              <span className="text-[10px] bg-accent-500/10 text-accent-400 border border-accent-500/20 px-2 py-0.5 rounded font-bold">
                 AGENT 4
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+            <p className="text-xs text-ink-mute mt-3 leading-relaxed">
               Trigger a typical homeowner sales barrier below to witness the AI Agent's responsive negotiation and objection resolution templates.
             </p>
 
@@ -265,11 +265,11 @@ export const Agent4Estimate: React.FC = () => {
                 onClick={() => handleTriggerObjection('insurance')}
                 className={`w-full text-left px-4 py-3.5 rounded-xl border transition flex flex-col space-y-1 ${
                   activeObjection === 'insurance'
-                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-accent-500/10 border-accent-500/30 text-accent-400'
+                    : 'bg-inset border-line text-ink-mute hover:text-ink'
                 }`}
               >
-                <span className="text-xs font-bold uppercase tracking-wider">Scenario A: Insurance Discrepancy</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Scenario A: Insurance Discrepancy</span>
                 <span className="text-[11px] opacity-70">Adjuster denied claim damages or paid insufficient funds.</span>
               </button>
 
@@ -277,11 +277,11 @@ export const Agent4Estimate: React.FC = () => {
                 onClick={() => handleTriggerObjection('price')}
                 className={`w-full text-left px-4 py-3.5 rounded-xl border transition flex flex-col space-y-1 ${
                   activeObjection === 'price'
-                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-accent-500/10 border-accent-500/30 text-accent-400'
+                    : 'bg-inset border-line text-ink-mute hover:text-ink'
                 }`}
               >
-                <span className="text-xs font-bold uppercase tracking-wider">Scenario B: Competitor Price Match</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Scenario B: Competitor Price Match</span>
                 <span className="text-[11px] opacity-70">Received a cheaper shingle estimate from a competitor.</span>
               </button>
 
@@ -289,11 +289,11 @@ export const Agent4Estimate: React.FC = () => {
                 onClick={() => handleTriggerObjection('budget')}
                 className={`w-full text-left px-4 py-3.5 rounded-xl border transition flex flex-col space-y-1 ${
                   activeObjection === 'budget'
-                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-accent-500/10 border-accent-500/30 text-accent-400'
+                    : 'bg-inset border-line text-ink-mute hover:text-ink'
                 }`}
               >
-                <span className="text-xs font-bold uppercase tracking-wider">Scenario C: Deductible / Budget</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Scenario C: Deductible / Budget</span>
                 <span className="text-[11px] opacity-70">Lacks ready cash for out-of-pocket insurance deductibles.</span>
               </button>
             </div>
@@ -301,22 +301,22 @@ export const Agent4Estimate: React.FC = () => {
         </div>
 
         {/* Live Simulation Logs (7 cols) */}
-        <div className="lg:col-span-7 glass rounded-2xl p-6 shadow-xl flex flex-col h-[520px] justify-between">
+        <div className="lg:col-span-7 glass-card p-6 shadow-xl flex flex-col h-[520px] justify-between">
           <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
-              <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Interactive Negotiation Panel
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2 pb-3 border-b border-line shrink-0">
+              <Sparkles className="h-4.5 w-4.5 text-accent-500" /> Interactive Negotiation Panel
             </h3>
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto space-y-4 bg-[#0f172a]/60 p-4 rounded-xl border border-slate-850">
+            <div className="flex-1 overflow-y-auto space-y-4 bg-inset p-4 rounded-xl border border-line">
               {messages.map((msg, index) => {
                 const isAI = msg.sender === 'AI';
                 return (
                   <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
                     <div className="flex items-start space-x-2 max-w-md">
                       {isAI && (
-                        <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                          <FileText className="h-4 w-4 text-orange-500" />
+                        <div className="h-8 w-8 rounded-lg bg-inset border border-line flex items-center justify-center shrink-0">
+                          <FileText className="h-4 w-4 text-accent-500" />
                         </div>
                       )}
                       <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
@@ -324,7 +324,7 @@ export const Agent4Estimate: React.FC = () => {
                           ? 'chat-bubble-ai rounded-tl-none' 
                           : 'chat-bubble-user rounded-tr-none'
                       }`}>
-                        <span className="text-[9px] opacity-40 font-black uppercase tracking-wider block mb-1">
+                        <span className="text-[9px] opacity-40 font-black uppercase tracking-widest block mb-1">
                           {isAI ? 'Agent 4 Estimate AI' : 'Homeowner User'}
                         </span>
                         <p className="whitespace-pre-line">{msg.text}</p>
@@ -335,19 +335,19 @@ export const Agent4Estimate: React.FC = () => {
               })}
               {isLoading && (
                 <div className="flex justify-start">
-                  <span className="text-[10px] text-slate-500 italic">Agent is typing…</span>
+                  <span className="text-[10px] text-ink-mute italic">Agent is typing…</span>
                 </div>
               )}
               {error && (
                 <div className="flex justify-center">
-                  <span className="text-[10px] text-red-400">{error}</span>
+                  <span className="text-[10px] text-danger">{error}</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Form input reply */}
-          <div className="pt-4 border-t border-slate-800 shrink-0 space-y-3 mt-4">
+          <div className="pt-4 border-t border-line shrink-0 space-y-3 mt-4">
             <div className="flex space-x-3">
               <input
                 type="text"
@@ -368,11 +368,11 @@ export const Agent4Estimate: React.FC = () => {
             </div>
 
             <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-500 flex items-center gap-1">
-                <HelpCircle className="h-3.5 w-3.5 text-orange-500" /> Dedicated post-inspection estimator follow-ups
+              <span className="text-ink-mute flex items-center gap-1">
+                <HelpCircle className="h-3.5 w-3.5 text-accent-500" /> Dedicated post-inspection estimator follow-ups
               </span>
               {savingSuccess && (
-                <span className="text-emerald-400 font-semibold flex items-center gap-1 animate-fadeIn">
+                <span className="text-accent-400 font-semibold flex items-center gap-1 animate-fadeIn">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Dialogue synced with CRM Board
                 </span>
               )}

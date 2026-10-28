@@ -204,42 +204,42 @@ export const Agent1Chatbot: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <h2 className="text-2xl font-black text-ink">Agent 1: Website Lead Capture Chatbot</h2>
+        <p className="text-xs text-ink-mute mt-1">
           Real AI-powered chat. Ask anything about storm damage, insurance, or inspections — the assistant responds live and hands off to a booking form when you're ready to schedule.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Chat Interface (7 cols) */}
-        <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
+        <div className="lg:col-span-7 glass-card overflow-hidden flex flex-col h-[560px]">
           {/* Top Chat Header */}
-          <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
+          <div className="bg-card px-6 py-4 border-b border-line flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-3">
-              <div className="bg-orange-500/10 p-2 rounded-lg relative">
-                <Bot className="h-5 w-5 text-orange-500" />
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-slate-900"></span>
+              <div className="bg-accent-500/10 p-2 rounded-lg relative">
+                <Bot className="h-5 w-5 text-accent-500" />
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-gold border border-card"></span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">RoofFlow Virtual Specialist</h3>
-                <p className="text-[10px] text-slate-400">AI Assistant • Online 24/7</p>
+                <h3 className="text-sm font-bold text-ink">RoofFlow Virtual Specialist</h3>
+                <p className="text-[10px] text-ink-mute">AI Assistant • Online 24/7</p>
               </div>
             </div>
-            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
+            <span className="label-micro bg-accent-500/10 text-accent-400 border border-accent-500/25 px-2 py-0.5 rounded-md">
               AGENT 1
             </span>
           </div>
 
           {/* Chat Messages Log */}
-          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
+          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-inset premium-scroll">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
               return (
                 <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
                   <div className="flex items-start space-x-2.5 max-w-md">
                     {isAI && (
-                      <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                        <Bot className="h-4 w-4 text-orange-500" />
+                      <div className="h-8 w-8 rounded-lg bg-card border border-line flex items-center justify-center shrink-0">
+                        <Bot className="h-4 w-4 text-accent-500" />
                       </div>
                     )}
                     <div className={`px-4 py-2.5 text-xs leading-relaxed ${
@@ -248,7 +248,7 @@ export const Agent1Chatbot: React.FC = () => {
                         : 'chat-bubble-user rounded-tr-none'
                     }`}>
                       <p>{msg.text}</p>
-                      <span className="text-[9px] opacity-40 block text-right mt-1.5 font-mono">
+                      <span className="text-[9px] opacity-40 block text-right mt-1.5">
                         {msg.timestamp}
                       </span>
                     </div>
@@ -260,8 +260,8 @@ export const Agent1Chatbot: React.FC = () => {
             {isLoading && (
               <div className="flex justify-start animate-slideUp">
                 <div className="flex items-start space-x-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                    <Bot className="h-4 w-4 text-orange-500" />
+                  <div className="h-8 w-8 rounded-lg bg-card border border-line flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4 text-accent-500" />
                   </div>
                   <div className="typing-indicator">
                     <span></span><span></span><span></span>
@@ -272,60 +272,60 @@ export const Agent1Chatbot: React.FC = () => {
 
             {error && (
               <div className="flex justify-center">
-                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">{error}</span>
+                <span className="text-[10px] text-danger bg-danger/10 border border-danger/30 px-3 py-1.5 rounded-lg">{error}</span>
               </div>
             )}
 
             {/* Inline booking form, shown when the AI signals booking intent */}
             {showBookingForm && (
-              <div className="bg-slate-900/80 backdrop-blur-md border border-accent-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-orange-500" /> Book Your Free Inspection
+              <div className="surface-inset border-accent-500/40 p-4 space-y-3 animate-slideUp">
+                <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-accent-500" /> Book Your Free Inspection
                 </h4>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                    <User className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <div className="flex items-center gap-2 bg-card border border-line rounded-lg px-3 py-2">
+                    <User className="h-3.5 w-3.5 text-ink-mute shrink-0" />
                     <input
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="Full name"
-                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
+                      className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
                     />
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                    <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <div className="flex items-center gap-2 bg-card border border-line rounded-lg px-3 py-2">
+                    <Phone className="h-3.5 w-3.5 text-ink-mute shrink-0" />
                     <input
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
                       placeholder="Phone number"
-                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
+                      className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
                     />
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                    <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <div className="flex items-center gap-2 bg-card border border-line rounded-lg px-3 py-2">
+                    <Mail className="h-3.5 w-3.5 text-ink-mute shrink-0" />
                     <input
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="Email address"
-                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
+                      className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setOwnership('Owner')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-gold text-gold-ink border-gold' : 'bg-card text-ink-mute border-line'}`}
                     >
                       I own the home
                     </button>
                     <button
                       onClick={() => setOwnership('Renter')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-gold text-gold-ink border-gold' : 'bg-card text-ink-mute border-line'}`}
                     >
                       I rent
                     </button>
                   </div>
                 </div>
-                {formError && <p className="text-[10px] text-red-400">{formError}</p>}
+                {formError && <p className="text-[10px] text-danger">{formError}</p>}
                 <button
                   onClick={handleBookingSubmit}
                   className="w-full btn-accent text-xs py-3"
@@ -338,13 +338,13 @@ export const Agent1Chatbot: React.FC = () => {
 
           {/* Quick Replies Buttons */}
           {!showBookingForm && (
-            <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
+            <div className="p-4 border-t border-line bg-card flex flex-wrap gap-2 shrink-0">
               {quickReplies.map((reply, i) => (
                 <button
                   key={i}
                   onClick={() => handleSend(reply)}
                   disabled={isLoading}
-                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-2.5 rounded-full transition shrink-0 disabled:opacity-50"
+                  className="bg-inset hover:border-accent-400 border border-line text-[11px] text-ink-soft px-3.5 py-2.5 rounded-full transition disabled:opacity-50 max-w-full"
                 >
                   {reply}
                 </button>
@@ -353,7 +353,7 @@ export const Agent1Chatbot: React.FC = () => {
           )}
 
           {/* Input Form */}
-          <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex items-center space-x-3 shrink-0">
+          <div className="p-4 bg-card border-t border-line flex items-center space-x-3 shrink-0">
             <input
               type="text"
               placeholder="Ask anything about storm damage or inspections..."
@@ -375,44 +375,44 @@ export const Agent1Chatbot: React.FC = () => {
 
         {/* Sidebar Simulator explanation (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="glass card-hover rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
+          <div className="glass-card card-hover p-6">
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2 pb-3 border-b border-line">
               <Sparkles className="h-4.5 w-4.5 text-accent-400" /> How This Works
             </h3>
-            <p className="text-xs text-slate-400 leading-relaxed mt-3">
+            <p className="text-xs text-ink-mute leading-relaxed mt-3">
               This is a live AI assistant, not a scripted demo. It answers freely using your company info, and hands off to a real booking form once a visitor is ready to schedule.
             </p>
-            <div className="mt-4 space-y-3.5 text-xs text-slate-300">
+            <div className="mt-4 space-y-3.5 text-xs text-ink-soft">
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">1</div>
+                <div className="bg-accent-500/10 text-accent-400 p-1 rounded-md font-bold text-[10px]">1</div>
                 <div>
-                  <p className="font-bold text-white">Live AI Conversation</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
+                  <p className="font-bold text-ink">Live AI Conversation</p>
+                  <p className="text-[11px] text-ink-mute mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">2</div>
+                <div className="bg-accent-500/10 text-accent-400 p-1 rounded-md font-bold text-[10px]">2</div>
                 <div>
-                  <p className="font-bold text-white">Booking Handoff</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
+                  <p className="font-bold text-ink">Booking Handoff</p>
+                  <p className="text-[11px] text-ink-mute mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
+                <div className="bg-accent-500/10 text-accent-400 p-1 rounded-md font-bold text-[10px]">3</div>
                 <div>
-                  <p className="font-bold text-white">CRM Sync</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
+                  <p className="font-bold text-ink">CRM Sync</p>
+                  <p className="text-[11px] text-ink-mute mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {hasQualified && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
+            <div className="bg-accent-500/10 border border-accent-500/30 text-accent-400 p-4 flex items-start space-x-3 animate-fade-in">
               <Calendar className="h-5 w-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-white">Lead Transferred to CRM!</h4>
-                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                <h4 className="text-xs font-bold text-ink">Lead Transferred to CRM!</h4>
+                <p className="text-[11px] text-ink-mute mt-1 leading-relaxed">
                   Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcript.
                 </p>
               </div>

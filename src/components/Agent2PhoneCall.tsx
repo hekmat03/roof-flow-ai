@@ -310,59 +310,59 @@ export const Agent2PhoneCall: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <h2 className="text-2xl font-black text-ink">Agent 2: Inbound Call Voice Handler</h2>
+        <p className="text-xs text-ink-mute mt-1">
           Interactive voice call simulation. Every AI line is generated live from your company settings — experience how the AI Voice Handler answers incoming homeowner calls, overcomes insurance pushbacks, and books inspections.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Telephone UI (5 cols) */}
-        <div className="lg:col-span-5 glass rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center space-y-6">
+        <div className="lg:col-span-5 glass-card p-6 flex flex-col items-center justify-center space-y-6">
           <div className="text-center">
-            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2.5 py-1 rounded-full font-bold font-mono uppercase tracking-wider">
+            <span className="label-micro bg-accent-500/10 text-accent-400 border border-accent-500/25 px-2.5 py-1 rounded-full">
               Inbound Line Simulator
             </span>
-            <h3 className="text-white font-extrabold text-base mt-3">Interactive Voice Console</h3>
-            <p className="text-slate-400 text-xs mt-1">Simulate incoming customer storm inquiries</p>
+            <h3 className="text-ink font-extrabold text-base mt-3">Interactive Voice Console</h3>
+            <p className="text-ink-mute text-xs mt-1">Simulate incoming customer storm inquiries</p>
           </div>
 
           {/* Smartphone Render Frame */}
-          <div className="w-full max-w-[280px] call-glass border-4 border-slate-700/50 rounded-[36px] p-6 shadow-2xl relative flex flex-col justify-between h-[440px] overflow-hidden call-screen-blur">
+          <div className="w-full max-w-[280px] call-glass rounded-[36px] p-6 relative flex flex-col justify-between h-[440px] overflow-hidden call-screen-blur">
             {/* Phone notch */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-4 bg-slate-800 rounded-full"></div>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-4 bg-inset rounded-full"></div>
 
             {/* Calling states */}
             {callStatus === 'idle' && (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6">
-                <div className="h-20 w-20 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center animate-pulse">
-                  <Phone className="h-8 w-8 text-orange-500" />
+                <div className="h-20 w-20 rounded-full bg-inset border border-line flex items-center justify-center animate-pulse">
+                  <Phone className="h-8 w-8 text-accent-500" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-white">Line Status: Available</h4>
-                  <p className="text-[10px] text-slate-500 mt-1">Ready to receive/place storm leads calls</p>
+                  <h4 className="text-sm font-extrabold text-ink">Line Status: Available</h4>
+                  <p className="text-[10px] text-ink-mute mt-1">Ready to receive/place storm leads calls</p>
                 </div>
                 <button
                   onClick={handleStartCall}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-2.5 rounded-full text-xs shadow-lg shadow-emerald-500/20 transition flex items-center gap-2"
+                  className="btn-accent px-6 py-2.5 rounded-full text-xs flex items-center gap-2"
                 >
-                  <Play className="h-3.5 w-3.5 fill-slate-950" /> Place Demo Call
+                  <Play className="h-3.5 w-3.5 fill-gold-ink" /> Place Demo Call
                 </button>
               </div>
             )}
 
             {callStatus === 'calling' && (
               <div className="flex-1 flex flex-col justify-center items-center text-center space-y-4">
-                <div className="h-20 w-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center animate-bounce">
-                  <Volume2 className="h-8 w-8 text-orange-500" />
+                <div className="h-20 w-20 rounded-full bg-accent-500/10 border border-accent-500/20 flex items-center justify-center animate-bounce">
+                  <Volume2 className="h-8 w-8 text-accent-500" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-white">Connecting Call...</h4>
-                  <p className="text-[10px] text-slate-500 mt-1">Connecting callback router to AI agent</p>
+                  <h4 className="text-sm font-extrabold text-ink">Connecting Call...</h4>
+                  <p className="text-[10px] text-ink-mute mt-1">Connecting callback router to AI agent</p>
                 </div>
                 <button
                   onClick={handleEndCall}
-                  className="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg shadow-red-500/10 transition"
+                  className="btn-danger p-3 rounded-full"
                 >
                   <PhoneOff className="h-5 w-5" />
                 </button>
@@ -372,9 +372,9 @@ export const Agent2PhoneCall: React.FC = () => {
             {(callStatus === 'connected' || callStatus === 'completed') && (
               <div className="flex-1 flex flex-col justify-between items-center text-center py-4">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">AI Voice Active</h4>
-                  <p className="text-sm font-black text-white">{name || 'Arthur Dent'}</p>
-                  <p className="text-[9px] text-emerald-400 font-mono font-bold">
+                  <h4 className="text-xs font-bold text-ink-mute">AI Voice Active</h4>
+                  <p className="text-sm font-black text-ink">{name || 'Arthur Dent'}</p>
+                  <p className="text-[9px] text-accent-400 font-bold">
                     {isSpeaking ? 'Speaking…' : isListening ? 'Listening…' : '00:42 • Connected'}
                   </p>
                 </div>
@@ -387,15 +387,15 @@ export const Agent2PhoneCall: React.FC = () => {
                       title={sttSupported.current ? 'Talk to the AI (speech recognition)' : 'Speech recognition unavailable in this browser'}
                       className={`min-h-0 h-10 w-10 rounded-full border flex items-center justify-center transition ${
                         isListening
-                          ? 'bg-red-500/20 border-red-500/40 text-red-400 animate-pulse'
+                          ? 'bg-danger/15 border-danger/50 text-danger animate-pulse'
                           : sttSupported.current
-                            ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
-                            : 'bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed'
+                            ? 'bg-inset border-line text-ink-soft hover:text-ink'
+                            : 'bg-inset border-line text-ink-mute cursor-not-allowed'
                       }`}
                     >
                       {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                     </button>
-                    <span className={`text-[9px] mt-1.5 font-bold ${isListening ? 'text-red-400' : 'text-slate-500'}`}>
+                    <span className={`text-[9px] mt-1.5 font-bold ${isListening ? 'text-danger' : 'text-ink-mute'}`}>
                       {isListening ? 'Listening' : 'Mic'}
                     </span>
                   </div>
@@ -406,26 +406,26 @@ export const Agent2PhoneCall: React.FC = () => {
                       className={`min-h-0 h-10 w-10 rounded-full border flex items-center justify-center transition ${
                         voiceOn
                           ? 'bg-accent-500/10 border-accent-500/20 text-accent-400'
-                          : 'bg-slate-800 border-slate-700 text-slate-500'
+                          : 'bg-inset border-line text-ink-mute'
                       } ${isSpeaking ? 'animate-pulse' : ''}`}
                     >
                       {voiceOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                     </button>
-                    <span className={`text-[9px] mt-1.5 font-bold ${voiceOn ? 'text-orange-400' : 'text-slate-500'}`}>
+                    <span className={`text-[9px] mt-1.5 font-bold ${voiceOn ? 'text-accent-400' : 'text-ink-mute'}`}>
                       {voiceOn ? 'Voice On' : 'Muted'}
                     </span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <button className="min-h-0 h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <button className="min-h-0 h-10 w-10 rounded-full bg-inset border border-line flex items-center justify-center text-ink-mute hover:text-ink transition">
                       <User className="h-4 w-4" />
                     </button>
-                    <span className="text-[9px] text-slate-500 mt-1.5">Keypad</span>
+                    <span className="text-[9px] text-ink-mute mt-1.5">Keypad</span>
                   </div>
                 </div>
 
                 <button
                   onClick={handleEndCall}
-                  className="bg-red-500 hover:bg-red-600 text-white p-3.5 rounded-full shadow-lg shadow-red-500/20 transition shrink-0"
+                  className="btn-danger p-3.5 rounded-full shrink-0"
                 >
                   <PhoneOff className="h-5 w-5" />
                 </button>
@@ -436,14 +436,14 @@ export const Agent2PhoneCall: React.FC = () => {
 
         {/* Call Transcript Scroll View (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="glass rounded-2xl p-6 h-[500px] flex flex-col justify-between">
+          <div className="glass-card p-6 h-[500px] flex flex-col justify-between">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
-                <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Call Transcript & Dialogue Log
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2 pb-3 border-b border-line shrink-0">
+                <Sparkles className="h-4.5 w-4.5 text-accent-500" /> Call Transcript & Dialogue Log
               </h3>
 
               {/* Log view */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 premium-scroll">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-inset p-4 border border-line premium-scroll">
                 {dialogue.length > 0 ? (
                   dialogue.map((item, index) => {
                     const isAI = item.speaker === 'AI';
@@ -454,7 +454,7 @@ export const Agent2PhoneCall: React.FC = () => {
                             ? 'chat-bubble-ai rounded-tl-none' 
                             : 'chat-bubble-user rounded-tr-none'
                         }`}>
-                          <span className="text-[9px] opacity-40 font-black uppercase tracking-wider block mb-1">
+                          <span className="text-[9px] opacity-40 font-black uppercase tracking-widest block mb-1">
                             {isAI ? 'AI Agent Voice' : 'Homeowner Speech'}
                           </span>
                           <p>{item.text}</p>
@@ -463,21 +463,21 @@ export const Agent2PhoneCall: React.FC = () => {
                     );
                   })
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 italic space-y-2">
+                  <div className="h-full flex flex-col items-center justify-center text-center text-ink-mute italic gap-3">
                     <Phone className="h-8 w-8 opacity-40" />
                     <p className="text-xs">Dialogue log is empty. Place a callback line simulation to connect.</p>
                   </div>
                 )}
                 {isGenerating && (
                   <div className="flex justify-start">
-                    <div className="flex items-center gap-2"><div className="typing-indicator"><span></span><span></span><span></span></div><span className="text-[10px] text-slate-500 italic">{isSpeaking ? 'AI is speaking…' : 'AI is thinking…'}</span></div>
+                    <div className="flex items-center gap-2"><div className="typing-indicator"><span></span><span></span><span></span></div><span className="text-[10px] text-ink-mute italic">{isSpeaking ? 'AI is speaking…' : 'AI is thinking…'}</span></div>
                   </div>
                 )}
                 {isListening && (
                   <div className="flex justify-end">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-red-400 italic font-semibold">Listening — speak now…</span>
-                      <AudioLines className="h-4 w-4 text-red-400 animate-pulse" />
+                      <span className="text-[10px] text-danger italic font-semibold">Listening — speak now…</span>
+                      <AudioLines className="h-4 w-4 text-danger animate-pulse" />
                     </div>
                   </div>
                 )}
@@ -486,9 +486,9 @@ export const Agent2PhoneCall: React.FC = () => {
 
             {/* Telephone options select */}
             {callStatus === 'connected' && currentScriptStep && (
-              <div className="mt-6 border-t border-slate-800 pt-4 shrink-0 space-y-3">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <ShieldAlert className="h-3.5 w-3.5 text-orange-500" /> Select dialogue reply option:
+              <div className="mt-6 border-t border-line pt-4 shrink-0 space-y-3">
+                <p className="label-micro flex items-center gap-1">
+                  <ShieldAlert className="h-3.5 w-3.5 text-accent-500" /> Select dialogue reply option:
                 </p>
                 <div className="grid grid-cols-1 gap-2">
                   {currentScriptStep.options.map((option, i) => (
@@ -523,11 +523,11 @@ export const Agent2PhoneCall: React.FC = () => {
                   </button>
                 </div>
                 {voiceNotice && (
-                  <p className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-accent-400 bg-accent-500/10 border border-accent-500/25 rounded-lg px-3 py-2">
                     {voiceNotice}
                   </p>
                 )}
-                <p className="text-[9px] text-slate-500">
+                <p className="text-[9px] text-ink-mute">
                   Free-form replies stay in the transcript — the script only advances via the options above.
                   {!sttSupported.current && ' Voice input needs Chrome, Edge, or Safari — type your replies here instead.'}
                 </p>
@@ -535,11 +535,11 @@ export const Agent2PhoneCall: React.FC = () => {
             )}
             
             {callStatus === 'completed' && (
-              <div className="mt-6 border-t border-slate-800 pt-4 shrink-0 bg-emerald-500/10 border border-emerald-500/15 p-4 rounded-xl flex items-center space-x-3">
-                <Calendar className="h-5 w-5 text-emerald-400" />
+              <div className="mt-6 shrink-0 bg-accent-500/10 border border-accent-500/25 p-4 flex items-center space-x-3">
+                <Calendar className="h-5 w-5 text-accent-400" />
                 <div>
-                  <h4 className="text-xs font-bold text-white">Call Completed! Lead Saved.</h4>
-                  <p className="text-[10px] text-slate-400">The inspection callback was scheduled. Lead profile has been added to the CRM Board.</p>
+                  <h4 className="text-xs font-bold text-ink">Call Completed! Lead Saved.</h4>
+                  <p className="text-[10px] text-ink-mute">The inspection callback was scheduled. Lead profile has been added to the CRM Board.</p>
                 </div>
               </div>
             )}

@@ -6,7 +6,6 @@ import { LiveLeadsStrip } from './LiveLeadsStrip';
 import { 
   Users, 
   Calendar, 
-  TrendingUp, 
   Zap, 
   ArrowRight, 
   MessageSquare, 
@@ -59,8 +58,8 @@ export const Dashboard: React.FC = () => {
       description: 'Conversational web-widget that captures storm leads 24/7 and qualifies homeowner status.',
       status: 'Active',
       metric: '35% booking rate',
-      color: 'from-amber-400 to-orange-600',
-      glow: 'shadow-amber-500/25',
+      color: 'from-accent-300 to-accent-500',
+      glow: 'shadow-black/10',
       icon: MessageSquare,
     },
     {
@@ -70,8 +69,8 @@ export const Dashboard: React.FC = () => {
       description: 'Interactive voice agent handling call flows, insurance queries, and booking inspections.',
       status: 'Active',
       metric: '<15s avg response',
-      color: 'from-orange-500 to-red-600',
-      glow: 'shadow-orange-500/25',
+      color: 'from-accent-400 to-accent-600',
+      glow: 'shadow-black/10',
       icon: PhoneCall,
     },
     {
@@ -81,8 +80,8 @@ export const Dashboard: React.FC = () => {
       description: 'Automated 7-day multi-channel follow-up sequencers reacting to user replies instantly.',
       status: 'Active',
       metric: '18% reactivation',
-      color: 'from-yellow-400 to-amber-600',
-      glow: 'shadow-yellow-500/25',
+      color: 'from-accent-300 to-accent-400',
+      glow: 'shadow-black/10',
       icon: MessageSquarePlus,
     },
     {
@@ -92,8 +91,8 @@ export const Dashboard: React.FC = () => {
       description: 'Follow-up on repair estimates to handle financing, budget, and competitor objections.',
       status: 'Active',
       metric: '+25% closing boost',
-      color: 'from-amber-500 to-red-600',
-      glow: 'shadow-amber-500/25',
+      color: 'from-accent-400 to-accent-700',
+      glow: 'shadow-black/10',
       icon: FileText,
     }
   ];
@@ -115,9 +114,9 @@ export const Dashboard: React.FC = () => {
       display: String(Math.round(animScheduled)),
       sub: `${bookingRate}% Lead-to-Booking Rate`,
       subIcon: null,
-      chip: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/25',
       icon: Calendar,
-      iconColor: 'text-emerald-400',
+      iconColor: 'text-accent-400',
     },
     {
       label: 'Reactivation Queue',
@@ -125,9 +124,9 @@ export const Dashboard: React.FC = () => {
       display: String(Math.round(animFollowUp)),
       sub: 'SMS/Email nurture sequences',
       subIcon: null,
-      chip: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+      chip: 'surface-inset text-ink-soft border border-line',
       icon: MessageSquarePlus,
-      iconColor: 'text-yellow-400',
+      iconColor: 'text-ink-soft',
     },
     {
       label: 'Est. Booking Revenue',
@@ -144,20 +143,17 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="glass hero-glow rounded-3xl p-6 md:p-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-6 opacity-[0.07] animate-float-slow">
-          <TrendingUp className="h-44 w-44 md:h-56 md:w-56 text-accent-400" />
-        </div>
+      <div className="glass-card hero-glow p-6 md:p-10 relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex items-center gap-2 bg-accent-500/10 text-accent-300 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider border border-accent-500/25 animate-pop-in">
+          <span className="inline-flex items-center gap-2 bg-accent-500/10 text-accent-400 text-[11px] px-3 py-1.5 rounded-full font-bold border border-accent-500/25 animate-pop-in">
             <Zap className="h-3 w-3" />
             RoofFlow Sales Console
           </span>
-          <h2 className="text-fluid-hero font-extrabold text-white mt-4 tracking-tight">
-            Maximize Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-orange-500 bg-clip-text text-transparent">Autonomous Sales Agents</span>
+          <h2 className="text-fluid-hero font-extrabold text-ink mt-4 tracking-tight">
+            Maximize Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-accent-600 bg-clip-text text-transparent">Autonomous Sales Agents</span>
           </h2>
-          <p className="text-slate-300 mt-2 text-fluid-body leading-relaxed">
-            RoofFlow AI automatically monitors, qualifies, and follows up with homeowners in the <span className="font-bold text-white">{companySettings.city}</span> market, keeping scheduling books filled after severe events like the <span className="font-bold text-white">{companySettings.stormName}</span>.
+          <p className="text-ink-soft mt-2 text-fluid-body leading-relaxed">
+            RoofFlow AI automatically monitors, qualifies, and follows up with homeowners in the <span className="font-bold text-ink">{companySettings.city}</span> market, keeping scheduling books filled after severe events like the <span className="font-bold text-ink">{companySettings.stormName}</span>.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-3 sm:space-y-0">
             <button 
@@ -182,17 +178,17 @@ export const Dashboard: React.FC = () => {
         {kpis.map((kpi) => {
           const SubIcon = kpi.subIcon;
           return (
-            <div key={kpi.label} className="glass card-hover rounded-2xl p-5 md:p-6">
+            <div key={kpi.label} className="glass-card card-hover p-5 md:p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{kpi.label}</p>
-                  <h3 className="text-3xl font-black font-mono text-white mt-1 count-up-flash">{kpi.display}</h3>
+                  <p className="label-micro">{kpi.label}</p>
+                  <h3 className="text-3xl font-black text-ink mt-1 count-up-flash">{kpi.display}</h3>
                 </div>
                 <div className={`p-3 rounded-xl ${kpi.chip}`}>
                   <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
                 </div>
               </div>
-              <div className="mt-4 flex items-center text-xs text-slate-400">
+              <div className="mt-4 flex items-center text-xs text-ink-mute">
                 {SubIcon ? <SubIcon className="h-3.5 w-3.5 text-accent-400 mr-1" /> : null}
                 <span>{kpi.sub}</span>
               </div>
@@ -207,8 +203,8 @@ export const Dashboard: React.FC = () => {
       <div>
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h3 className="text-fluid-title font-bold text-white">Interactive AI Agent Suite</h3>
-            <p className="text-xs text-slate-400 mt-1">Four specialized AI agents working together across the roofing sales pipeline</p>
+            <h3 className="text-fluid-title font-bold text-ink">Interactive AI Agent Suite</h3>
+            <p className="text-xs text-ink-mute mt-1">Four specialized AI agents working together across the roofing sales pipeline</p>
           </div>
         </div>
 
@@ -218,29 +214,29 @@ export const Dashboard: React.FC = () => {
             return (
               <div 
                 key={agent.id}
-                className="glass card-hover rounded-2xl p-6 flex flex-col justify-between group"
+                className="glass-card card-hover p-6 flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <div className={`p-2.5 rounded-xl bg-gradient-to-br ${agent.color} shadow-lg ${agent.glow} group-hover:scale-105 transition-transform duration-200`}>
-                      <Icon className="h-5 w-5 text-slate-950 stroke-[2.5]" />
+                      <Icon className="h-5 w-5 text-gold-ink stroke-[2.5]" />
                     </div>
-                    <span className="text-xs bg-slate-900/70 border border-slate-700/70 text-slate-400 font-mono font-bold px-2 py-0.5 rounded-md uppercase">
+                    <span className="label-micro bg-inset border border-line px-2 py-0.5 rounded-md">
                       Agent {agent.number}
                     </span>
                   </div>
-                  <h4 className="text-base font-bold text-white group-hover:text-accent-300 transition-colors duration-200">
+                  <h4 className="text-base font-bold text-ink group-hover:text-accent-300 transition-colors duration-200">
                     {agent.title}
                   </h4>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  <p className="text-xs text-ink-mute mt-2 leading-relaxed">
                     {agent.description}
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-800/70 flex items-center justify-between text-xs">
+                <div className="mt-6 pt-4 border-t border-line flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-slate-500 block font-semibold uppercase tracking-wider text-[9px]">KPI Metric</span>
-                    <span className="text-slate-200 font-bold font-mono">{agent.metric}</span>
+                    <span className="label-micro block">KPI Metric</span>
+                    <span className="text-ink-soft font-bold">{agent.metric}</span>
                   </div>
                   <button 
                     onClick={() => setActiveTab(agent.id)}
@@ -262,11 +258,11 @@ export const Dashboard: React.FC = () => {
       {/* Bottom Row: Recent Leads & Active Storm Warnings */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Recent Leads (Left/Mid) */}
-        <div className="lg:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
+        <div className="lg:col-span-2 glass-card card-hover p-5 md:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-bold text-white">Latest Pipeline Inflow</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Real-time leads automatically qualified by active agents</p>
+              <h3 className="text-base font-bold text-ink">Latest Pipeline Inflow</h3>
+              <p className="text-xs text-ink-mute mt-0.5">Real-time leads automatically qualified by active agents</p>
             </div>
             <button 
               onClick={() => setActiveTab('crm')}
@@ -279,29 +275,29 @@ export const Dashboard: React.FC = () => {
 
           {leads.length === 0 && (
             <div className="py-10 text-center">
-              <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-800/70 border border-slate-700/70 flex items-center justify-center mb-3">
-                <Users className="h-5 w-5 text-slate-500" />
+              <div className="mx-auto h-12 w-12 surface-inset flex items-center justify-center mb-3">
+                <Users className="h-5 w-5 text-ink-mute" />
               </div>
-              <p className="text-sm font-semibold text-slate-300">No leads captured yet</p>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+              <p className="text-sm font-semibold text-ink-soft">No leads captured yet</p>
+              <p className="text-xs text-ink-mute mt-1 max-w-xs mx-auto">
                 Run any agent simulator above — a real lead appears here instantly, with its full
                 conversation transcript. Nothing is pre-seeded.
               </p>
             </div>
           )}
 
-          <div className="divide-y divide-slate-800/70">
+          <div className="divide-y divide-line">
             {leads.slice(0, 4).map((lead, idx) => (
               <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0 gap-3 animate-slide-up" style={{ animationDelay: `${idx * 60}ms` }}>
                 <div className="flex items-center space-x-3.5 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700/70 flex items-center justify-center font-bold text-accent-300 shrink-0 shadow-lg">
+                  <div className="h-10 w-10 surface-inset flex items-center justify-center font-bold text-accent-400 shrink-0">
                     {lead.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-white truncate">{lead.name}</h4>
-                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+                    <h4 className="text-sm font-bold text-ink truncate">{lead.name}</h4>
+                    <p className="text-xs text-ink-mute flex items-center gap-1.5 mt-0.5 truncate">
                       <span>{lead.email}</span>
-                      <span className="text-slate-600">•</span>
+                      <span className="text-ink-mute">•</span>
                       <span>{lead.phone}</span>
                     </p>
                   </div>
@@ -309,8 +305,8 @@ export const Dashboard: React.FC = () => {
 
                 <div className="flex items-center space-x-3 shrink-0">
                   <div className="text-right hidden sm:block">
-                    <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Acquired via</span>
-                    <span className="text-xs text-slate-300 font-medium">{lead.agentType}</span>
+                    <span className="label-micro block">Acquired via</span>
+                    <span className="text-xs text-ink-soft font-medium">{lead.agentType}</span>
                   </div>
                   <span className={`status-pill ${statusPillClass(lead.status)}`}>
                     {lead.status}
@@ -322,18 +318,18 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Storm/Objection Focus (Right) */}
-        <div className="glass card-hover rounded-2xl p-5 md:p-6 flex flex-col justify-between">
+        <div className="glass-card card-hover p-5 md:p-6 flex flex-col justify-between">
           <div>
-            <div className="flex items-center space-x-2 text-accent-400 mb-4 bg-accent-500/10 p-3 rounded-xl border border-accent-500/25">
+            <div className="flex items-center space-x-2 text-accent-400 mb-4 bg-accent-500/10 p-3 border border-accent-500/25">
               <AlertTriangle className="h-5 w-5 stroke-[2.5]" />
-              <span className="text-xs font-bold uppercase tracking-wider">Storm Objection Vector</span>
+              <span className="label-micro">Storm Objection Vector</span>
             </div>
-            <h3 className="text-base font-bold text-white">Local Target Event Analysis</h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              AI agents are currently programmed to inject references to the <span className="text-slate-200 font-bold">{companySettings.stormName}</span> that impacted the <span className="text-slate-200 font-bold">{companySettings.city}</span> region on <span className="text-slate-200 font-bold">{companySettings.stormDate}</span>.
+            <h3 className="text-base font-bold text-ink">Local Target Event Analysis</h3>
+            <p className="text-xs text-ink-mute mt-2 leading-relaxed">
+              AI agents are currently programmed to inject references to the <span className="text-ink-soft font-bold">{companySettings.stormName}</span> that impacted the <span className="text-ink-soft font-bold">{companySettings.city}</span> region on <span className="text-ink-soft font-bold">{companySettings.stormDate}</span>.
             </p>
-            <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-xs text-slate-300 mt-4 space-y-2 font-mono leading-relaxed">
-              <p className="text-accent-400 font-bold uppercase tracking-wider text-[9px] mb-1">Active AI Objection Script</p>
+            <div className="surface-inset p-3.5 text-xs text-ink-soft mt-4 space-y-2 leading-relaxed">
+              <p className="label-micro mb-1 text-accent-400">Active AI Objection Script</p>
               {`Most insurance policies have a 1-year filing limit from the event date (${companySettings.stormDate}). We provide a free inspection report so you don't miss the deadline.`}
             </div>
           </div>

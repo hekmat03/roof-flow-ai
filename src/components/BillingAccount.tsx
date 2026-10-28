@@ -32,12 +32,12 @@ import { UsageMeter } from './PricingPlans';
 
 /** Rendered when a subscription is genuinely past due. Never shown otherwise. */
 export const PaymentFailureNotice: React.FC<{ planName: string }> = ({ planName }) => (
-  <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-100">
+  <div className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm text-ink-soft">
     <div className="flex items-start gap-2">
       <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" aria-hidden />
       <div>
         <p className="font-semibold">There is a problem with the last payment.</p>
-        <p className="mt-1 text-rose-200/90">
+        <p className="mt-1 text-ink-soft">
           The {planName} plan is still active while Stripe retries. Update the payment method in the billing
           portal to avoid losing access at the end of the period.
         </p>
@@ -73,31 +73,31 @@ const AuthForm: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   };
 
   return (
-    <div className="glass rounded-2xl p-5 md:p-6">
+    <div className="glass-card p-5 md:p-6">
       <div className="flex items-center gap-2">
         {mode === 'signin' ? <LogIn className="h-5 w-5 text-accent-400" aria-hidden /> : <UserPlus className="h-5 w-5 text-accent-400" aria-hidden />}
-        <h2 className="font-semibold text-slate-100">
+        <h2 className="font-semibold text-ink">
           {mode === 'signin' ? 'Sign in' : 'Create an account'}
         </h2>
       </div>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-ink-mute">
         An account is optional. The dashboard, the four simulators and the CRM all keep working without one —
         the account is what gives a plan and a monthly conversation quota.
       </p>
       <form className="mt-4 space-y-3" onSubmit={(e) => void submit(e)}>
         <label className="block">
-          <span className="text-xs font-medium text-slate-400">Email</span>
+          <span className="text-xs font-medium text-ink-mute">Email</span>
           <input
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-xl bg-slate-900/80 border border-slate-700 px-3 py-2.5 text-slate-100 outline-none focus:border-accent-500 min-h-[44px]"
+            className="mt-1 w-full rounded-xl bg-inset border border-line px-3 py-2.5 text-ink outline-none focus:border-accent-500 min-h-[44px]"
           />
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-slate-400">Password</span>
+          <span className="text-xs font-medium text-ink-mute">Password</span>
           <input
             type="password"
             required
@@ -105,14 +105,14 @@ const AuthForm: React.FC<{ onDone: () => void }> = ({ onDone }) => {
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-xl bg-slate-900/80 border border-slate-700 px-3 py-2.5 text-slate-100 outline-none focus:border-accent-500 min-h-[44px]"
+            className="mt-1 w-full rounded-xl bg-inset border border-line px-3 py-2.5 text-ink outline-none focus:border-accent-500 min-h-[44px]"
           />
-          <span className="text-[11px] text-slate-500">At least 8 characters.</span>
+          <span className="text-[11px] text-ink-mute">At least 8 characters.</span>
         </label>
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-xl bg-accent-600 hover:bg-accent-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold px-4 py-3 text-sm transition min-h-[44px]"
+          className="w-full rounded-xl bg-accent-600 hover:bg-accent-500 disabled:bg-inset disabled:text-ink-mute text-ink font-semibold px-4 py-3 text-sm transition min-h-[44px]"
         >
           {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}
         </button>
@@ -128,7 +128,7 @@ const AuthForm: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         {mode === 'signin' ? 'No account yet? Create one' : 'Already have an account? Sign in'}
       </button>
       {notice && (
-        <p className="mt-3 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">{notice}</p>
+        <p className="mt-3 rounded-xl border border-line bg-inset p-3 text-sm text-ink-soft">{notice}</p>
       )}
     </div>
   );
@@ -185,14 +185,14 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
 
   return (
     <div className="space-y-6">
-      <header className="glass rounded-2xl p-5 md:p-7">
-        <h1 className="text-2xl md:text-3xl font-bold text-white">Billing &amp; account</h1>
-        <p className="mt-2 text-slate-300 max-w-3xl">
+      <header className="glass-card p-5 md:p-7">
+        <h1 className="text-2xl md:text-3xl font-bold text-ink">Billing &amp; account</h1>
+        <p className="mt-2 text-ink-soft max-w-3xl">
           Your plan, your monthly conversation allowance, and the controls for a paid subscription.
         </p>
         {returnBanner && (
-          <p className="mt-4 flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-100">
-            <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-emerald-400" aria-hidden />
+          <p className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-inset p-3 text-sm text-ink">
+            <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-accent-400" aria-hidden />
             <span>{returnBanner}</span>
           </p>
         )}
@@ -203,14 +203,14 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
       {!status.authenticated ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <AuthForm onDone={onChanged} />
-          <div className="glass rounded-2xl p-5 md:p-6">
-            <h2 className="font-semibold text-slate-100">Why an account at all?</h2>
-            <ul className="mt-3 space-y-2 text-sm text-slate-300">
+          <div className="glass-card p-5 md:p-6">
+            <h2 className="font-semibold text-ink">Why an account at all?</h2>
+            <ul className="mt-3 space-y-2 text-sm text-ink-soft">
               <li>• It gives the account its own conversation quota, counted on the server.</li>
               <li>• It is what a paid plan would attach to once payments are activated.</li>
               <li>• Nothing else needs it: every simulator, the CRM and the dashboard stay open.</li>
             </ul>
-            <p className="mt-4 text-xs text-slate-500">
+            <p className="mt-4 text-xs text-ink-mute">
               Passwords are handled by Supabase Auth. This site never sees or stores them, and the browser is never
               given a database key.
             </p>
@@ -218,11 +218,11 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <section className="glass rounded-2xl p-5 md:p-6">
+          <section className="glass-card p-5 md:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-semibold text-slate-100">Account</h2>
-                <p className="mt-1 text-sm text-slate-300 break-all">{status.user?.email}</p>
+                <h2 className="font-semibold text-ink">Account</h2>
+                <p className="mt-1 text-sm text-ink-soft break-all">{status.user?.email}</p>
               </div>
               <span className="rounded-full bg-accent-500/15 px-3 py-1 text-xs font-semibold text-accent-300 whitespace-nowrap">
                 {planName}
@@ -231,20 +231,20 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
 
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-400">Subscription status</dt>
-                <dd className="text-slate-100 font-medium">
+                <dt className="text-ink-mute">Subscription status</dt>
+                <dd className="text-ink font-medium">
                   {status.paymentsActivated ? (sub?.status ?? 'none') : '— until payments activated'}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-400">Renews on</dt>
-                <dd className="text-slate-100 font-medium">
+                <dt className="text-ink-mute">Renews on</dt>
+                <dd className="text-ink font-medium">
                   {formatPeriod(sub?.currentPeriodEnd, status.paymentsActivated)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-400">Cancels at period end</dt>
-                <dd className="text-slate-100 font-medium">
+                <dt className="text-ink-mute">Cancels at period end</dt>
+                <dd className="text-ink font-medium">
                   {status.paymentsActivated ? (sub?.cancelAtPeriodEnd ? 'Yes' : 'No') : '—'}
                 </dd>
               </div>
@@ -262,7 +262,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
                       : undefined
                 }
                 onClick={() => void handlePortal()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] bg-slate-800/70 text-slate-400 disabled:cursor-not-allowed enabled:bg-accent-600 enabled:text-white enabled:hover:bg-accent-500"
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] bg-inset text-ink-mute disabled:cursor-not-allowed enabled:bg-accent-600 enabled:text-ink enabled:hover:bg-accent-500"
               >
                 <CreditCard className="h-4 w-4" aria-hidden />
                 Manage billing
@@ -275,14 +275,14 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
                     onChanged();
                   });
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800/60 transition min-h-[44px]"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink-soft hover:bg-inset transition min-h-[44px]"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
                 Sign out
               </button>
             </div>
             {notice && (
-              <p className="mt-4 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
+              <p className="mt-4 rounded-xl border border-line bg-inset p-3 text-sm text-ink-soft">
                 {notice}
               </p>
             )}
@@ -292,13 +292,13 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
             {status.usage ? (
               <UsageMeter usage={status.usage} planName={planName} />
             ) : (
-              <div className="glass rounded-2xl p-5 md:p-6 text-sm text-slate-300">
+              <div className="glass-card p-5 md:p-6 text-sm text-ink-soft">
                 Usage is unavailable right now.
               </div>
             )}
             {!status.paymentsActivated && (
-              <p className="flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
-                <Info className="h-5 w-5 mt-0.5 shrink-0 text-slate-400" aria-hidden />
+              <p className="flex items-start gap-2 rounded-xl border border-line bg-inset p-4 text-sm text-ink-soft">
+                <Info className="h-5 w-5 mt-0.5 shrink-0 text-ink-mute" aria-hidden />
                 <span>
                   Payment state is reported by the server. While no Stripe account is connected it always reads
                   “not activated” — this page never shows a renewal date or an invoice it cannot prove.

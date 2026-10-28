@@ -36,13 +36,13 @@ export const LiveLeadsStrip: React.FC = () => {
   const newest = leads[0];
 
   return (
-    <div className="glass rounded-2xl p-5 md:p-6">
+    <div className="glass-card p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" /> Live Website Leads
+          <h3 className="text-base font-bold text-ink flex items-center gap-2">
+            <Globe className="h-4 w-4 text-accent-400" /> Live Website Leads
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-ink-mute mt-0.5">
             Real visitors captured by the embeddable widget — kept separate from the simulator figures
             (this release counts them here rather than mixing them into the charts).
           </p>
@@ -65,20 +65,20 @@ export const LiveLeadsStrip: React.FC = () => {
       </div>
 
       {state === 'not-configured' && (
-        <p className="text-xs text-amber-200/80 mt-4 flex items-start gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-accent-300/80 mt-4 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-accent-400 shrink-0 mt-0.5" />
           {message ?? 'Connect the database to switch live capture on.'}
         </p>
       )}
       {state === 'error' && (
-        <p className="text-xs text-rose-200/80 mt-4 flex items-start gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 text-rose-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-ink-soft mt-4 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-danger shrink-0 mt-0.5" />
           {message ?? 'Could not reach the lead service.'} This is a connection problem, not an empty CRM.
         </p>
       )}
       {state === 'ok' && leads.length === 0 && (
-        <p className="text-xs text-slate-500 mt-4">
-          No live leads yet. Open <span className="font-mono text-slate-400">/widget-demo.html</span> and complete the
+        <p className="text-xs text-ink-mute mt-4">
+          No live leads yet. Open <span className=" text-ink-mute">/widget-demo.html</span> and complete the
           widget as a visitor to see one land here.
         </p>
       )}
@@ -87,8 +87,8 @@ export const LiveLeadsStrip: React.FC = () => {
 };
 
 const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
-    <span className="block text-[10px] uppercase tracking-wider text-slate-500 font-bold">{label}</span>
-    <span className="text-lg font-black text-white">{value}</span>
+  <div className="rounded-xl border border-line bg-inset p-3">
+    <span className="block text-[10px] uppercase tracking-widest text-ink-mute font-bold">{label}</span>
+    <span className="text-lg font-black text-ink">{value}</span>
   </div>
 );

@@ -235,8 +235,8 @@ export const CRMLeadsBoard: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-white">CRM Leads Board</h2>
-          <p className="text-xs text-slate-400 mt-1">Manage and track all captured roofing lead interactions, inspection bookings, and conversations.</p>
+          <h2 className="text-2xl font-black text-ink">CRM Leads Board</h2>
+          <p className="text-xs text-ink-mute mt-1">Manage and track all captured roofing lead interactions, inspection bookings, and conversations.</p>
         </div>
         
         <button
@@ -253,19 +253,19 @@ export const CRMLeadsBoard: React.FC = () => {
 
       {/* Manual Add Form (Collapsible Card) */}
       {isAddOpen && (
-        <form onSubmit={handleCreateLead} className="glass rounded-2xl p-6 shadow-xl max-w-3xl animate-slideDown">
-          <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Plus className="h-4 w-4 text-orange-500" /> Create New Lead Profile
+        <form onSubmit={handleCreateLead} className="glass-card p-6 shadow-xl max-w-3xl animate-slideDown">
+          <div className="flex justify-between items-center mb-4 pb-3 border-b border-line">
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+              <Plus className="h-4 w-4 text-accent-500" /> Create New Lead Profile
             </h3>
-            <button type="button" onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-white">
+            <button type="button" onClick={() => setIsAddOpen(false)} className="text-ink-mute hover:text-ink">
               <X className="h-5 w-5" />
             </button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Full Name *</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Full Name *</label>
               <input
                 type="text"
                 required
@@ -276,7 +276,7 @@ export const CRMLeadsBoard: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Phone Number *</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Phone Number *</label>
               <input
                 type="tel"
                 required
@@ -287,7 +287,7 @@ export const CRMLeadsBoard: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Email Address</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Email Address</label>
               <input
                 type="email"
                 placeholder="s.connor@sky.net (or leave empty)"
@@ -300,7 +300,7 @@ export const CRMLeadsBoard: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Property Ownership</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Property Ownership</label>
               <select
                 value={newOwnership}
                 onChange={e => setNewOwnership(e.target.value as 'Owner' | 'Renter')}
@@ -311,7 +311,7 @@ export const CRMLeadsBoard: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Initial Status</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Initial Status</label>
               <select
                 value={newStatus}
                 onChange={e => setNewStatus(e.target.value as Lead['status'])}
@@ -330,7 +330,7 @@ export const CRMLeadsBoard: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Acquisition Source</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Acquisition Source</label>
               <select
                 value={newAgentType}
                 onChange={e => setNewAgentType(e.target.value as Lead['agentType'])}
@@ -344,9 +344,9 @@ export const CRMLeadsBoard: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-slate-800/60 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-line pt-4">
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Zip Code</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Zip Code</label>
               <input
                 type="text"
                 placeholder="75201"
@@ -356,7 +356,7 @@ export const CRMLeadsBoard: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Roof Issue Description</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Roof Issue Description</label>
               <input
                 type="text"
                 placeholder="Storm damage replacement estimate, leak assessment, etc."
@@ -369,13 +369,13 @@ export const CRMLeadsBoard: React.FC = () => {
 
           {/* Inline Scheduling options when status is Inspection Scheduled */}
           {newStatus === 'Inspection Scheduled' && (
-            <div className="mt-4 p-4 rounded-xl bg-[#0f172a] border border-emerald-500/10 space-y-4">
-              <h4 className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+            <div className="mt-4 p-4 rounded-xl bg-[#0f172a] border border-accent-500/10 space-y-4">
+              <h4 className="text-xs font-bold uppercase text-accent-400 flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" /> Schedule Initial Appointment Details
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Date *</label>
+                  <label className="text-[10px] text-ink-mute block mb-1 font-semibold">Appointment Date *</label>
                   <input
                     type="date"
                     required
@@ -385,7 +385,7 @@ export const CRMLeadsBoard: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Time (e.g. 10:00 AM) *</label>
+                  <label className="text-[10px] text-ink-mute block mb-1 font-semibold">Appointment Time (e.g. 10:00 AM) *</label>
                   <input
                     type="text"
                     required
@@ -397,7 +397,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Scheduler Notes (Internal/Customer preferences)</label>
+                <label className="text-[10px] text-ink-mute block mb-1 font-semibold">Scheduler Notes (Internal/Customer preferences)</label>
                 <textarea
                   placeholder="E.g., visible water stains on second floor ceiling, prefers afternoon visit."
                   value={newApptNotes}
@@ -428,11 +428,11 @@ export const CRMLeadsBoard: React.FC = () => {
       )}
 
       {/* Filter and Search Dashboard Card */}
-      <div className="glass card-hover rounded-2xl p-5 md:p-6">
+      <div className="glass-card card-hover rounded-2xl p-5 md:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-3 h-5 w-5 text-slate-500" />
+            <Search className="absolute left-4 top-3 h-5 w-5 text-ink-mute" />
             <input
               type="text"
               placeholder="Search by name, phone, email, zip or issue..."
@@ -444,15 +444,15 @@ export const CRMLeadsBoard: React.FC = () => {
 
           {/* Quick Filter tabs */}
           <div className="flex items-center space-x-1.5 overflow-x-auto pb-1.5 lg:pb-0 scrollbar-none">
-            <Filter className="h-4 w-4 text-slate-400 mr-1 shrink-0" />
+            <Filter className="h-4 w-4 text-ink-mute mr-1 shrink-0" />
             {['All', 'New Lead', 'Contacted', 'In Contact', 'Inspection Scheduled', 'Inspection Completed', 'Estimate Sent', 'Closed-Won', 'Closed-Lost', 'Follow-up Nurture', 'Closed'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
                   statusFilter === status
-                    ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
-                    : 'bg-slate-900 border border-slate-800/80 text-slate-400 hover:text-slate-100'
+                    ? 'bg-accent-500/15 text-accent-400 border border-accent-500/20'
+                    : 'bg-inset border border-line text-ink-mute hover:text-ink'
                 }`}
               >
                 {status}
@@ -464,19 +464,19 @@ export const CRMLeadsBoard: React.FC = () => {
         {/* Leads Table Container */}
         <div className="mt-6">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-bold text-white">Simulator leads</h3>
-            <span className="text-[10px] font-bold uppercase tracking-wider rounded px-2 py-0.5 border text-slate-400 bg-slate-500/10 border-slate-500/30">
+            <h3 className="text-sm font-bold text-ink">Simulator leads</h3>
+            <span className="label-micro rounded px-2 py-0.5 border text-ink-mute bg-inset border-line">
               SIMULATED · demo data
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-ink-mute">
               — created by the agent simulators, stored in this browser only (fully editable).
             </span>
           </div>
         </div>
-        <div className="mt-2 overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-900/20 premium-scroll table-sticky-header">
-          <table className="w-full border-collapse text-left text-sm text-slate-300">
+        <div className="mt-2 overflow-x-auto rounded-xl border border-line bg-inset premium-scroll table-sticky-header">
+          <table className="w-full border-collapse text-left text-sm text-ink-soft">
             <thead>
-              <tr className="border-b border-slate-800/80 bg-slate-950/85 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <tr className="border-b border-line bg-inset text-xs font-semibold uppercase tracking-widest text-ink-mute">
                 <th className="px-6 py-4">Homeowner Name</th>
                 <th className="px-6 py-4">Roof Issue / Zip</th>
                 <th className="px-6 py-4">Acquisition Source</th>
@@ -485,29 +485,29 @@ export const CRMLeadsBoard: React.FC = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70 row-stripe bg-slate-900/10">
+            <tbody className="divide-y divide-line row-stripe bg-inset">
               {filteredLeads.length > 0 ? (
                 filteredLeads.map((lead) => (
                   <tr 
                     key={lead.id} 
-                    className="hover:bg-slate-800/40 transition cursor-pointer"
+                    className="hover:bg-inset transition cursor-pointer"
                     onClick={() => setSelectedLeadForChat(lead)}
                   >
                     {/* Homeowner Name & Contact info */}
                     <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center space-x-3">
                         <div 
-                          className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/60 flex items-center justify-center font-bold text-accent-300 shadow-lg cursor-pointer"
+                          className="h-9 w-9 rounded-xl surface-inset flex items-center justify-center font-bold text-accent-300 shadow-lg cursor-pointer"
                           onClick={() => setSelectedLeadForChat(lead)}
                         >
                           {lead.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div className="cursor-pointer" onClick={() => setSelectedLeadForChat(lead)}>
-                          <p className="font-bold text-white">{lead.name}</p>
-                          <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 border text-slate-400 bg-slate-500/10 border-slate-500/30">
+                          <p className="font-bold text-ink">{lead.name}</p>
+                          <span className="inline-block mt-1 label-micro rounded px-1.5 py-0.5 border text-ink-mute bg-inset border-line">
                             SIMULATED · demo data
                           </span>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-ink-mute mt-0.5">
                             <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {lead.phone}</span>
                             <span>•</span>
                             <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {lead.email}</span>
@@ -519,14 +519,14 @@ export const CRMLeadsBoard: React.FC = () => {
                     {/* Roof Issue and Zip Code */}
                     <td className="px-6 py-4">
                       <div className="space-y-0.5">
-                        <p className="text-xs text-slate-200 font-medium line-clamp-1 max-w-xs">{lead.roofIssue}</p>
-                        <p className="text-[10px] text-slate-500 flex items-center gap-1"><MapPin className="h-2.5 w-2.5" /> Zip: {lead.zipCode}</p>
+                        <p className="text-xs text-ink-soft font-medium line-clamp-1 max-w-xs">{lead.roofIssue}</p>
+                        <p className="text-[10px] text-ink-mute flex items-center gap-1"><MapPin className="h-2.5 w-2.5" /> Zip: {lead.zipCode}</p>
                       </div>
                     </td>
 
                     {/* Agent source */}
                     <td className="px-6 py-4">
-                      <span className="text-xs text-slate-300 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 font-medium">
+                      <span className="text-xs text-ink-soft bg-inset px-2 py-1 rounded-lg border border-line font-medium">
                         {lead.agentType}
                       </span>
                     </td>
@@ -554,16 +554,16 @@ export const CRMLeadsBoard: React.FC = () => {
                     {/* Scheduled inspection date */}
                     <td className="px-6 py-4">
                       {lead.status === 'Inspection Scheduled' && (lead.appointmentDetails || lead.scheduledDate) ? (
-                        <div className="flex items-center space-x-1.5 text-xs text-emerald-400 font-mono">
+                        <div className="flex items-center space-x-1.5 text-xs text-accent-400">
                           <Calendar className="h-3.5 w-3.5 shrink-0" />
                           <span>{lead.appointmentDetails?.date || lead.scheduledDate?.split(' ')[0]} {lead.appointmentDetails?.time || lead.scheduledDate?.split(' ').slice(1).join(' ')}</span>
                         </div>
                       ) : lead.status === 'Inspection Completed' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 px-2 py-0.5 rounded bg-cyan-400/5 border border-cyan-400/10">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent-400 px-2 py-0.5 rounded bg-accent-400/5 border border-accent-400/10">
                           <CheckCircle2 className="h-3 w-3" /> Completed
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-500 font-mono italic">Not Scheduled</span>
+                        <span className="text-xs text-ink-mute italic">Not Scheduled</span>
                       )}
                     </td>
 
@@ -572,14 +572,14 @@ export const CRMLeadsBoard: React.FC = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => setSelectedLeadForChat(lead)}
-                          className="bg-accent-500/10 hover:bg-accent-500 hover:text-slate-950 text-accent-400 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1 min-h-0"
+                          className="bg-accent-500/10 hover:bg-accent-500 hover:text-gold-ink text-accent-400 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1 min-h-0"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
                           View Log ({lead.chatLog.length})
                         </button>
                         <button
                           onClick={() => handleDeleteLead(lead.id)}
-                          className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
+                          className="text-ink-mute hover:text-danger p-1.5 rounded-lg hover:bg-inset transition"
                           title="Delete Lead"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -592,14 +592,14 @@ export const CRMLeadsBoard: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="px-6 py-14 text-center">
                     <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-slate-500" />
+                      <div className="h-12 w-12 rounded-2xl bg-inset border border-line flex items-center justify-center">
+                        <Users className="h-6 w-6 text-ink-mute" />
                       </div>
-                      <h4 className="text-sm font-bold text-slate-300">Your CRM is live and waiting</h4>
-                      <p className="text-xs text-slate-500 leading-relaxed">
+                      <h4 className="text-sm font-bold text-ink-soft">Your CRM is live and waiting</h4>
+                      <p className="text-xs text-ink-mute leading-relaxed">
                         No leads yet. Every lead captured by the AI agents — chat, phone, SMS/email nurture, or estimate follow-up — lands here instantly with its full conversation transcript.
                       </p>
-                      <p className="text-[11px] text-slate-400 font-semibold">
+                      <p className="text-[11px] text-ink-mute font-semibold">
                         Start with Agent 1 on the Dashboard → "Simulate Chatbot".
                       </p>
                     </div>
@@ -607,7 +607,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 </tr>
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">
+                  <td colSpan={6} className="px-6 py-12 text-center text-ink-mute italic">
                     No leads matching your search criteria were found.
                   </td>
                 </tr>
@@ -619,75 +619,75 @@ export const CRMLeadsBoard: React.FC = () => {
 
       {/* Slide-over Conversation Audit Panel */}
       {selectedLeadForChat && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
-          <div className="w-full max-w-2xl glass-strong border-l border-slate-800/80 h-full flex flex-col justify-between shadow-2xl animate-slideLeft">
+        <div className="fixed inset-0 bg-inset backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
+          <div className="w-full max-w-2xl glass-card border-l border-line h-full flex flex-col justify-between shadow-2xl animate-slideLeft">
             
             {/* Panel Header */}
-            <div className="p-6 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
+            <div className="p-6 border-b border-line bg-inset flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="h-11 w-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-orange-500 text-lg">
+                <div className="h-11 w-11 rounded-xl bg-inset border border-line flex items-center justify-center font-bold text-accent-500 text-lg">
                   {selectedLeadForChat.name.split(' ').map(n => n[0]).join('')}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-base">{selectedLeadForChat.name}</h3>
-                  <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <span>Acquired via: <span className="text-orange-400 font-bold">{selectedLeadForChat.agentType}</span></span>
+                  <h3 className="font-extrabold text-ink text-base">{selectedLeadForChat.name}</h3>
+                  <p className="text-xs text-ink-mute flex items-center gap-1.5 mt-0.5">
+                    <span>Acquired via: <span className="text-accent-400 font-bold">{selectedLeadForChat.agentType}</span></span>
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => { setSelectedLeadForChat(null); setIsSchedulingOpen(false); }}
-                className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800 border border-slate-700"
+                className="text-ink-mute hover:text-ink p-1 rounded-lg bg-inset border border-line"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Homeowner Audit Profile Card */}
-            <div className="p-4 bg-slate-900/60 border-b border-slate-800 grid grid-cols-2 gap-4 text-xs text-slate-300">
+            <div className="p-4 bg-inset border-b border-line grid grid-cols-2 gap-4 text-xs text-ink-soft">
               <div className="col-span-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider rounded px-2 py-0.5 border text-slate-400 bg-slate-500/10 border-slate-500/30">
+                <span className="label-micro rounded px-2 py-0.5 border text-ink-mute bg-inset border-line">
                   SIMULATED · demo data
                 </span>
-                <span className="ml-2 text-[11px] text-slate-500">
+                <span className="ml-2 text-[11px] text-ink-mute">
                   Generated by a simulator and saved in this browser only.
                 </span>
               </div>
               <div className="space-y-1.5">
-                <p className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Full Name:</span> {selectedLeadForChat.name}</p>
-                <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Phone:</span> {selectedLeadForChat.phone}</p>
-                <p className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Email:</span> {selectedLeadForChat.email}</p>
-                <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Zip Code:</span> {selectedLeadForChat.zipCode}</p>
+                <p className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-ink-mute" /> <span className="font-semibold text-ink">Full Name:</span> {selectedLeadForChat.name}</p>
+                <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-ink-mute" /> <span className="font-semibold text-ink">Phone:</span> {selectedLeadForChat.phone}</p>
+                <p className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-ink-mute" /> <span className="font-semibold text-ink">Email:</span> {selectedLeadForChat.email}</p>
+                <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-ink-mute" /> <span className="font-semibold text-ink">Zip Code:</span> {selectedLeadForChat.zipCode}</p>
               </div>
               <div className="space-y-1.5">
-                <p className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Ownership:</span> {selectedLeadForChat.propertyOwnership}</p>
-                <p className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Status:</span> 
+                <p className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5 text-ink-mute" /> <span className="font-semibold text-ink">Ownership:</span> {selectedLeadForChat.propertyOwnership}</p>
+                <p className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-ink-mute" /> <span className="font-semibold text-ink">Status:</span> 
                   <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusStyles(selectedLeadForChat.status)}`}>
                     {selectedLeadForChat.status}
                   </span>
                 </p>
-                <p className="flex items-start gap-1.5"><FileText className="h-3.5 w-3.5 text-slate-500 shrink-0 mt-0.5" /> <span><span className="font-semibold text-white">Roof Issue:</span> {selectedLeadForChat.roofIssue}</span></p>
+                <p className="flex items-start gap-1.5"><FileText className="h-3.5 w-3.5 text-ink-mute shrink-0 mt-0.5" /> <span><span className="font-semibold text-ink">Roof Issue:</span> {selectedLeadForChat.roofIssue}</span></p>
               </div>
             </div>
 
             {/* Scheduled Inspection Booking details with edit state */}
-            <div className="p-4 bg-slate-900/40 border-b border-slate-800/80 space-y-3">
+            <div className="p-4 bg-inset border-b border-line space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-emerald-400" /> Inspection Appointment Panel
+                <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-accent-400" /> Inspection Appointment Panel
                 </h4>
                 
                 {!isSchedulingOpen ? (
                   <button
                     onClick={() => startScheduling(selectedLeadForChat)}
-                    className="text-[11px] font-black bg-emerald-500 text-slate-950 px-3 py-1 rounded-md hover:bg-emerald-400 transition"
+                    className="text-[11px] font-black bg-accent-500 text-gold-ink px-3 py-1 rounded-md hover:bg-accent-400 transition"
                   >
                     {selectedLeadForChat.status === 'Inspection Scheduled' ? 'Reschedule / Edit' : 'Schedule Inspection'}
                   </button>
                 ) : (
                   <button
                     onClick={() => setIsSchedulingOpen(false)}
-                    className="text-[11px] text-slate-400 hover:text-white"
+                    className="text-[11px] text-ink-mute hover:text-ink"
                   >
                     Cancel
                   </button>
@@ -696,34 +696,34 @@ export const CRMLeadsBoard: React.FC = () => {
 
               {!isSchedulingOpen ? (
                 selectedLeadForChat.status === 'Inspection Scheduled' && (selectedLeadForChat.appointmentDetails || selectedLeadForChat.scheduledDate) ? (
-                  <div className="bg-emerald-950/20 border border-emerald-500/10 p-3 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center gap-4 text-emerald-400 font-mono font-bold">
-                      <p>Date: <span className="text-white">{selectedLeadForChat.appointmentDetails?.date || selectedLeadForChat.scheduledDate?.split(' ')[0]}</span></p>
-                      <p>Time: <span className="text-white">{selectedLeadForChat.appointmentDetails?.time || selectedLeadForChat.scheduledDate?.split(' ').slice(1).join(' ')}</span></p>
+                  <div className="bg-accent-500/5 border border-accent-500/10 p-3 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center gap-4 text-accent-400 font-bold">
+                      <p>Date: <span className="text-ink">{selectedLeadForChat.appointmentDetails?.date || selectedLeadForChat.scheduledDate?.split(' ')[0]}</span></p>
+                      <p>Time: <span className="text-ink">{selectedLeadForChat.appointmentDetails?.time || selectedLeadForChat.scheduledDate?.split(' ').slice(1).join(' ')}</span></p>
                     </div>
                     {selectedLeadForChat.appointmentDetails?.notes && (
-                      <p className="text-slate-300 text-[11px] italic bg-slate-900/40 p-2 rounded-lg border border-slate-800/50">
-                        <span className="font-bold text-slate-400 not-italic uppercase text-[9px] block mb-0.5">Appointment Notes:</span>
+                      <p className="text-ink-soft text-[11px] italic bg-inset p-2 rounded-lg border border-line">
+                        <span className="font-bold text-ink-mute not-italic uppercase text-[9px] block mb-0.5">Appointment Notes:</span>
                         "{selectedLeadForChat.appointmentDetails.notes}"
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="bg-slate-950/30 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between text-xs text-slate-400">
+                  <div className="bg-inset border border-line p-3.5 rounded-xl flex items-center justify-between text-xs text-ink-mute">
                     <span className="italic">No active inspection scheduled.</span>
                     <button
                       onClick={() => startScheduling(selectedLeadForChat)}
-                      className="text-orange-400 hover:text-orange-300 font-bold flex items-center gap-1"
+                      className="text-accent-400 hover:text-accent-300 font-bold flex items-center gap-1"
                     >
                       Schedule Free Inspection Now &rarr;
                     </button>
                   </div>
                 )
               ) : (
-                <div className="bg-slate-900 p-4 rounded-xl border border-emerald-500/20 space-y-3.5 animate-slideDown">
+                <div className="bg-inset p-4 rounded-xl border border-accent-500/20 space-y-3.5 animate-slideDown">
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Date</label>
+                      <label className="text-[10px] text-ink-mute block mb-1 font-semibold">Appointment Date</label>
                       <input
                         type="date"
                         value={editApptDate}
@@ -732,7 +732,7 @@ export const CRMLeadsBoard: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Time (e.g. 10:00 AM)</label>
+                      <label className="text-[10px] text-ink-mute block mb-1 font-semibold">Appointment Time (e.g. 10:00 AM)</label>
                       <input
                         type="text"
                         value={editApptTime}
@@ -742,7 +742,7 @@ export const CRMLeadsBoard: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Scheduler Notes</label>
+                    <label className="text-[10px] text-ink-mute block mb-1 font-semibold">Scheduler Notes</label>
                     <textarea
                       value={editApptNotes}
                       onChange={e => setEditApptNotes(e.target.value)}
@@ -754,13 +754,13 @@ export const CRMLeadsBoard: React.FC = () => {
                   <div className="flex justify-end space-x-2">
                     <button
                       onClick={() => setIsSchedulingOpen(false)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition"
+                      className="bg-inset hover:bg-inset text-ink-soft text-[11px] font-semibold px-3 py-1.5 rounded-lg transition"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => handleSaveAppointment(selectedLeadForChat.id)}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black px-4 py-1.5 rounded-lg transition"
+                      className="bg-gold hover:bg-gold-strong text-gold-ink text-[11px] font-black px-4 py-1.5 rounded-lg transition"
                     >
                       Save & Book Inspection
                     </button>
@@ -770,7 +770,7 @@ export const CRMLeadsBoard: React.FC = () => {
             </div>
 
             {/* Conversations Transcripts Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/50 premium-scroll">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-inset premium-scroll">
               {selectedLeadForChat.chatLog.map((log, index) => {
                 const isAI = log.sender === 'AI';
                 const isSystem = log.sender === 'System';
@@ -778,7 +778,7 @@ export const CRMLeadsBoard: React.FC = () => {
                 if (isSystem) {
                   return (
                     <div key={index} className="flex justify-center">
-                      <span className="bg-slate-800/80 text-[10px] font-semibold text-slate-400 px-3 py-1 rounded-md border border-slate-800/80 font-mono tracking-wide max-w-md text-center">
+                      <span className="bg-inset text-[10px] font-semibold text-ink-mute px-3 py-1 rounded-md border border-line tracking-wide max-w-md text-center">
                         {log.timestamp} • {log.text}
                       </span>
                     </div>
@@ -792,11 +792,11 @@ export const CRMLeadsBoard: React.FC = () => {
                         ? 'chat-bubble-ai rounded-tl-none' 
                         : 'chat-bubble-user rounded-tr-none'
                     }`}>
-                      <div className="flex justify-between items-center gap-4 mb-1 border-b border-slate-700/30 pb-0.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-60">
+                      <div className="flex justify-between items-center gap-4 mb-1 border-b border-line pb-0.5">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
                           {isAI ? 'RoofFlow AI Agent' : 'Homeowner User'}
                         </span>
-                        <span className="text-[9px] opacity-50 font-mono">
+                        <span className="text-[9px] opacity-50">
                           {log.timestamp}
                         </span>
                       </div>
@@ -808,13 +808,13 @@ export const CRMLeadsBoard: React.FC = () => {
             </div>
 
             {/* Conversation footer details */}
-            <div className="p-4 border-t border-slate-800/80 bg-slate-950/60 text-xs text-slate-500 flex items-center justify-between">
+            <div className="p-4 border-t border-line bg-inset text-xs text-ink-mute flex items-center justify-between">
               <span className="flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" /> Lead Audit Trail verified
+                <ShieldCheck className="h-4 w-4 text-accent-500" /> Lead Audit Trail verified
               </span>
               <button 
                 onClick={() => { setSelectedLeadForChat(null); setIsSchedulingOpen(false); }}
-                className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl border border-slate-700"
+                className="bg-inset hover:bg-inset text-ink font-bold px-4 py-2 rounded-xl border border-line"
               >
                 Close Audit Log
               </button>

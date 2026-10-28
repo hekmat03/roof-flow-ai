@@ -1,10 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>roof-flow-ai</title>
+    <meta name="theme-color" content="#0A0A0A" />
+    <title>RoofFlow AI — Contractor Sales Suite</title>
+    <script>
+      /* Pre-paint theme: applies the stored choice before first render so the
+         Obsidian/Cream surface never flashes the wrong colour. Guarded for
+         static/SSR serving — a failure here just leaves the brand default. */
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('roof-flow-theme');
+          var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+          var root = document.documentElement;
+          root.classList.toggle('dark', theme === 'dark');
+          root.setAttribute('data-theme', theme);
+          root.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

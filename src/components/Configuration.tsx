@@ -60,24 +60,24 @@ export const Configuration: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">System Configuration</h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <h2 className="text-2xl font-black text-ink">System Configuration</h2>
+        <p className="text-xs text-ink-mute mt-1">
           Customize contractor identity, active weather storm parameters, financing agreements, and AI agent vocabulary tones.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Editor Form */}
-        <div className="lg:col-span-2 glass card-hover rounded-2xl p-6">
+        <div className="lg:col-span-2 glass-card card-hover rounded-2xl p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Settings className="h-4.5 w-4.5 text-orange-500" /> Identity & Campaign Parameters
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2 pb-3 border-b border-line">
+              <Settings className="h-4.5 w-4.5 text-accent-500" /> Identity & Campaign Parameters
             </h3>
 
             {/* Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs text-slate-400 block mb-2 font-semibold">Contractor Company Name</label>
+                <label className="text-xs text-ink-mute block mb-2 font-semibold">Contractor Company Name</label>
                 <input
                   type="text"
                   value={companyName}
@@ -86,7 +86,7 @@ export const Configuration: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 block mb-2 font-semibold">Target Metro City/Region</label>
+                <label className="text-xs text-ink-mute block mb-2 font-semibold">Target Metro City/Region</label>
                 <input
                   type="text"
                   value={city}
@@ -99,7 +99,7 @@ export const Configuration: React.FC = () => {
             {/* Row 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs text-slate-400 block mb-2 font-semibold">Target Storm Event Name</label>
+                <label className="text-xs text-ink-mute block mb-2 font-semibold">Target Storm Event Name</label>
                 <input
                   type="text"
                   value={stormName}
@@ -108,7 +108,7 @@ export const Configuration: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 block mb-2 font-semibold">Storm Event Occurrence Date</label>
+                <label className="text-xs text-ink-mute block mb-2 font-semibold">Storm Event Occurrence Date</label>
                 <input
                   type="text"
                   value={stormDate}
@@ -120,34 +120,34 @@ export const Configuration: React.FC = () => {
 
             {/* Textarea 1 */}
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Financing Objections Counter-Offer</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Financing Objections Counter-Offer</label>
               <textarea
                 rows={2}
                 value={financingOptions}
                 onChange={e => setFinancingOptions(e.target.value)}
                 className="input-premium text-sm font-medium leading-relaxed"
               />
-              <span className="text-[10px] text-slate-500 mt-1.5 block">Used by Phone/Estimate Agents to answer "How will I pay for my deductible?"</span>
+              <span className="text-[10px] text-ink-mute mt-1.5 block">Used by Phone/Estimate Agents to answer "How will I pay for my deductible?"</span>
             </div>
 
             {/* Textarea 2 */}
             <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Conversational AI Personality / Tone</label>
+              <label className="text-xs text-ink-mute block mb-2 font-semibold">Conversational AI Personality / Tone</label>
               <textarea
                 rows={2}
                 value={agentTone}
                 onChange={e => setAgentTone(e.target.value)}
                 className="input-premium text-sm font-medium leading-relaxed"
               />
-              <span className="text-[10px] text-slate-500 mt-1.5 block">Overrides default response parameters across active models.</span>
+              <span className="text-[10px] text-ink-mute mt-1.5 block">Overrides default response parameters across active models.</span>
             </div>
 
             {/* Buttons */}
-            <div className="flex justify-between items-center pt-4 border-t border-slate-800">
+            <div className="flex justify-between items-center pt-4 border-t border-line">
               <button
                 type="button"
                 onClick={handleReset}
-                className="bg-slate-900 text-slate-400 hover:text-red-400 hover:bg-slate-800 font-semibold px-4 py-2.5 rounded-xl text-xs transition border border-slate-800/80 flex items-center gap-1.5"
+                className="bg-inset text-ink-mute hover:text-danger hover:bg-inset font-semibold px-4 py-2.5 rounded-xl text-xs transition border border-line flex items-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Reset Defaults
@@ -155,7 +155,7 @@ export const Configuration: React.FC = () => {
 
               <div className="flex items-center space-x-3">
                 {isSaved && (
-                  <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                  <span className="text-accent-400 text-xs font-bold flex items-center gap-1">
                     <ShieldCheck className="h-4.5 w-4.5 stroke-[2.5]" /> Configuration Synced!
                   </span>
                 )}
@@ -172,15 +172,15 @@ export const Configuration: React.FC = () => {
 
         {/* Info sidebar helper */}
         <div className="space-y-6">
-          <div className="glass card-hover rounded-2xl p-6">
-            <h4 className="text-sm font-bold text-white mb-3">Settings Synchronization</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+          <div className="glass-card card-hover rounded-2xl p-6">
+            <h4 className="text-sm font-bold text-ink mb-3">Settings Synchronization</h4>
+            <p className="text-xs text-ink-mute leading-relaxed">
               Updates saved in this configuration panel are instantly propagated across all four simulators.
             </p>
             <div className="mt-4 space-y-3">
-              <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 flex items-start space-x-2 text-xs">
-                <AlertCircle className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-                <span className="text-slate-300">
+              <div className="bg-inset p-3 rounded-lg border border-line flex items-start space-x-2 text-xs">
+                <AlertCircle className="h-4 w-4 text-accent-500 shrink-0 mt-0.5" />
+                <span className="text-ink-soft">
                   Changing the company name or active storm will modify system instructions dynamically.
                 </span>
               </div>
@@ -237,13 +237,13 @@ const IntegrationPanel: React.FC = () => {
   };
 
   return (
-    <div className="glass rounded-2xl p-6">
-      <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-800">
+    <div className="glass-card p-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-line">
         <div>
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <PlugZap className="h-4.5 w-4.5 text-orange-500" /> Live Integrations (Free Tier)
+          <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+            <PlugZap className="h-4.5 w-4.5 text-accent-500" /> Live Integrations (Free Tier)
           </h3>
-          <p className="text-xs text-slate-400 mt-1.5">
+          <p className="text-xs text-ink-mute mt-1.5">
             Wire real AI inference and real CRM storage into the simulators. Everything degrades gracefully —
             the built-in engine keeps working when these are empty.
           </p>
@@ -252,48 +252,48 @@ const IntegrationPanel: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {/* AI engine status (server-side key) */}
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 space-y-3">
+        <div className="bg-inset border border-line rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-slate-300 font-bold flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-amber-400" /> AI Engine (server-side)
+            <label className="text-xs text-ink-soft font-bold flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-accent-400" /> AI Engine (server-side)
             </label>
             {aiLive ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-accent-400 bg-accent-500/10 border border-accent-500/20 px-2 py-0.5 rounded-full">
                 <CheckCircle2 className="h-3 w-3" /> LIVE AI ON
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-800/60 border border-slate-700 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-ink-mute bg-inset border border-line px-2 py-0.5 rounded-full">
                 <XCircle className="h-3 w-3" /> {ai === 'loading' ? 'CHECKING…' : 'BUILT-IN ENGINE'}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
+          <p className="text-[11px] text-ink-mute leading-relaxed">
             {aiLive
               ? `Agents answer through the secure server endpoint (${ai.model ?? ''}). No API key is stored in this browser.`
               : 'Live AI is off. Add MISTRAL_API_KEY in your Vercel project environment variables and redeploy. Until then the built-in offline engine answers.'}
           </p>
           {aiLive && (
             <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-              <span className={ai.storage ? 'text-emerald-400' : 'text-slate-500'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
-              <span className={ai.email ? 'text-emerald-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Email delivery — not available</span>
-              <span className="text-amber-400">○ SMS: demo mode</span>
+              <span className={ai.storage ? 'text-accent-400' : 'text-ink-mute'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
+              <span className={ai.email ? 'text-accent-400' : 'text-ink-mute'}>{ai.email ? '✓' : '○'} Email delivery — not available</span>
+              <span className="text-accent-400">○ SMS: demo mode</span>
             </div>
           )}
         </div>
 
         {/* Google Sheets Webhook URL */}
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 space-y-3">
+        <div className="bg-inset border border-line rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-slate-300 font-bold flex items-center gap-2">
-              <Webhook className="h-4 w-4 text-blue-400" /> Google Sheets Webhook URL
-              <span className="font-mono text-[9px] text-slate-500 hidden sm:inline">({WEBHOOK_URL_STORAGE})</span>
+            <label className="text-xs text-ink-soft font-bold flex items-center gap-2">
+              <Webhook className="h-4 w-4 text-accent-400" /> Google Sheets Webhook URL
+              <span className=" text-[9px] text-ink-mute hidden sm:inline">({WEBHOOK_URL_STORAGE})</span>
             </label>
             {urlConfigured ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-accent-400 bg-accent-500/10 border border-accent-500/20 px-2 py-0.5 rounded-full">
                 <CheckCircle2 className="h-3 w-3" /> CRM PUSH ON
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-800/60 border border-slate-700 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-ink-mute bg-inset border border-line px-2 py-0.5 rounded-full">
                 <XCircle className="h-3 w-3" /> LOCAL CRM ONLY
               </span>
             )}
@@ -304,13 +304,13 @@ const IntegrationPanel: React.FC = () => {
               placeholder="https://script.google.com/macros/s/…/exec"
               value={urlInput}
               onChange={e => setUrlInput(e.target.value)}
-              className="flex-1 input-premium px-3 py-2 text-xs font-mono"
+              className="flex-1 input-premium px-3 py-2 text-xs"
             />
             <button onClick={handleSaveUrl} className="btn-accent px-4 py-2 text-xs font-bold min-h-0">
               Save
             </button>
           </div>
-          <div className="flex items-center justify-between text-[10px] text-slate-500">
+          <div className="flex items-center justify-between text-[10px] text-ink-mute">
             <span>Apps Script Web App URL (deploy: "Anyone") — appends each captured lead as a Sheet row</span>
             <button
               onClick={handleTestWebhook}

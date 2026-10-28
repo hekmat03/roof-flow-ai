@@ -17,7 +17,7 @@ export const BillingGateway: React.FC<{ view: string }> = ({ view }) => {
 
   if (result.state === 'loading') {
     return (
-      <div className="glass rounded-2xl p-8 flex items-center gap-3 text-slate-300">
+      <div className="glass-card p-8 flex items-center gap-3 text-ink-soft">
         <Loader2 className="h-5 w-5 animate-spin text-accent-400" aria-hidden />
         <span>Loading plan and usage details…</span>
       </div>
@@ -26,19 +26,19 @@ export const BillingGateway: React.FC<{ view: string }> = ({ view }) => {
 
   if (result.state === 'error') {
     return (
-      <div className="glass rounded-2xl p-6 md:p-8">
+      <div className="glass-card p-6 md:p-8">
         <div className="flex items-start gap-3">
-          <WifiOff className="h-6 w-6 shrink-0 text-amber-400" aria-hidden />
+          <WifiOff className="h-6 w-6 shrink-0 text-accent-400" aria-hidden />
           <div>
-            <h2 className="font-semibold text-white">Billing details are unavailable</h2>
-            <p className="mt-1 text-sm text-slate-300">{result.message}</p>
-            <p className="mt-2 text-xs text-slate-500">
+            <h2 className="font-semibold text-ink">Billing details are unavailable</h2>
+            <p className="mt-1 text-sm text-ink-soft">{result.message}</p>
+            <p className="mt-2 text-xs text-ink-mute">
               No plan, price or quota is shown here when it cannot be read from the server — the app never guesses.
             </p>
             <button
               type="button"
               onClick={reload}
-              className="mt-4 rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-100 transition min-h-[44px]"
+              className="mt-4 rounded-xl bg-inset hover:bg-inset px-4 py-2.5 text-sm font-semibold text-ink transition min-h-[44px]"
             >
               Try again
             </button>

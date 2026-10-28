@@ -172,35 +172,35 @@ export const Agent3SMSEmail: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 3: Follow-Up & Nurture SMS/Email</h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <h2 className="text-2xl font-black text-ink">Agent 3: Follow-Up & Nurture SMS/Email</h2>
+        <p className="text-xs text-ink-mute mt-1">
           A multi-day follow-up campaign that nurtures leads who did not schedule inspections immediately. The sequence reacts to replies dynamically.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         
         {/* Sequence Timelines (7 cols) */}
-        <div className="lg:col-span-7 glass rounded-2xl p-6 shadow-xl space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Clock className="h-4.5 w-4.5 text-orange-500" /> Automated Sequence Timeline
+        <div className="lg:col-span-7 glass-card p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+              <Clock className="h-4.5 w-4.5 text-accent-500" /> Automated Sequence Timeline
             </h3>
-            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
+            <span className="label-micro bg-accent-500/10 text-accent-400 border border-accent-500/25 px-2 py-0.5 rounded-md">
               AGENT 3
             </span>
           </div>
 
           {/* Timeline Tab selector */}
-          <div className="grid grid-cols-4 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800/80">
+          <div className="grid grid-cols-4 gap-2 bg-inset p-1.5 rounded-xl border border-line">
             {([1, 2, 4, 7] as const).map(day => (
               <button
                 key={day}
                 onClick={() => setSelectedDay(day)}
                 className={`py-2 text-xs font-bold rounded-lg transition ${
                   selectedDay === day
-                    ? 'bg-orange-500 text-slate-950 shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gold text-gold-ink'
+                    : 'text-ink-mute hover:text-ink'
                 }`}
               >
                 Day {day}
@@ -211,24 +211,24 @@ export const Agent3SMSEmail: React.FC = () => {
           {/* Templates Display cards */}
           <div className="space-y-4">
             {/* SMS View card */}
-            <div className="bg-[#0f172a]/60 border border-slate-800 rounded-xl p-4 space-y-2">
-              <span className="text-[9px] text-slate-500 block font-bold uppercase tracking-wider">Simulated Day {selectedDay} SMS Outline</span>
-              <p className="text-slate-200 text-xs font-mono bg-slate-900/80 p-3 rounded-lg border border-slate-850">
+            <div className="surface-inset p-4 space-y-2">
+              <span className="label-micro block">Simulated Day {selectedDay} SMS Outline</span>
+              <p className="text-ink-soft text-xs bg-inset p-3 rounded-lg border border-line">
                 {getRenderedTemplate(selectedDay, 'sms', simulatedLead)}
               </p>
             </div>
 
             {/* Email View card */}
-            <div className="bg-[#0f172a]/60 border border-slate-800 rounded-xl p-4 space-y-3">
-              <div className="border-b border-slate-800/50 pb-2">
-                <span className="text-[9px] text-slate-500 block font-bold uppercase tracking-wider">Simulated Day {selectedDay} Email Subject</span>
-                <p className="text-white text-xs font-bold mt-1">
+            <div className="surface-inset p-4 space-y-3">
+              <div className="border-b border-line pb-2">
+                <span className="label-micro block">Simulated Day {selectedDay} Email Subject</span>
+                <p className="text-ink text-xs font-bold mt-1">
                   {getRenderedTemplate(selectedDay, 'emailSubject', simulatedLead)}
                 </p>
               </div>
               <div>
-                <span className="text-[9px] text-slate-500 block font-bold uppercase tracking-wider">Email Content Body</span>
-                <pre className="text-slate-300 text-[11px] font-sans whitespace-pre-wrap leading-relaxed mt-1.5 bg-slate-900/80 p-3 rounded-lg border border-slate-850 max-h-[180px] overflow-y-auto">
+                <span className="label-micro block">Email Content Body</span>
+                <pre className="text-ink-soft text-[11px] whitespace-pre-wrap leading-relaxed mt-1.5 bg-inset p-3 rounded-lg border border-line max-h-[180px] overflow-y-auto">
                   {getRenderedTemplate(selectedDay, 'emailBody', simulatedLead)}
                 </pre>
               </div>
@@ -237,26 +237,26 @@ export const Agent3SMSEmail: React.FC = () => {
         </div>
 
         {/* Nurture Trigger Playground (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="glass card-hover rounded-2xl p-6 flex flex-col justify-between h-[520px]">
+        <div className="lg:col-span-5 flex">
+          <div className="glass-card card-hover p-6 flex flex-col flex-1 min-h-[420px]">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
-                <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Sequence Trigger Simulator
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2 pb-3 border-b border-line shrink-0">
+                <Sparkles className="h-4.5 w-4.5 text-accent-500" /> Sequence Trigger Simulator
               </h3>
 
               {!simulationActive ? (
-                <div className="flex-1 flex flex-col justify-center items-center text-center p-4 space-y-4">
-                  <Smartphone className="h-12 w-12 text-slate-600 animate-pulse" />
+                <div className="flex-1 flex flex-col justify-center items-center text-center gap-5 p-6 w-full">
+                  <Smartphone className="h-12 w-12 text-ink-mute animate-pulse" />
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-white">Trigger Sequences for CRM Leads</h4>
-                    <p className="text-[11px] text-slate-400 leading-relaxed max-w-xs">
+                    <h4 className="text-xs font-bold text-ink">Trigger Sequences for CRM Leads</h4>
+                    <p className="text-[11px] text-ink-mute leading-relaxed max-w-xs">
                       Pick a cold lead from our CRM list and trigger the automated multi-channel sequence to view the interactive follow-up chat logs.
                     </p>
                   </div>
                   
                   {/* Select Lead dropdown (live from CRM) */}
                   <div className="w-full max-w-xs text-left">
-                    <label className="text-[10px] text-slate-500 block mb-1.5 font-bold uppercase tracking-wider">Target CRM Recipient</label>
+                    <label className="label-micro block mb-1.5">Target CRM Recipient</label>
                     {selectorLeads.length > 0 ? (
                       <select
                         value={simulatedLead}
@@ -278,7 +278,7 @@ export const Agent3SMSEmail: React.FC = () => {
                           placeholder="Cold lead name (e.g. Chris Nolan)"
                           className="input-premium text-xs font-medium w-full"
                         />
-                        <p className="text-[11px] text-slate-500 italic leading-relaxed">
+                        <p className="text-[11px] text-ink-mute italic leading-relaxed">
                           No leads in the CRM yet — type a name to simulate a cold lead; their first
                           reply is captured as a real lead in the CRM.
                         </p>
@@ -291,14 +291,14 @@ export const Agent3SMSEmail: React.FC = () => {
                     disabled={!simulatedLead.trim()}
                     className="btn-accent px-5 py-2.5 text-xs flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <Play className="h-3.5 w-3.5 fill-slate-950" />
+                    <Play className="h-3.5 w-3.5 fill-gold-ink" />
                     Launch Sequence
                   </button>
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col justify-between overflow-hidden">
                   {/* Active Simulation logs */}
-                  <div className="flex-1 overflow-y-auto space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-850 max-h-[280px]">
+                  <div className="flex-1 overflow-y-auto space-y-3 bg-inset p-4 border border-line max-h-[320px]">
                     {simulationLogs.map((log, index) => {
                       const isSystem = log.sender === 'System';
                       const isAI = log.sender === 'AI';
@@ -306,7 +306,7 @@ export const Agent3SMSEmail: React.FC = () => {
                       if (isSystem) {
                         return (
                           <div key={index} className="flex justify-center">
-                            <span className="bg-slate-800/80 text-[9px] font-bold text-slate-400 px-2.5 py-1 rounded-md font-mono">
+                            <span className="label-micro bg-card border border-line px-2.5 py-1 rounded-md">
                               {log.text}
                             </span>
                           </div>
@@ -317,7 +317,7 @@ export const Agent3SMSEmail: React.FC = () => {
                         <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
                           <div className={`max-w-xs rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
                             isAI 
-                              ? 'bg-slate-850 text-slate-100 border border-slate-750 rounded-tl-none' 
+                              ? 'bg-card text-ink border border-line rounded-tl-none' 
                               : 'chat-bubble-user rounded-tr-none'
                           }`}>
                             <p>{log.text}</p>
@@ -327,18 +327,18 @@ export const Agent3SMSEmail: React.FC = () => {
                     })}
                     {isLoading && (
                       <div className="flex justify-start">
-                        <span className="text-[10px] text-slate-500 italic">AI is typing…</span>
+                        <span className="text-[10px] text-ink-mute italic">AI is typing…</span>
                       </div>
                     )}
                     {error && (
                       <div className="flex justify-center">
-                        <span className="text-[10px] text-red-400">{error}</span>
+                        <span className="text-[10px] text-danger">{error}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Form response reply input */}
-                  <div className="pt-4 border-t border-slate-800 shrink-0 space-y-3">
+                  <div className="pt-4 border-t border-line shrink-0 space-y-3">
                     <div className="flex space-x-2">
                       <input
                         type="text"
@@ -359,12 +359,12 @@ export const Agent3SMSEmail: React.FC = () => {
                     </div>
 
                     <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <span className="text-accent-400 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="h-3.5 w-3.5" /> Synchronized with CRM
                       </span>
                       <button 
                         onClick={() => setSimulationActive(false)}
-                        className="text-slate-400 hover:text-white underline font-semibold"
+                        className="text-ink-mute hover:text-ink underline font-semibold"
                       >
                         Reset Simulator
                       </button>

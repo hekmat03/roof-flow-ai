@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import { 
   LayoutDashboard, 
   MessageSquare, 
@@ -15,7 +15,9 @@ import {
   CloudLightning,
   Calendar,
   Menu,
-  X
+  X,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -24,6 +26,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { companySettings, activeTab, setActiveTab, leads } = useApp();
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const menuItems = [
@@ -48,11 +51,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans relative panel-bg">
+    <div className="flex h-screen bg-page text-ink overflow-hidden font-sans relative panel-bg">
       {/* Mobile overlay (click to close menu) */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -60,29 +63,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static z-40 h-full w-72 md:w-80 bg-slate-950/85 md:bg-slate-950 backdrop-blur-xl
-          border-r border-slate-800/80 flex flex-col justify-between shrink-0
+          fixed md:static z-40 h-full w-72 md:w-80 bg-card
+          border-r border-line flex flex-col justify-between shrink-0
           transition-transform duration-300 ease-out
           ${mobileMenuOpen ? 'translate-x-0 drawer-in' : '-translate-x-full'} md:translate-x-0
         `}
       >
         <div>
           {/* Sidebar Header */}
-          <div className="p-4 md:p-6 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900/70 to-slate-900/20">
+          <div className="p-4 md:p-6 border-b border-line flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-accent-400 to-accent-600 p-2.5 rounded-xl shadow-lg shadow-accent-500/30 animate-glow-breathe">
-                <CloudLightning className="h-6 w-6 text-slate-950 stroke-[2.5]" />
+              <div className="bg-gold p-2.5 rounded-xl shadow-lg">
+                <CloudLightning className="h-6 w-6 text-gold-ink stroke-[2.5]" />
               </div>
               <div>
-                <h1 className="text-lg md:text-xl font-black tracking-tight text-white flex items-center gap-1">
+                <h1 className="text-lg md:text-xl font-black tracking-tight text-ink flex items-center gap-1">
                   Roof<span className="text-accent-400">Flow</span>
-                  <span className="text-[10px] bg-accent-500/10 text-accent-300 px-1.5 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider border border-accent-500/20">AI</span>
+                  <span className="text-[10px] bg-accent-500/10 text-accent-400 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-widest border border-accent-500/25">AI</span>
                 </h1>
-                <p className="text-xs text-slate-400 font-medium">Contractor Sales Suite</p>
+                <p className="text-xs text-ink-mute font-medium">Contractor Sales Suite</p>
               </div>
             </div>
             {/* Close button, mobile only */}
-            <button className="md:hidden text-slate-300 hover:text-white transition min-h-0" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+            <button className="md:hidden text-ink-mute hover:text-ink transition min-h-0" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
               <X className="h-6 w-6" />
             </button>
           </div>
@@ -98,7 +101,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onClick={() => handleTabSelect(item.id)}
                   className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
                 >
-                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-accent-400' : 'text-slate-500'}`} />
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-accent-400' : 'text-ink-mute'}`} />
                   <span className="truncate">{item.label}</span>
                 </button>
               );
@@ -107,11 +110,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-500 flex items-center justify-between">
-          <span className="font-semibold tracking-wide">v1.0.0 Premium Suite</span>
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        <div className="p-4 border-t border-line text-xs text-ink-mute flex items-center justify-between">
+          <span className="font-semibold">RoofFlow AI Suite v1.1</span>
+          <span className="flex h-2 w-2 relative" title="Live console">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-60"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
           </span>
         </div>
       </aside>
@@ -119,10 +122,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top Header */}
-        <header className="relative z-20 h-auto md:h-20 glass-strong flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 gap-4">
+        <header className="relative z-20 h-auto md:h-20 bg-card border-b border-line flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 gap-4">
           {/* Hamburger, mobile only */}
           <button
-            className="md:hidden text-slate-200 shrink-0 bg-slate-800/70 border border-slate-700/70 rounded-xl px-3 flex items-center justify-center hover:bg-slate-700/70 transition active:scale-95"
+            className="md:hidden text-ink shrink-0 surface-inset px-3 flex items-center justify-center hover:border-accent-400 transition active:scale-95 min-h-0"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Open menu"
           >
@@ -130,44 +133,59 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
 
           {/* Company Context — scrolls horizontally on small screens instead of overflowing */}
-          <div className="flex items-center space-x-6 text-sm overflow-x-auto no-scrollbar">
+          <div className="flex items-center space-x-5 md:space-x-6 text-sm overflow-hidden min-w-0 flex-1">
             <div className="shrink-0">
-              <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">Contractor Profile</span>
-              <span className="text-white font-bold text-base">{companySettings.companyName}</span>
+              <span className="label-micro block">Contractor Profile</span>
+              <span className="text-ink font-bold text-base">{companySettings.companyName}</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-700/70 hidden sm:block shrink-0"></div>
+            <div className="h-8 w-[1px] bg-line hidden sm:block shrink-0"></div>
             <div className="shrink-0 hidden sm:block">
-              <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">Service Market</span>
-              <span className="text-white font-semibold">{companySettings.city}</span>
+              <span className="label-micro block">Service Market</span>
+              <span className="text-ink font-semibold">{companySettings.city}</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-700/70 hidden lg:block shrink-0"></div>
-            <div className="flex items-center space-x-2 shrink-0 hidden lg:flex">
-              <div className="bg-red-500/10 text-red-400 p-1 rounded-lg border border-red-500/10">
+            <div className="h-8 w-[1px] bg-line hidden lg:block shrink-0"></div>
+            <div className="items-center space-x-2 min-w-0 hidden xl:flex">
+              <div className="bg-accent-500/10 text-accent-400 p-1.5 rounded-lg border border-accent-500/25">
                 <CloudLightning className="h-4 w-4" />
               </div>
               <div>
-                <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">Active Event Nurture</span>
-                <span className="text-slate-200 font-semibold text-xs flex items-center gap-1.5">
-                  {companySettings.stormName} <span className="text-slate-400 font-mono font-normal">({companySettings.stormDate})</span>
+                <span className="label-micro block">Active Event Nurture</span>
+                <span className="text-ink-soft font-semibold text-xs flex items-center gap-1.5 min-w-0">
+                  <span className="truncate max-w-[13rem]">{companySettings.stormName}</span>
+                  <span className="text-ink-mute font-normal shrink-0">({companySettings.stormDate})</span>
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Quick Metrics Badge — hidden on the smallest screens to save space */}
-          <div className="hidden sm:flex items-center space-x-3 shrink-0">
-            <div className="bg-slate-900/50 border border-slate-800/80 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3 backdrop-blur-md">
-              <Users className="h-4 w-4 text-accent-400" />
-              <div>
-                <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">Total Leads</span>
-                <span className="text-sm text-slate-100 font-bold font-mono">{totalLeads}</span>
+          {/* Theme toggle + quick metrics */}
+          <div className="flex items-center space-x-2 md:space-x-3 shrink-0 ml-auto">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="theme-toggle shrink-0"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'Cream' : 'Obsidian'} theme`}
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span className="hidden sm:inline">{theme === 'dark' ? 'Cream' : 'Obsidian'}</span>
+            </button>
+
+            {/* Quick Metrics — hidden on the smallest screens to save space */}
+            <div className="hidden sm:flex items-center space-x-3 shrink-0">
+              <div className="surface-inset px-3 md:px-4 py-2 flex items-center space-x-2 md:space-x-3">
+                <Users className="h-4 w-4 text-accent-400" />
+                <div>
+                  <span className="label-micro block">Total Leads</span>
+                  <span className="text-sm text-ink font-bold">{totalLeads}</span>
+                </div>
               </div>
-            </div>
-            <div className="hidden md:flex bg-slate-900/50 border border-slate-800/80 px-4 py-2 rounded-xl items-center space-x-3 backdrop-blur-md">
-              <Calendar className="h-4 w-4 text-emerald-400" />
-              <div>
-                <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">Scheduled Inspections</span>
-                <span className="text-sm text-slate-100 font-bold font-mono">{scheduledInspections}</span>
+              <div className="hidden lg:flex surface-inset px-4 py-2 items-center space-x-3 shrink-0">
+                <Calendar className="h-4 w-4 text-accent-400" />
+                <div>
+                  <span className="label-micro block">Inspections</span>
+                  <span className="text-sm text-ink font-bold">{scheduledInspections}</span>
+                </div>
               </div>
             </div>
           </div>

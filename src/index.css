@@ -1,29 +1,81 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* =============================================================
-   RoofFlow AI — Premium Enterprise Design System (feature/premium-ui)
-   Tailwind v4 CSS-first tokens. All brand tokens live here so the
-   whole app stays consistent from one place.
+   RoofFlow AI — "Strict 3-Color Luxury" design system
+   =============================================================
+   The owner's rule, verbatim intent:
+     1. Obsidian   #0A0A0A page bg  /  #141414 cards
+     2. Champagne Gold #D4AF37 — primary buttons and accents ONLY
+     3. Cream      #F9F9F6 light-mode page bg / #FFFFFF light cards
+   Crisp white text on dark; dark text on cream in light mode.
+   There is NO neon green and NO random blue anywhere in this file.
+   Everything below is expressed as tokens so both themes are driven
+   from exactly one place.
    ============================================================= */
 
+/* ---------- Theme tokens (light is the default, .dark overrides) ---------- */
+:root {
+  color-scheme: light;
+
+  --rf-page: #f9f9f6;          /* Cream */
+  --rf-card: #ffffff;          /* Light cards */
+  --rf-inset: #f4f4ee;         /* Quiet inset for logs / inputs inside a card */
+  --rf-line: #e4e4da;          /* The single 1px border colour */
+  --rf-line-strong: #d3d3c6;
+  --rf-ink: #0a0a0a;           /* Dark text on cream (contrast, not white) */
+  --rf-ink-soft: #3c3c36;
+  --rf-ink-mute: #6b6b63;
+  --rf-gold: #d4af37;          /* Champagne Gold — the only accent */
+  --rf-gold-strong: #c9a227;
+  --rf-gold-deep: #8a6f1c;     /* Accessible gold *text* on cream */
+  --rf-gold-ink: #0a0a0a;      /* Text sitting ON gold */
+  --rf-danger: #a33327;        /* Semantic only: errors + destructive controls */
+  --rf-danger-soft: #b4443c;
+  --rf-shadow: 0 3px 14px -8px rgb(10 10 10 / 0.18);
+  /* accent scale (theme-aware so `text-accent-400` stays readable on cream) */
+  --rf-gold-300: #a98a22;
+  --rf-gold-400: #8a6f1c;
+  --rf-gold-500: #7a6117;
+  --rf-gold-600: #6b5413;
+  --rf-gold-700: #5c480f;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --rf-page: #0a0a0a;          /* Obsidian */
+  --rf-card: #141414;          /* Cards */
+  --rf-inset: #101010;
+  --rf-line: #262626;
+  --rf-line-strong: #333333;
+  --rf-ink: #ffffff;           /* Crisp white */
+  --rf-ink-soft: #d8d8d2;
+  --rf-ink-mute: #8b8b83;
+  --rf-gold: #d4af37;
+  --rf-gold-strong: #e3c55c;
+  --rf-gold-deep: #d4af37;
+  --rf-gold-ink: #0a0a0a;
+  --rf-danger: #c0392b;
+  --rf-danger-soft: #d4574a;
+  --rf-shadow: 0 6px 22px -14px rgb(0 0 0 / 0.7);
+  --rf-gold-300: #e7cf7a;
+  --rf-gold-400: #d4af37;
+  --rf-gold-500: #c9a227;
+  --rf-gold-600: #b08f26;
+  --rf-gold-700: #8a6f1c;
+}
+
 @theme {
-  /* Typography: Plus Jakarta Sans (display/UI) with graceful system fallback */
-  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui,
-    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* ONE font family for the whole product (headings, body, numbers, labels). */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  /* Brand accent — vivid amber (roofing / storm-hail theme) */
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
-
-  /* Secondary electric-blue glow (used for info/live states) */
-  --color-electric-400: #38bdf8;
-  --color-electric-500: #0ea5e9;
+  /* Champagne Gold accent scale is declared theme-aware in `@theme inline`. */
 
   /* Motion tokens (used as `animate-*` Tailwind classes) */
   --animate-fade-in: fade-in 0.45s ease-out both;
@@ -61,8 +113,8 @@
     100% { background-position: 400px 0; }
   }
   @keyframes glow-breathe {
-    0%, 100% { box-shadow: 0 0 18px 0 rgb(245 158 11 / 0.28); }
-    50% { box-shadow: 0 0 30px 4px rgb(245 158 11 / 0.45); }
+    0%, 100% { box-shadow: 0 0 16px 0 rgb(212 175 55 / 0.22); }
+    50% { box-shadow: 0 0 26px 3px rgb(212 175 55 / 0.34); }
   }
   @keyframes float-slow {
     0%, 100% { transform: translateY(0); }
@@ -74,6 +126,31 @@
   }
 }
 
+/* Semantic colour utilities (bg-page, bg-card, bg-inset, border-line,
+   text-ink, text-ink-soft, text-ink-mute, text-gold, bg-gold, ...).
+   `inline` keeps the var() reference so switching the html class re-themes
+   the whole app without re-generating any CSS. */
+@theme inline {
+  --color-page: var(--rf-page);
+  --color-card: var(--rf-card);
+  --color-inset: var(--rf-inset);
+  --color-line: var(--rf-line);
+  --color-line-strong: var(--rf-line-strong);
+  --color-ink: var(--rf-ink);
+  --color-ink-soft: var(--rf-ink-soft);
+  --color-ink-mute: var(--rf-ink-mute);
+  --color-gold: var(--rf-gold);
+  --color-gold-strong: var(--rf-gold-strong);
+  --color-gold-deep: var(--rf-gold-deep);
+  --color-gold-ink: var(--rf-gold-ink);
+  --color-danger: var(--rf-danger);
+  --color-accent-300: var(--rf-gold-300);
+  --color-accent-400: var(--rf-gold-400);
+  --color-accent-500: var(--rf-gold-500);
+  --color-accent-600: var(--rf-gold-600);
+  --color-accent-700: var(--rf-gold-700);
+}
+
 /* =============================================================
    Base
    ============================================================= */
@@ -82,15 +159,21 @@ html, body, #root {
 }
 
 body {
-  background-color: #020617; /* slate-950 */
-  color: #e2e8f0; /* slate-200 */
+  background-color: var(--rf-page);
+  color: var(--rf-ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
+/* ONE family, everywhere — including anything that would otherwise pick
+   a system/monospace face. */
+html, body, button, input, select, textarea, code, pre, kbd, samp {
+  font-family: var(--font-sans);
+}
+
 /* Fluid typography — scales smoothly mobile → desktop */
 h1, h2, h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   letter-spacing: -0.02em;
 }
 .text-fluid-hero {
@@ -101,7 +184,18 @@ h1, h2, h3 {
   font-size: clamp(1.1rem, 1.4vw + 0.75rem, 1.5rem);
 }
 .text-fluid-body {
-  font-size: clamp(0.8rem, 0.4vw + 0.72rem, 0.95rem);
+  font-size: clamp(0.8rem, 0.4vw + 0.72rem, 1rem);
+}
+
+/* The ONLY place uppercase + wide tracking belongs: tiny sub-labels
+   (e.g. "CONTRACTOR PROFILE", "TOTAL LEADS"). */
+.label-micro {
+  font-size: 0.625rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rf-ink-mute);
 }
 
 /* =============================================================
@@ -115,78 +209,96 @@ button, [role="button"] {
 button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 
 /* =============================================================
-   Surfaces — glassmorphism & depth
+   Surfaces — ONE card recipe for every panel in the product.
+   Identical background, identical 1px border, identical radius.
+   (`.glass`, `.glass-strong` and `.surface-raised` are kept as
+   aliases so no panel can drift back to its own look.)
    ============================================================= */
-.glass {
-  background-color: rgb(15 23 42 / 0.52); /* slate-900/52 */
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgb(30 41 59 / 0.9); /* slate-800 */
-  box-shadow: 0 8px 30px -12px rgb(0 0 0 / 0.55);
-}
-.glass-strong {
-  background-color: rgb(15 23 42 / 0.78);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgb(30 41 59 / 0.95);
-  box-shadow: 0 12px 36px -12px rgb(0 0 0 / 0.65);
-}
-.surface-raised {
-  background: linear-gradient(180deg, rgb(30 41 59 / 0.55), rgb(15 23 42 / 0.45));
+:root, .dark {
+  --rf-radius: 1rem;
 }
 
-/* Card hover: lift + border glow */
+.glass-card,
+.glass,
+.glass-strong,
+.surface-raised {
+  background-color: var(--rf-card);
+  background-image: none;
+  border: 1px solid var(--rf-line);
+  border-radius: var(--rf-radius);
+  box-shadow: var(--rf-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Quiet inset used INSIDE a card (chat log wells, inputs). Same radius,
+   same 1px border — never a second dark box stacked on a dark box. */
+.surface-inset {
+  background-color: var(--rf-inset);
+  border: 1px solid var(--rf-line);
+  border-radius: var(--rf-radius);
+}
+
+/* Card hover: lift + a champagne hairline. No colour change. */
 .card-hover {
   transition: transform 0.2s ease, border-color 0.2s ease,
     box-shadow 0.2s ease, background-color 0.2s ease;
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  border-color: rgb(51 65 85 / 0.85); /* slate-700 */
-  box-shadow: 0 16px 40px -16px rgb(0 0 0 / 0.7),
-    0 0 0 1px rgb(245 158 11 / 0.06), 0 0 24px -8px rgb(245 158 11 / 0.18);
+  border-color: var(--rf-gold);
+  box-shadow: var(--rf-shadow), 0 0 0 1px rgb(212 175 55 / 0.18);
 }
 
 /* =============================================================
    Buttons & interactive micro-interactions
    ============================================================= */
 .btn-accent {
-  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 55%, #f59e0b 100%);
-  background-size: 160% 160%;
-  color: #0f172a;
+  background: var(--rf-gold);
+  background-image: linear-gradient(135deg, #e3c55c 0%, #d4af37 55%, #c9a227 100%);
+  color: var(--rf-gold-ink);
   font-weight: 800;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
   border-radius: 0.75rem;
-  box-shadow: 0 8px 24px -8px rgb(245 158 11 / 0.5);
-  transition: transform 0.15s ease, box-shadow 0.2s ease,
-    background-position 0.4s ease, filter 0.15s ease;
+  box-shadow: 0 8px 22px -12px rgb(212 175 55 / 0.7);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease;
 }
 .btn-accent:hover {
-  transform: translateY(-1px) scale(1.04);
-  background-position: 100% 50%;
-  box-shadow: 0 10px 30px -6px rgb(245 158 11 / 0.6),
-    0 0 22px -2px rgb(245 158 11 / 0.4);
-  filter: brightness(1.04);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 10px 26px -10px rgb(212 175 55 / 0.75);
 }
-.btn-accent:active {
-  transform: scale(0.98);
+.btn-accent:active { transform: scale(0.99); }
+.btn-accent:disabled { filter: grayscale(0.35); box-shadow: none; }
+
+.btn-danger {
+  background: var(--rf-danger);
+  color: #ffffff;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
+.btn-danger:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.btn-danger:active { transform: scale(0.99); }
 
 .btn-ghost {
-  background-color: rgb(30 41 59 / 0.6);
-  border: 1px solid rgb(51 65 85 / 0.7);
-  color: #e2e8f0;
+  background-color: var(--rf-card);
+  border: 1px solid var(--rf-line);
+  color: var(--rf-ink);
   font-weight: 600;
   border-radius: 0.75rem;
   transition: transform 0.15s ease, background-color 0.2s ease,
-    border-color 0.2s ease, box-shadow 0.2s ease;
+    border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 .btn-ghost:hover {
-  transform: translateY(-1px) scale(1.03);
-  background-color: rgb(51 65 85 / 0.55);
-  border-color: rgb(100 116 139 / 0.8);
-  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.6);
+  transform: translateY(-1px);
+  border-color: var(--rf-gold);
+  color: var(--rf-ink);
+  box-shadow: var(--rf-shadow);
 }
-.btn-ghost:active { transform: scale(0.98); }
+.btn-ghost:active { transform: scale(0.99); }
 
 /* =============================================================
    Sidebar navigation
@@ -198,24 +310,23 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   align-items: center;
   gap: 0.75rem;
   padding: 0.7rem 1rem;
-  border-radius: 0.65rem;
+  border-radius: 0.75rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #64748b; /* slate-500 */
+  color: var(--rf-ink-mute);
   transition: color 0.18s ease, background-color 0.18s ease,
     transform 0.15s ease, box-shadow 0.18s ease;
   min-height: 46px;
 }
 .nav-item:hover {
-  color: #f1f5f9;
-  background-color: rgb(30 41 59 / 0.7);
+  color: var(--rf-ink);
+  background-color: var(--rf-inset);
   transform: translateX(2px);
 }
 .nav-item-active {
-  color: #fcd34d;
-  background: linear-gradient(90deg, rgb(245 158 11 / 0.16), rgb(245 158 11 / 0.04));
-  box-shadow: inset 0 0 0 1px rgb(245 158 11 / 0.18),
-    0 0 18px -4px rgb(245 158 11 / 0.25);
+  color: var(--rf-gold);
+  background: rgb(212 175 55 / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(212 175 55 / 0.3);
 }
 .nav-item-active::before {
   content: "";
@@ -225,10 +336,9 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   bottom: 22%;
   width: 3px;
   border-radius: 99px;
-  background: linear-gradient(180deg, #fbbf24, #f59e0b);
-  box-shadow: 0 0 10px 1px rgb(245 158 11 / 0.6);
+  background: var(--rf-gold);
 }
-.nav-item-active svg { filter: drop-shadow(0 0 6px rgb(252 211 77 / 0.55)); }
+.nav-item-active svg { color: var(--rf-gold); }
 
 /* =============================================================
    CRM / data tables
@@ -237,18 +347,17 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   position: sticky;
   top: 0;
   z-index: 5;
-  background: rgba(2, 6, 23, 0.92);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  background: var(--rf-card);
 }
 .row-stripe tbody tr:nth-child(even) {
-  background-color: rgb(30 41 59 / 0.24);
+  background-color: var(--rf-inset);
 }
 .row-stripe tbody tr:hover {
-  background-color: rgb(245 158 11 / 0.05);
+  background-color: rgb(212 175 55 / 0.07);
 }
 
-/* Status pills — mapped to the 10 CRM statuses */
+/* Status pills — the 10 CRM statuses, rendered in ink + champagne only.
+   Gold = moving forward, muted ink = parked, semantic danger = lost. */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -259,7 +368,9 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  border: 1px solid transparent;
+  border: 1px solid var(--rf-line);
+  color: var(--rf-ink-soft);
+  background: var(--rf-inset);
 }
 .status-pill::before {
   content: "";
@@ -267,37 +378,35 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   height: 6px;
   border-radius: 999px;
   background: currentColor;
-  box-shadow: 0 0 6px currentColor;
   flex-shrink: 0;
 }
-.st-new         { color: #fbbf24; background: rgb(251 191 36 / 0.1);  border-color: rgb(251 191 36 / 0.25); }
-.st-contacted   { color: #fcd34d; background: rgb(252 211 77 / 0.1);  border-color: rgb(252 211 77 / 0.25); }
-.st-incontact   { color: #38bdf8; background: rgb(56 189 248 / 0.1);  border-color: rgb(56 189 248 / 0.25); }
-.st-scheduled   { color: #34d399; background: rgb(52 211 153 / 0.1);  border-color: rgb(52 211 153 / 0.28); }
-.st-inspected   { color: #6ee7b7; background: rgb(110 231 183 / 0.1); border-color: rgb(110 231 183 / 0.25); }
-.st-estimate    { color: #a78bfa; background: rgb(167 139 250 / 0.1); border-color: rgb(167 139 250 / 0.25); }
-.st-won         { color: #4ade80; background: rgb(74 222 128 / 0.12); border-color: rgb(74 222 128 / 0.3); }
-.st-lost        { color: #f87171; background: rgb(248 113 113 / 0.1); border-color: rgb(248 113 113 / 0.25); }
-.st-nurture     { color: #fbbf24; background: rgb(251 191 36 / 0.12); border-color: rgb(251 191 36 / 0.3); }
-.st-closed      { color: #94a3b8; background: rgb(148 163 184 / 0.1); border-color: rgb(148 163 184 / 0.22); }
+.st-new         { color: var(--rf-gold-deep); border-color: rgb(212 175 55 / 0.45); background: rgb(212 175 55 / 0.12); }
+.st-contacted   { color: var(--rf-gold-deep); border-color: rgb(212 175 55 / 0.4);  background: rgb(212 175 55 / 0.1); }
+.st-incontact   { color: var(--rf-ink-soft); }
+.st-scheduled   { color: var(--rf-gold-deep); border-color: rgb(212 175 55 / 0.55); background: rgb(212 175 55 / 0.16); }
+.st-inspected   { color: var(--rf-ink-soft); }
+.st-estimate    { color: var(--rf-gold-deep); border-color: rgb(212 175 55 / 0.4);  background: rgb(212 175 55 / 0.1); }
+.st-won         { color: var(--rf-gold-ink); background: var(--rf-gold); border-color: var(--rf-gold); }
+.st-lost        { color: var(--rf-danger); border-color: rgb(163 51 39 / 0.4); background: rgb(163 51 39 / 0.08); }
+.st-nurture     { color: var(--rf-ink-soft); }
+.st-closed      { color: var(--rf-ink-mute); }
 
 /* =============================================================
-   Chat bubbles (Agent 1 / Agent 3 / Agent 4 messaging)
+   Chat bubbles (Agent 1 / Agent 2 / Agent 3 / Agent 4 messaging)
    ============================================================= */
 .chat-bubble-ai {
-  background: linear-gradient(180deg, rgb(30 41 59 / 0.95), rgb(15 23 42 / 0.95));
-  border: 1px solid rgb(51 65 85 / 0.6);
+  background: var(--rf-inset);
+  border: 1px solid var(--rf-line);
   border-radius: 1rem 1rem 1rem 0.3rem;
-  color: #e2e8f0;
-  box-shadow: 0 4px 14px -6px rgb(0 0 0 / 0.5);
+  color: var(--rf-ink);
   animation: pop-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 .chat-bubble-user {
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  background: var(--rf-gold);
+  border: 1px solid var(--rf-gold);
   border-radius: 1rem 1rem 0.3rem 1rem;
-  color: #0f172a;
+  color: var(--rf-gold-ink);
   font-weight: 600;
-  box-shadow: 0 4px 16px -6px rgb(245 158 11 / 0.45);
   animation: pop-in 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -308,14 +417,14 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   gap: 5px;
   padding: 0.85rem 1rem;
   border-radius: 1rem 1rem 1rem 0.3rem;
-  background: rgb(30 41 59 / 0.85);
-  border: 1px solid rgb(51 65 85 / 0.55);
+  background: var(--rf-inset);
+  border: 1px solid var(--rf-line);
 }
 .typing-indicator span {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #fbbf24;
+  background: var(--rf-gold);
   animation: wave-bar 1.1s ease-in-out infinite;
   transform-origin: center;
 }
@@ -326,28 +435,27 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .shimmer {
   background: linear-gradient(
     90deg,
-    rgb(30 41 59 / 0.4) 25%,
-    rgb(51 65 85 / 0.55) 50%,
-    rgb(30 41 59 / 0.4) 75%
+    rgb(212 175 55 / 0.06) 25%,
+    rgb(212 175 55 / 0.16) 50%,
+    rgb(212 175 55 / 0.06) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.6s linear infinite;
 }
 
 /* =============================================================
-   Phone call screen (Agent 2) — blurred depth backdrop
+   Phone call screen (Agent 2)
    ============================================================= */
 .call-screen-blur {
-  background-image:
-    radial-gradient(1200px 500px at 10% -10%, rgb(245 158 11 / 0.16), transparent 60%),
-    radial-gradient(900px 450px at 110% 10%, rgb(56 189 248 / 0.1), transparent 55%),
-    radial-gradient(700px 700px at 50% 120%, rgb(251 191 36 / 0.08), transparent 60%);
+  background-image: radial-gradient(
+    900px 460px at 50% -10%,
+    rgb(212 175 55 / 0.14),
+    transparent 62%
+  );
 }
 .call-glass {
-  background: rgba(2, 6, 23, 0.55);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
-  backdrop-filter: blur(20px) saturate(1.3);
-  border: 1px solid rgb(51 65 85 / 0.5);
+  background: var(--rf-card);
+  border: 1px solid var(--rf-line);
 }
 
 /* Waveform bars (voice activity) */
@@ -357,7 +465,7 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 }
 
 /* =============================================================
-   Dashboard hero & glow accents
+   Dashboard hero — champagne wash only (no watermark, no blue)
    ============================================================= */
 .hero-glow {
   position: relative;
@@ -366,26 +474,18 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .hero-glow::before {
   content: "";
   position: absolute;
-  inset: -40%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgb(245 158 11 / 0.12) 70deg,
-    transparent 140deg,
-    transparent 200deg,
-    rgb(56 189 248 / 0.1) 260deg,
-    transparent 330deg
+  inset: 0;
+  background: radial-gradient(
+    620px 320px at 100% 0%,
+    rgb(212 175 55 / 0.1),
+    transparent 66%
   );
-  animation: spin 24s linear infinite;
   pointer-events: none;
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* Numeric count-up highlight flash when the value settles */
 @keyframes count-flash {
-  0% { filter: brightness(1.6); }
+  0% { filter: brightness(1.25); }
   100% { filter: brightness(1); }
 }
 .count-up-flash { animation: count-flash 0.5s ease-out 0.2s; }
@@ -400,17 +500,15 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .premium-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .premium-scroll::-webkit-scrollbar-track { background: transparent; }
 .premium-scroll::-webkit-scrollbar-thumb {
-  background: rgb(51 65 85 / 0.7);
+  background: var(--rf-line-strong);
   border-radius: 999px;
 }
-.premium-scroll::-webkit-scrollbar-thumb:hover { background: rgb(100 116 139 / 0.8); }
+.premium-scroll::-webkit-scrollbar-thumb:hover { background: var(--rf-gold); }
 
-/* Main panel background — deep slate with subtle amber/blue ambience */
+/* Main panel background — flat Obsidian / Cream, no ambience gradients */
 .panel-bg {
-  background-color: #020617;
-  background-image:
-    radial-gradient(1000px 480px at 85% -5%, rgb(245 158 11 / 0.05), transparent 55%),
-    radial-gradient(800px 420px at 5% 0%, rgb(56 189 248 / 0.04), transparent 55%);
+  background-color: var(--rf-page);
+  background-image: none;
 }
 
 /* Mobile sidebar drawer slide-in */
@@ -422,44 +520,36 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 
 /* Focus visibility (accessibility) */
 :focus-visible {
-  outline: 2px solid rgb(252 211 77 / 0.7);
+  outline: 2px solid var(--rf-gold);
   outline-offset: 2px;
 }
 
 /* =============================================================
    Form inputs
    ============================================================= */
-.input-premium {
+.input-premium,
+.input-premium-sm {
   width: 100%;
-  background: #0f172a; /* slate-900 */
-  border: 1px solid rgb(30 41 59 / 0.9); /* slate-800 */
+  background: var(--rf-inset);
+  border: 1px solid var(--rf-line);
   border-radius: 0.75rem;
   padding: 0.7rem 1rem;
   font-size: 0.875rem;
-  color: #f1f5f9;
+  color: var(--rf-ink);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
-.input-premium::placeholder { color: #475569; }
-.input-premium:focus {
-  outline: none;
-  border-color: rgb(245 158 11 / 0.6);
-  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.16);
-  background: #111c33;
-}
 .input-premium-sm {
-  width: 100%;
-  background: #020617; /* slate-950 */
-  border: 1px solid #1e293b;
-  border-radius: 0.5rem;
+  border-radius: 0.65rem;
   padding: 0.5rem 0.65rem;
   font-size: 0.75rem;
-  color: #f1f5f9;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+.input-premium::placeholder,
+.input-premium-sm::placeholder { color: var(--rf-ink-mute); }
+.input-premium:focus,
 .input-premium-sm:focus {
   outline: none;
-  border-color: rgb(16 185 129 / 0.6);
-  box-shadow: 0 0 0 3px rgb(16 185 129 / 0.15);
+  border-color: var(--rf-gold);
+  box-shadow: 0 0 0 3px rgb(212 175 55 / 0.18);
 }
 
 /* Slide-in / slide-down panel animations */
@@ -474,8 +564,30 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .animate-slideDown { animation: slide-down 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-slideLeft { animation: slide-left 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
+/* Theme toggle button */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--rf-line);
+  background: var(--rf-card);
+  color: var(--rf-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  min-height: 40px;
+}
+.theme-toggle:hover {
+  border-color: var(--rf-gold);
+  transform: translateY(-1px);
+}
+
 /* =============================================================
-   Responsive container padding (replaces old fixed block)
+   Responsive container padding
    ============================================================= */
 .container {
   padding-left: 1rem;
