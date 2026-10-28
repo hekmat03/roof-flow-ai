@@ -30,13 +30,14 @@ import {
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Filler,
   Tooltip,
   Legend,
   type ChartOptions,
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
-import { TrendingUp, Filter } from 'lucide-react';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { TrendingUp, Filter, CalendarRange, Percent } from 'lucide-react';
 import { useApp, type Lead } from '../context/AppContext';
 
 ChartJS.register(
@@ -45,6 +46,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Filler,
   Tooltip,
   Legend
@@ -221,7 +223,57 @@ export const AnalyticsCharts: React.FC = () => {
     },
   };
 
+  const kpis = useMemo(() => {
+    const now = Date.now();
+    const weekAgo = now - 7 * 86400000;
+    const monthAgo = now - 30 * 86400000;
+    const week = leads.filter((l) => leadDate(l).getTime() >= weekAgo).length;
+    const month = leads.filter((l) => leadDate(l).getTime() >= monthAgo).length;
+    const won = leads.filter((l) => l.status === 'Closed-Won' || l.status === 'Closed').length;
+    const conversion = leads.length ? Math.round((won / leads.length) * 100) : 0;
+    const pipeline = leads.reduce((sum, l) => sum + leadValueShare(l.status) * AVG_JOB_VALUE, 0);
+    return { week, month, conversion, pipeline: Math.round(pipeline), won };
+  }, [leads]);
+
+  const donutOptions: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: { legend: { display: false }, tooltip: darkTooltip },
+  };
+
   return (
+    <div className="space-y-4 md:space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[
+          { label: 'Leads this week', value: kpis.week, total: Math.max(kpis.month, 1), color: '#F97316', icon: CalendarRange },
+          { label: 'Leads this month', value: kpis.month, total: Math.max(leads.length, 1), color: '#fb923c', icon: TrendingUp },
+          { label: 'Conversion rate', value: kpis.conversion, total: 100, color: '#10B981', suffix: '%', icon: Percent },
+          { label: 'Revenue pipeline', value: kpis.pipeline, total: Math.max(kpis.pipeline, AVG_JOB_VALUE), color: '#F97316', prefix: '$', icon: Filter },
+        ].map((card) => (
+          <div key={card.label} className="glass card-hover rounded-2xl p-4 flex items-center gap-4 min-w-0">
+            <div className="h-20 w-20 shrink-0">
+              <Doughnut
+                data={{
+                  labels: [card.label, 'Remainder'],
+                  datasets: [{
+                    data: [card.value, Math.max(card.total - card.value, 0.0001)],
+                    backgroundColor: [card.color, '#1e293b'],
+                    borderWidth: 0,
+                  }],
+                }}
+                options={donutOptions}
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">{card.label}</p>
+              <p className={`text-2xl font-black font-mono truncate ${card.label === 'Conversion rate' && kpis.conversion > 0 ? 'text-emerald-400' : 'text-white'}`}>
+                {card.prefix ?? ''}{card.value.toLocaleString()}{card.suffix ?? ''}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 md:gap-6">
       {/* Revenue Attribution */}
       <div className="xl:col-span-3 glass card-hover rounded-2xl p-5 md:p-6">
