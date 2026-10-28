@@ -1,3 +1,4 @@
+
 /**
  * leadExtract.ts — free-form contact extraction for the conversational agents.
  * ----------------------------------------------------------------------------
@@ -26,24 +27,29 @@ const NAME_STOPWORDS = new Set([
 ]);
 
 /** "My name is John Smith" / "I'm Jane" / "this is Bob" / "John Smith here". */
-// Trigger words handle common capitalizations explicitly ("I am"/"i am",
-// "My name is"/"my name is") WITHOUT making the captured name
-// case-insensitive — continuation words must stay Capitalized, which stops
-// false grabs like "Bob from State" out of "this is Bob from State Farm".
 const NAME_PATTERNS = [
   /\b(?:[Mm]y name(?:'s|\s+is)|[Ii](?:'m|\s+am)|[Tt]his is)\s+([A-Za-z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,2})/,
   /\b([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+)?)\s+here\b/,
 ];
 
+const FAKE_EMAIL_LOCALS = new Set(['test', 'asdf', 'fake', 'none', 'noemail', 'abc', 'xxx', 'no']);
+
 export function extractEmail(text: string): string | undefined {
-  return text.match(EMAIL_RE)?.[0];
+  const email = text.match(EMAIL_RE)?.[0];
+  if (!email) return undefined;
+  const [local, domain] = email.toLowerCase().split('@');
+  if (FAKE_EMAIL_LOCALS.has(local) || /^(test|fake|asdf)\./.test(domain)) return undefined;
+  return email;
 }
 
 export function extractPhone(text: string): string | undefined {
   const raw = text.match(PHONE_RE)?.[0];
   if (!raw) return undefined;
-  // Reject pure repeating-digit junk like "0000000000".
-  return /^(\d)\1+$/.test(raw.replace(/\D/g, '')) ? undefined : raw.trim();
+  const d = raw.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  if (/^(\d)\1+$/.test(d)) return undefined;
+  if ('01234567890123456789'.includes(d) || '98765432109876543210'.includes(d)) return undefined;
+  if (/^[01]/.test(d)) return undefined;
+  return raw.trim();
 }
 
 export function extractName(text: string): string | undefined {
