@@ -1,9 +1,16 @@
-// api/_lib/agent.ts
+
+ // api/_lib/agent.ts
 // Pure helpers shared by the serverless handler and the test-suite.
 // Files/folders starting with "_" are NOT exposed as routes by Vercel.
 
 export type AgentType = 'chatbot' | 'phone' | 'nurturer' | 'closer';
-export const AGENT_TYPES: AgentType[] = ['chatbot', 'phone', 'nurturer', 'closer'];
+
+export const AGENT_TYPES: AgentType[] = [
+  'chatbot',
+  'phone',
+  'nurturer',
+  'closer',
+];
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -92,14 +99,23 @@ const INTENT_LABELS: Record<string, string> = {
 
 const clip = (v: unknown, max: number): string | undefined => {
   if (typeof v !== 'string') return undefined;
-  const t = v.replace(/[\u0000-\u001F\u007F]/g, ' ').trim().slice(0, max);
+
+  const t = v
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .trim()
+    .slice(0, max);
+
   return t || undefined;
 };
 
 /** Keep only well-formed, bounded context fields. */
 export function sanitizeContext(raw: unknown): AgentContext {
-  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const r = (
+    raw && typeof raw === 'object' ? raw : {}
+  ) as Record<string, unknown>;
+
   const m = LIMITS.maxContextChars;
+
   return {
     companyName: clip(r.companyName, m),
     city: clip(r.city, m),
@@ -115,16 +131,30 @@ export function sanitizeContext(raw: unknown): AgentContext {
 }
 
 /** Returns a cleaned message list, or null when the input is invalid. */
-export function sanitizeMessages(raw: unknown): ChatMessage[] | null {
+export function sanitizeMessages(
+  raw: unknown
+): ChatMessage[] | null {
   if (!Array.isArray(raw)) return null;
+
   const out: ChatMessage[] = [];
+
   for (const item of raw.slice(-LIMITS.maxMessages)) {
     if (!item || typeof item !== 'object') return null;
+
     const { role, content } = item as Record<string, unknown>;
-    if ((role !== 'user' && role !== 'assistant') || typeof content !== 'string') return null;
+
+    if (
+      (role !== 'user' && role !== 'assistant') ||
+      typeof content !== 'string'
+    ) {
+      return null;
+    }
+
     const text = content.trim().slice(0, LIMITS.maxMessageChars);
+
     if (text) out.push({ role, content: text });
   }
+
   return out;
 }
 
@@ -134,42 +164,73 @@ const PERSONAS: Record<AgentType, (c: AgentContext) => string> = {
     'Answer questions about roofing, storm damage, insurance claims and inspections, and gently guide qualified visitors toward a free inspection. ' +
     'Keep replies to 2-4 sentences and ask only one question at a time. ' +
     'When the visitor wants to book, say a booking form will open; do not collect their details in chat or invent times.',
+
   phone: (c) =>
     `You are the phone intake assistant for ${c.companyName || 'a roofing company'} in ${c.city || 'the local area'}. ` +
     'Your replies are SPOKEN aloud: one or two short sentences, no markdown, no lists. ' +
     'Collect name, phone, address and whether an insurance claim exists. Offer a free inspection; never say it is already scheduled.',
+
   nurturer: (c) =>
     `You write follow-up SMS/email for ${c.companyName || 'a roofing company'} to ${c.leadName || 'a lead'} who has not replied. ` +
     'Write ONE short, friendly, low-pressure message (SMS under 300 characters, email under 150 words) that references the free inspection. Plain text only.',
+
   closer: (c) =>
     `You are the post-estimate follow-up assistant for ${c.companyName || 'a roofing company'}, helping ${c.leadName || 'a customer'}. ` +
     'Handle price, insurance, financing and competitor objections honestly. Never invent prices; ask a human rep to confirm numbers. Under 4 sentences.',
 };
 
-export function buildSystemPrompt(agentType: AgentType, ctx: AgentContext): string {
-  const parts: string[] = [AGENT_POLICY + PERSONAS[agentType](ctx)];
+export function buildSystemPrompt(
+  agentType: AgentType,
+  ctx: AgentContext
+): string {
+  const parts: string[] = [
+    AGENT_POLICY + PERSONAS[agentType](ctx),
+  ];
+
   if (ctx.stormEvent) {
     parts.push(
       `Recent storm: ${ctx.stormEvent}${ctx.stormDate ? ` (${ctx.stormDate})` : ''}. Mention it only when relevant.`
     );
   }
-  if (ctx.financingOptions) parts.push(`Financing the company offers: ${ctx.financingOptions}.`);
-  if (ctx.agentTone) parts.push(`Preferred tone: ${ctx.agentTone}.`);
+
+  if (ctx.financingOptions) {
+    parts.push(
+      `Financing the company offers: ${ctx.financingOptions}.`
+    );
+  }
+
+  if (ctx.agentTone) {
+    parts.push(`Preferred tone: ${ctx.agentTone}.`);
+  }
+
   if (ctx.replyIntent) {
     parts.push(
       `The person's latest message is best classified as "${INTENT_LABELS[ctx.replyIntent] || ctx.replyIntent}"; respond to that.`
     );
   }
+
   parts.push('Reply with ONLY the message text.');
+
   return parts.join('\n');
 }
 
 /** Tiny in-memory sliding-window limiter (best effort per warm instance). */
 const hits = new Map<string, number[]>();
-export function rateLimited(key: string, max = 30, windowMs = 60_000, now = Date.now()): boolean {
-  const recent = (hits.get(key) || []).filter((t) => now - t < windowMs);
+
+export function rateLimited(
+  key: string,
+  max = 10,
+  windowMs = 60_000,
+  now = Date.now()
+): boolean {
+  const recent = (hits.get(key) || []).filter(
+    (t) => now - t < windowMs
+  );
+
   recent.push(now);
   hits.set(key, recent);
+
   if (hits.size > 5000) hits.clear();
+
   return recent.length > max;
 }
