@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Layout } from './components/Layout';
@@ -11,9 +12,17 @@ import { Configuration } from './components/Configuration';
 import { PromptPlayground } from './components/PromptPlayground';
 import { BillingGateway } from './components/BillingGateway';
 import { FallbackNotice } from './components/FallbackNotice';
+import { usePlan } from './lib/usePlan';
+import { canAccess } from './lib/planAccess';
 
 function MainAppContent() {
-  const { activeTab } = useApp();
+  const { activeTab: requestedTab } = useApp();
+  const plan = usePlan();
+
+  // A locked tab can never render, even if something sets it directly.
+  const activeTab = canAccess(plan, requestedTab)
+    ? requestedTab
+    : 'pricing';
 
   const renderContent = () => {
     switch (activeTab) {
@@ -46,7 +55,8 @@ function MainAppContent() {
       <div key={activeTab} className="animate-tab-in h-full">
         {renderContent()}
       </div>
-      {/* Non-intrusive "built-in engine" toast when live AI is unavailable */}
+
+      {/* Non-intrusive notice when live AI is unavailable */}
       <FallbackNotice />
     </Layout>
   );
