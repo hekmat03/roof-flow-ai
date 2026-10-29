@@ -3,6 +3,7 @@ import { MailCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { navigate } from '../../lib/router';
 
+/** "Check your inbox" screen: shown after signup and for unverified sessions. */
 export function VerifyEmail({ email }: { email: string }) {
   const { resendVerification, signOut } = useAuth();
   const [busy, setBusy] = useState(false);
