@@ -1,5 +1,3 @@
-
-import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -14,6 +12,13 @@ import { BillingGateway } from './components/BillingGateway';
 import { FallbackNotice } from './components/FallbackNotice';
 import { usePlan } from './lib/usePlan';
 import { canAccess } from './lib/planAccess';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthPage } from './components/auth/AuthPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { FullScreenSpinner } from './components/Spinner';
+import { Redirect } from './components/Redirect';
+import { usePath } from './lib/router';
 
 function MainAppContent() {
   const { activeTab: requestedTab } = useApp();
@@ -62,10 +67,43 @@ function MainAppContent() {
   );
 }
 
+/** "/" until the landing page exists (Step 5): send people where they belong. */
+function Home() {
+  const { user, loading } = useAuth();
+  if (loading) return <FullScreenSpinner />;
+  return <Redirect to={user ? '/app' : '/login'} />;
+}
+
+function Routes() {
+  const path = usePath();
+  switch (path) {
+    case '/':
+      return <Home />;
+    case '/login':
+      return <AuthPage mode="login" />;
+    case '/signup':
+      return <AuthPage mode="signup" />;
+    case '/app':
+      return (
+        <ProtectedRoute>
+          <AppProvider>
+            <MainAppContent />
+          </AppProvider>
+        </ProtectedRoute>
+      );
+    default:
+      return <Redirect to="/" />;
+  }
+}
+
 export default function App() {
+  const path = usePath();
   return (
-    <AppProvider>
-      <MainAppContent />
-    </AppProvider>
+    <AuthProvider>
+      {/* key resets the boundary on navigation, so one crash never traps the user */}
+      <ErrorBoundary key={path}>
+        <Routes />
+      </ErrorBoundary>
+    </AuthProvider>
   );
 }
