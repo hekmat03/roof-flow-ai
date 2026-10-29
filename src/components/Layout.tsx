@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
@@ -16,9 +15,12 @@ import {
   Calendar,
   Menu,
   X,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 import { usePlan } from '../lib/usePlan';
+import { useAuth } from '../context/AuthContext';
+import { navigate } from '../lib/router';
 import { canAccess, upgradeLabel } from '../lib/planAccess';
 
 interface LayoutProps {
@@ -29,6 +31,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { companySettings, activeTab, setActiveTab, leads } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const plan = usePlan();
+  const { user, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+    navigate('/login', true);
+  }
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -144,15 +154,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Sidebar footer */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-500 flex items-center justify-between">
-          <span className="font-semibold tracking-wide">
-            v1.0.0 Premium Suite
-          </span>
-
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-400 space-y-3">
+          <div className="truncate" title={user?.email ?? ''}>{user?.email}</div>
+          <button
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="w-full flex items-center justify-center gap-2 border border-slate-700 hover:border-accent-500 hover:text-white disabled:opacity-60 rounded-lg py-2 font-semibold transition"
+          >
+            <LogOut className="h-4 w-4" />
+            {signingOut ? 'Signing out…' : 'Sign out'}
+          </button>
         </div>
       </aside>
 
