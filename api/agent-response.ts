@@ -11,11 +11,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
   AGENT_TYPES,
   buildSystemPrompt,
-  rateLimited,
   sanitizeContext,
   sanitizeMessages,
   type AgentType,
 } from './_lib/agent.js';
+import { isRateLimited } from './_lib/rateLimit.js';
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
@@ -31,21 +31,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  if (!apiKey) {
-    return res.status(503).json({ error: 'AI is not configured on the server' });
+  try {
+    if (await isRateLimited(req)) {
+      return res.status(429).json({ error: 'Too many requests. Try again in a minute.' });
+    }
+  } catch (error) {
+    console.error('Rate limiter unavailable:', error instanceof Error ? error.message : error);
+    return res.status(503).json({ error: 'The chat service is temporarily unavailable.' });
   }
-
-  const forwarded = req.headers['x-forwarded-for'];
-  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() || 'unknown';
-  if (rateLimited(ip)) {
-    return res.status(429).json({ error: 'Too many requests, please slow down' });
-  }
+  if (!apiKey) return res.status(503).json({ error: 'AI is not configured on the server' });
 
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>;
   const agentType = body.agentType as AgentType;
   if (!AGENT_TYPES.includes(agentType)) {
     return res.status(400).json({ error: 'agentType must be chatbot | phone | nurturer | closer' });
   }
+  if (agentType !== 'chatbot') return res.status(403).json({ error: 'Only the chatbot endpoint is enabled.' });
   const messages = sanitizeMessages(body.messages);
   if (!messages) {
     return res.status(400).json({ error: 'messages must be an array of {role, content}' });

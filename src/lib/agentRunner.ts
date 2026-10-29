@@ -5,6 +5,7 @@
  */
 import { getAgentResponse, type AgentType, type AgentMessage, type AgentContext } from './agentService';
 import type { AgentAction } from './applyActions';
+import { supabase } from './supabase';
 
 export const AGENT_RUN_ENDPOINT = '/api/agent-run';
 const TIMEOUT_MS = 25000;
@@ -15,18 +16,12 @@ export interface AgentRunResult {
   live: boolean;
 }
 
-/** Anonymous per-browser id used to group server-side records. */
+/** Ephemeral id for one in-memory chat; it is never persisted in the browser. */
+const chatSessionId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`)
+  .replace(/[^A-Za-z0-9_-]/g, '');
+
 export function getSessionId(): string {
-  const KEY = 'roofflow_session';
-  try {
-    const existing = localStorage.getItem(KEY);
-    if (existing && /^[A-Za-z0-9_-]{8,64}$/.test(existing)) return existing;
-    const id = (globalThis.crypto?.randomUUID?.() ?? `s${Date.now()}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, '');
-    localStorage.setItem(KEY, id);
-    return id;
-  } catch {
-    return 'anon';
-  }
+  return chatSessionId;
 }
 
 export async function runAgentWithTools(
@@ -37,9 +32,16 @@ export async function runAgentWithTools(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
+    const { data: { session } } = supabase
+      ? await supabase.auth.getSession()
+      : { data: { session: null } };
+    if (!session?.access_token) throw new Error('A verified account is required to use chat tools.');
     const res = await fetch(AGENT_RUN_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify({
         agentType,
         sessionId: getSessionId(),
