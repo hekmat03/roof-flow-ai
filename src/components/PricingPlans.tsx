@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Check, Minus, ShieldAlert, Sparkles, AlertTriangle } from 'lucide-react';
 import {
@@ -8,16 +9,10 @@ import {
 } from '../lib/billingApi';
 
 /**
- * PricingPlans — the three plans, rendered from the SERVER catalogue.
- *
- * HONESTY RULES ENFORCED HERE:
- *  - prices, quotas and feature lists come from /api/billing/status; nothing is
- *    hard-coded in this component, so the UI cannot advertise something the
- *    server does not enforce;
- *  - the upgrade button is disabled and says "Payments not activated yet" while
- *    `paymentsActivated` is false. It never opens a fake checkout;
- *  - the "not included in any plan" list is rendered verbatim, so a visitor is
- *    told which features are simulations instead of guessing.
+ * PricingPlans — the three plans, rendered from the SERVER catalogue
+ * (/api/billing/status). Nothing is hard-coded here, so the UI cannot
+ * advertise something the server does not enforce. Upgrade buttons stay
+ * disabled while Lemon Squeezy is not configured on the server.
  */
 
 const CheckRow: React.FC<{ ok: boolean; children: React.ReactNode }> = ({ ok, children }) => (
@@ -38,7 +33,7 @@ export const UsageMeter: React.FC<{ usage: UsageView; planName: string }> = ({ u
   return (
     <div className="glass rounded-2xl p-5 md:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-semibold text-slate-100">Conversations this month</h3>
+        <h3 className="font-semibold text-slate-100">Chats this month</h3>
         <span className="text-sm text-slate-400">{planName} plan</span>
       </div>
       <p className="mt-3 text-3xl font-bold text-white tabular-nums">
@@ -50,14 +45,13 @@ export const UsageMeter: React.FC<{ usage: UsageView; planName: string }> = ({ u
         <div className={`h-full ${tone} transition-all`} style={{ width: `${String(pct)}%` }} />
       </div>
       <p className="mt-3 text-xs text-slate-400">
-        Resets on {usage.periodEnd}. One conversation = one chat thread that received at least one AI reply.
+        Resets on {usage.periodEnd}. One chat = one conversation thread that received at least one AI reply.
       </p>
       {!storageReady && (
         <p className="mt-3 flex items-start gap-2 text-xs text-amber-300/90">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden />
           <span>
-            Usage storage is not connected yet ({usage.storage}), so this counter cannot be trusted until the
-            database migration is applied. Conversations are not being counted.
+            Usage could not be read ({usage.storage}). Make sure supabase/002_billing.sql was applied.
           </span>
         </p>
       )}
@@ -80,8 +74,8 @@ const PlanCard: React.FC<{
       ? 'Included by default'
       : paymentsActivated
         ? `Upgrade to ${plan.name}`
-        : 'Payments not activated yet';
-  const disabled = current || !paid || !paymentsActivated || busy;
+        : 'Payments not set up yet';
+  const disabled = current || !paid || !paymentsActivated || busy || !authenticated;
   return (
     <div
       className={`glass rounded-2xl p-5 md:p-6 flex flex-col ${
@@ -102,7 +96,7 @@ const PlanCard: React.FC<{
         <span className="text-slate-400 text-sm"> / month</span>
       </p>
       <p className="mt-1 text-sm text-accent-300 font-medium">
-        {plan.conversationsPerMonth} AI conversations / month
+        {plan.conversationsPerMonth.toLocaleString()} chats / month
       </p>
       <ul className="mt-5 space-y-2.5 flex-1">
         {plan.includes.map((f) => (
@@ -116,12 +110,10 @@ const PlanCard: React.FC<{
         disabled={disabled}
         title={
           !paid
-            ? 'Included for every account — nothing to buy.'
+            ? 'Included for every account.'
             : !paymentsActivated
-              ? 'No Stripe account is connected yet, so no checkout can be created. This button activates on its own once the payment keys exist.'
-              : !authenticated
-                ? 'Create an account first, then choose this plan.'
-                : undefined
+              ? 'Lemon Squeezy is not configured on the server yet.'
+              : undefined
         }
         onClick={() => {
           if (paid && !current) onUpgrade(plan.id as 'starter' | 'pro');
@@ -129,16 +121,11 @@ const PlanCard: React.FC<{
         className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] ${
           disabled
             ? 'bg-slate-800/70 text-slate-500 cursor-not-allowed'
-            : 'bg-accent-600 hover:bg-accent-500 text-white active:scale-[0.99]'
+            : 'bg-[#F97316] hover:bg-orange-400 text-slate-950 active:scale-[0.99]'
         }`}
       >
         {buttonLabel}
       </button>
-      {paid && !paymentsActivated && (
-        <p className="mt-2 text-[11px] text-slate-500">
-          Activates automatically once payment keys are added.
-        </p>
-      )}
     </div>
   );
 };
@@ -176,16 +163,16 @@ export const PricingPlans: React.FC<{ status: BillingStatus; onChanged: () => vo
           <h1 className="text-2xl md:text-3xl font-bold text-white">Plans &amp; pricing</h1>
         </div>
         <p className="mt-2 text-slate-300 max-w-3xl">
-          Every account starts on Free. Limits below are enforced on the server, not in the browser — editing
-          anything in dev tools cannot raise a quota.
+          Every account starts on Free. Limits are enforced on the server, so editing anything in the
+          browser cannot raise a quota.
         </p>
         {!status.paymentsActivated && (
           <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
             <ShieldAlert className="h-5 w-5 mt-0.5 shrink-0" aria-hidden />
             <span>
-              <strong className="font-semibold">Payments are not activated.</strong> No Stripe account is
-              connected, so no plan can be purchased and no card can be charged. Upgrading becomes available the
-              moment payment keys are added — the buttons then work with no further changes.
+              <strong className="font-semibold">Payments are not set up yet.</strong> The Lemon Squeezy
+              keys have not been added to the server, so no plan can be purchased. The buttons turn on
+              automatically once they are.
             </span>
           </p>
         )}
@@ -213,7 +200,7 @@ export const PricingPlans: React.FC<{ status: BillingStatus; onChanged: () => vo
       <section className="glass rounded-2xl p-5 md:p-6">
         <h2 className="font-semibold text-slate-100">What no plan includes yet</h2>
         <p className="mt-1 text-sm text-slate-400">
-          These are simulations in the product today. They are listed here so nothing is oversold.
+          These are simulations in the product today. They are listed so nothing is oversold.
         </p>
         <ul className="mt-4 space-y-2.5">
           {status.notIncluded.map((item) => (
