@@ -1,3 +1,4 @@
+
 export function FullScreenSpinner({ label = 'Loading…' }: { label?: string }) {
   return (
     <div className="min-h-screen bg-[#0F172A] flex items-center justify-center text-slate-300" role="status" aria-live="polite">
