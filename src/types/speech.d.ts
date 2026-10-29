@@ -1,3 +1,4 @@
+
 /**
  * Minimal type declarations for the Web Speech API — TypeScript's DOM lib
  * does not ship SpeechRecognition types, and Chrome's vendor-prefixed
