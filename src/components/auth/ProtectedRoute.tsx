@@ -4,6 +4,7 @@ import { FullScreenSpinner } from '../Spinner';
 import { Redirect } from '../Redirect';
 import { VerifyEmail } from './VerifyEmail';
 
+/** Renders children only for a signed-in, email-verified user. */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading, configured, emailVerified } = useAuth();
 
