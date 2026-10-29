@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { postLeadToWebhook } from '../utils/webhook';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
+import {
+  fetchLeads, upsertLeads, deleteLeads, fetchMyTenantId, fetchTenantConfig, saveTenantConfig,
+} from '../lib/leadsDb';
 
 export interface Lead {
   id: string;
@@ -36,6 +41,8 @@ export interface AgentPrompts {
   agent4: string;
 }
 
+export type StorageStatus = 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error';
+
 interface AppContextType {
   companySettings: CompanySettings;
   setCompanySettings: React.Dispatch<React.SetStateAction<CompanySettings>>;
@@ -46,6 +53,9 @@ interface AppContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   addLead: (lead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => void;
+  tenantId: string | null;
+  storageStatus: StorageStatus;
+  storageError: string | null;
 }
 
 const defaultCompanySettings: CompanySettings = {
@@ -82,68 +92,117 @@ Your goals:
 3. Offer low-interest payment terms: {{financingOptions}}.`
 };
 
-/**
- * Live CRM only — no mock/seed leads. A fresh browser starts with 0 leads and
- * every lead in the board comes from a real simulator capture.
- */
-const defaultLeads: Lead[] = [];
-
-/**
- * Leads storage schema version. v1 (absent key) shipped with hardcoded demo
- * leads that got persisted into localStorage; v2 discards any legacy stored
- * array exactly once so even browsers that ran the old demo (including the
- * owner's) start from a clean, live-data-only CRM. Captured leads made AFTER
- * the v2 marker is set persist normally.
- */
-const LEADS_SCHEMA_V = '2';
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const SAVE_DEBOUNCE_MS = 800;
+
+function leadChanged(a: Lead, b: Lead): boolean {
+  return JSON.stringify(a) !== JSON.stringify(b);
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
-    const saved = localStorage.getItem('companySettings');
-    return saved ? JSON.parse(saved) : defaultCompanySettings;
-  });
-
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    try {
-      const schemaV = localStorage.getItem('leads_schema_v');
-      if (schemaV !== LEADS_SCHEMA_V) {
-        // One-time migration: the stored array predates live-data-only mode
-        // (it contains the old demo leads). Discard it and mark v2.
-        localStorage.setItem('leads_schema_v', LEADS_SCHEMA_V);
-        localStorage.removeItem('leads');
-        return [];
-      }
-      const saved = localStorage.getItem('leads');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [prompts, setPrompts] = useState<AgentPrompts>(() => {
-    const saved = localStorage.getItem('prompts');
-    return saved ? JSON.parse(saved) : defaultPrompts;
-  });
-
+  const [companySettings, setCompanySettings] = useState<CompanySettings>(defaultCompanySettings);
+  const [prompts, setPrompts] = useState<AgentPrompts>(defaultPrompts);
+  const [leads, setLeadsState] = useState<Lead[]>([]);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus>(
+    supabase ? 'loading' : 'unconfigured',
+  );
+  const [storageError, setStorageError] = useState<string | null>(null);
+
+  const leadsRef = useRef<Lead[]>([]);
+  const tenantRef = useRef<string | null>(null);
+  const configLoaded = useRef(false);
+
+  const fail = useCallback((e: unknown) => {
+    const msg = e instanceof Error ? e.message : 'Storage request failed.';
+    setStorageError(msg);
+  }, []);
+
+  const loadTenant = useCallback(async () => {
+    if (!supabase) return;
+    configLoaded.current = false;
+    try {
+      const id = await fetchMyTenantId();
+      tenantRef.current = id;
+      setTenantId(id);
+      if (!id) {
+        leadsRef.current = [];
+        setLeadsState([]);
+        setStorageStatus('signed-out');
+        return;
+      }
+      const [cfg, rows] = await Promise.all([fetchTenantConfig(id), fetchLeads(id)]);
+      setCompanySettings({ ...defaultCompanySettings, ...cfg.settings });
+      setPrompts({ ...defaultPrompts, ...cfg.prompts });
+      leadsRef.current = rows;
+      setLeadsState(rows);
+      configLoaded.current = true;
+      setStorageError(null);
+      setStorageStatus('ready');
+    } catch (e) {
+      fail(e);
+      setStorageStatus('error');
+    }
+  }, [fail]);
+
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
   useEffect(() => {
-    localStorage.setItem('companySettings', JSON.stringify(companySettings));
-  }, [companySettings]);
+    if (!supabase) return;
+    if (!userId) {
+      tenantRef.current = null;
+      configLoaded.current = false;
+      leadsRef.current = [];
+      setTenantId(null);
+      setLeadsState([]);
+      setStorageStatus('signed-out');
+      return;
+    }
+    setStorageStatus('loading');
+    void loadTenant();
+  }, [userId, loadTenant]);
 
   useEffect(() => {
-    localStorage.setItem('leads', JSON.stringify(leads));
-  }, [leads]);
+    if (!configLoaded.current || !tenantRef.current) return;
+    const id = tenantRef.current;
+    const t = setTimeout(() => {
+      saveTenantConfig(id, companySettings, prompts).catch(fail);
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [companySettings, prompts, fail]);
 
-  useEffect(() => {
-    localStorage.setItem('prompts', JSON.stringify(prompts));
-  }, [prompts]);
+  const setLeads: React.Dispatch<React.SetStateAction<Lead[]>> = useCallback((action) => {
+    const prev = leadsRef.current;
+    const next = typeof action === 'function' ? action(prev) : action;
+    leadsRef.current = next;
+    setLeadsState(next);
+
+    const id = tenantRef.current;
+    if (!id) return;
+
+    const prevById = new Map(prev.map((l) => [l.id, l]));
+    const nextIds = new Set(next.map((l) => l.id));
+    const changed = next.filter((l) => {
+      const old = prevById.get(l.id);
+      return !old || leadChanged(old, l);
+    });
+    const removed = prev.filter((l) => !nextIds.has(l.id)).map((l) => l.id);
+
+    Promise.all([upsertLeads(id, changed), deleteLeads(id, removed)]).catch((e) => {
+      fail(e);
+      void fetchLeads(id).then((rows) => {
+        leadsRef.current = rows;
+        setLeadsState(rows);
+      }).catch(() => { /* keep optimistic state; error already set */ });
+    });
+  }, [fail]);
 
   const addLead = (newLead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => {
     const leadWithId: Lead = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       name: newLead.name,
       phone: newLead.phone,
       email: newLead.email || 'N/A',
@@ -164,10 +223,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setLeads((prev) => [leadWithId, ...prev]);
 
-    // Real CRM push: fire-and-forget POST to the configured Google Sheets
-    // webhook (no-op when the URL isn't set in Configuration). The internal
-    // CRM board above updates instantly regardless — the webhook must never
-    // block or break lead capture.
     postLeadToWebhook({
       name: leadWithId.name,
       phone: leadWithId.phone,
@@ -177,20 +232,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: leadWithId.status,
       source: leadWithId.agentType,
       timestamp: new Date().toISOString(),
-    }).catch(() => { /* postLeadToWebhook never rejects, belt-and-suspenders */ });
+    }).catch(() => { /* never rejects */ });
   };
 
   return (
     <AppContext.Provider value={{
-      companySettings,
-      setCompanySettings,
-      leads,
-      setLeads,
-      prompts,
-      setPrompts,
-      activeTab,
-      setActiveTab,
-      addLead
+      companySettings, setCompanySettings,
+      leads, setLeads,
+      prompts, setPrompts,
+      activeTab, setActiveTab,
+      addLead,
+      tenantId, storageStatus, storageError,
     }}>
       {children}
     </AppContext.Provider>
