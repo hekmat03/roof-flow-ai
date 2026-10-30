@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import type { Lead, CompanySettings, AgentPrompts } from '../context/AppContext';
 
+/** Row shape of public.leads (only the columns the app uses). */
 interface LeadRow {
   id: string;
   tenant_id: string;
@@ -85,6 +86,7 @@ export async function deleteLeads(tenantId: string, ids: string[]): Promise<void
   if (error) throw error;
 }
 
+/** Look up the signed-in user's tenant id (null if signed out / no profile). */
 export async function fetchMyTenantId(): Promise<string | null> {
   const c = client();
   const { data: userData } = await c.auth.getUser();
