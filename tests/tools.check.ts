@@ -19,14 +19,14 @@ const mockDb: Supabase = {
   async exists(table, _c, v) { return rows.some((r) => r.table === table && Object.values(r.row).includes(v)); },
 };
 const mkEnv = (over: Partial<ToolEnv> = {}): ToolEnv => ({
-  db: null, sessionId: 'sess-12345678', optOuts: new Set(), allowedContacts: new Set(['5551234567', 'sam@example.com']), ...over,
+  db: null, sessionId: 'sess-12345678', optOuts: new Set(), allowedContacts: new Set(['5551234567', 'sam@gmail.com']), ...over,
 });
 const goodBook = { name: 'Sam Lee', phone: '(555) 123-4567', preferred_time: 'Tuesday morning', address_or_zip: '12 Palm St', issue: 'hail damage' };
 
 console.log('\n[1] contact collection');
-const c = collectAllowedContacts(['call me on +1 (555) 123-4567 or sam@Example.com'], ['x@y.io']);
+const c = collectAllowedContacts(['call me on +1 (555) 123-4567 or sam@Gmail.com'], ['x@y.io']);
 check('finds phone (digits only)', c.has('15551234567'));
-check('finds email (lowercased)', c.has('sam@example.com'));
+check('finds email (lowercased)', c.has('sam@gmail.com'));
 check('adds CRM context contact', c.has('x@y.io'));
 check('ignores short numbers', collectAllowedContacts(['zip 90210 and 12345']).size === 0);
 
@@ -50,7 +50,7 @@ r = await executeTool('book_inspection', goodBook, mkEnv({ allowedContacts: new 
 check('rejects contact the customer never provided', !r.ok && /not provided/.test(r.error || ''));
 r = await executeTool('send_message', { channel: 'sms', to: '5551234567', body: 'See you Tuesday' }, mkEnv());
 check('sms is always simulated (never claims delivery)', r.ok && r.simulated && r.status === 'simulated_sent');
-r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, mkEnv());
+r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, mkEnv());
 check('email without provider key is simulated', r.ok && r.simulated);
 
 let sent: any = null;
@@ -59,14 +59,14 @@ const fakeFetch = (async (url: string, init: any) => { sent = { url, body: JSON.
 // Resend integration was removed. These checks now pin that boundary: even if a
 // provider key were somehow present, nothing may be sent and no outbound
 // request may be made.
-r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, mkEnv({ fetchFn: fakeFetch, companyName: 'Acme' }));
+r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, mkEnv({ fetchFn: fakeFetch, companyName: 'Acme' }));
 check('email is never really sent (no provider integration)', r.ok && r.simulated && r.status === 'simulated_sent');
 check('no outbound email request is made at all', sent === null);
 // A leftover RESEND_API_KEY in the environment must not re-enable sending.
 const legacyEnv = mkEnv({ fetchFn: fakeFetch }) as Record<string, unknown>;
 legacyEnv.resendKey = 'rk_legacy';
 legacyEnv.resendFrom = 'onboarding@resend.dev';
-r = await executeTool('send_message', { channel: 'email', to: 'sam@example.com', body: 'See you Tuesday' }, legacyEnv as never);
+r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, legacyEnv as never);
 check('a stray provider key cannot re-enable sending', r.ok && r.simulated && sent === null);
 
 const env = mkEnv({ db: mockDb });
@@ -76,7 +76,7 @@ r = await executeTool('send_message', { channel: 'sms', to: '5551234567', body: 
 check('opted-out contact can no longer be messaged', !r.ok && r.error === 'contact opted out');
 r = await executeTool('schedule_followup', { channel: 'sms', contact: '5551234567', when_hours: 24 }, env);
 check('opted-out contact cannot be scheduled', !r.ok);
-r = await executeTool('schedule_followup', { channel: 'email', contact: 'sam@example.com', when_hours: 24 }, mkEnv({ db: mockDb }));
+r = await executeTool('schedule_followup', { channel: 'email', contact: 'sam@gmail.com', when_hours: 24 }, mkEnv({ db: mockDb }));
 check('followup stored as "scheduled" (not sent)', r.ok && r.status === 'scheduled' && r.persisted);
 rows.length = 0; // clear opt-outs recorded by earlier tests
 const boomDb: Supabase = { ...mockDb, insert: async () => { throw new Error('storage 500'); } };
