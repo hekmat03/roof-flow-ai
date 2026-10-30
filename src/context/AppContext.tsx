@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { postLeadToWebhook } from '../utils/webhook';
 import { supabase } from '../lib/supabase';
@@ -5,6 +6,7 @@ import { useAuth } from './AuthContext';
 import {
   fetchLeads, upsertLeads, deleteLeads, fetchMyTenantId, fetchTenantConfig, saveTenantConfig,
 } from '../lib/leadsDb';
+import { validateEmail, validateName, validatePhone, formatPhone } from '../lib/validators';
 
 export interface Lead {
   id: string;
@@ -14,11 +16,7 @@ export interface Lead {
   propertyOwnership: 'Owner' | 'Renter';
   status: 'New Lead' | 'Contacted' | 'In Contact' | 'Inspection Scheduled' | 'Inspection Completed' | 'Estimate Sent' | 'Closed-Won' | 'Closed-Lost' | 'Follow-up Nurture' | 'Closed';
   scheduledDate?: string;
-  appointmentDetails?: {
-    date: string;
-    time: string;
-    notes?: string;
-  };
+  appointmentDetails?: { date: string; time: string; notes?: string };
   zipCode: string;
   roofIssue: string;
   agentType: 'Chatbot' | 'Phone Call' | 'SMS Nurture' | 'Estimate Follow-Up';
@@ -50,13 +48,14 @@ interface AppContextType {
   setPrompts: React.Dispatch<React.SetStateAction<AgentPrompts>>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  addLead: (lead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => void;
+  addLead: (lead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>, options?: { validate?: boolean }) => AddLeadResult;
   tenantId: string | null;
-  /** 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error' */
   storageStatus: StorageStatus;
   storageError: string | null;
 }
 
+export interface AddLeadErrors { name?: string; phone?: string; email?: string }
+export type AddLeadResult = { ok: true; lead: Lead } | { ok: false; errors: AddLeadErrors };
 export type StorageStatus = 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error';
 
 const defaultCompanySettings: CompanySettings = {
@@ -94,7 +93,6 @@ Your goals:
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
 const SAVE_DEBOUNCE_MS = 800;
 
 function leadChanged(a: Lead, b: Lead): boolean {
@@ -107,9 +105,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [leads, setLeadsState] = useState<Lead[]>([]);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [storageStatus, setStorageStatus] = useState<StorageStatus>(
-    supabase ? 'loading' : 'unconfigured',
-  );
+  const [storageStatus, setStorageStatus] = useState<StorageStatus>(supabase ? 'loading' : 'unconfigured');
   const [storageError, setStorageError] = useState<string | null>(null);
 
   const leadsRef = useRef<Lead[]>([]);
@@ -121,7 +117,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStorageError(msg);
   }, []);
 
-  // ---- Load everything for the signed-in tenant -------------------------
   const loadTenant = useCallback(async () => {
     if (!supabase) return;
     configLoaded.current = false;
@@ -155,7 +150,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!supabase) return;
     if (!userId) {
-      // Signed out: drop all tenant data from memory.
       tenantRef.current = null;
       configLoaded.current = false;
       leadsRef.current = [];
@@ -168,7 +162,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void loadTenant();
   }, [userId, loadTenant]);
 
-  // ---- Persist tenant settings/prompts (debounced) ----------------------
   useEffect(() => {
     if (!configLoaded.current || !tenantRef.current) return;
     const id = tenantRef.current;
@@ -178,7 +171,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearTimeout(t);
   }, [companySettings, prompts, fail]);
 
-  // ---- Leads: same setState API, synced to Supabase ---------------------
   const setLeads: React.Dispatch<React.SetStateAction<Lead[]>> = useCallback((action) => {
     const prev = leadsRef.current;
     const next = typeof action === 'function' ? action(prev) : action;
@@ -186,7 +178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeadsState(next);
 
     const id = tenantRef.current;
-    if (!id) return; // signed out: nothing is persisted
+    if (!id) return;
 
     const prevById = new Map(prev.map((l) => [l.id, l]));
     const nextIds = new Set(next.map((l) => l.id));
@@ -198,20 +190,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     Promise.all([upsertLeads(id, changed), deleteLeads(id, removed)]).catch((e) => {
       fail(e);
-      // Storage is the source of truth: reload so the UI never shows unsaved data.
       void fetchLeads(id).then((rows) => {
         leadsRef.current = rows;
         setLeadsState(rows);
-      }).catch(() => { /* keep optimistic state; error banner already set */ });
+      }).catch(() => {});
     });
   }, [fail]);
 
-  const addLead = (newLead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => {
+  const addLead = (
+    newLead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>,
+    options?: { validate?: boolean },
+  ): AddLeadResult => {
+    let name = newLead.name;
+    let phone = newLead.phone;
+    let email = newLead.email || 'N/A';
+
+    if (options?.validate) {
+      const errors: AddLeadErrors = {};
+      const n = validateName(newLead.name);
+      const p = validatePhone(newLead.phone);
+      if (n.ok) name = n.value; else errors.name = n.error;
+      if (p.ok) phone = formatPhone(p.value); else errors.phone = p.error;
+      const rawEmail = (newLead.email ?? '').trim();
+      if (rawEmail && rawEmail.toUpperCase() !== 'N/A') {
+        const e = validateEmail(rawEmail);
+        if (e.ok) email = e.value; else errors.email = e.error;
+      }
+      if (errors.name || errors.phone || errors.email) return { ok: false, errors };
+    }
+
     const leadWithId: Lead = {
       id: crypto.randomUUID(),
-      name: newLead.name,
-      phone: newLead.phone,
-      email: newLead.email || 'N/A',
+      name,
+      phone,
+      email,
       propertyOwnership: newLead.propertyOwnership || 'Owner',
       status: newLead.status || 'New Lead',
       scheduledDate: newLead.scheduledDate || '',
@@ -229,7 +241,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setLeads((prev) => [leadWithId, ...prev]);
 
-    // Fire-and-forget Google Sheets webhook (no-op if not configured).
     postLeadToWebhook({
       name: leadWithId.name,
       phone: leadWithId.phone,
@@ -239,7 +250,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: leadWithId.status,
       source: leadWithId.agentType,
       timestamp: new Date().toISOString(),
-    }).catch(() => { /* never rejects */ });
+    }).catch(() => {});
+
+    return { ok: true, lead: leadWithId };
   };
 
   return (
@@ -258,8 +271,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within an AppProvider');
   return context;
 };
