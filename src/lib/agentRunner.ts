@@ -1,10 +1,14 @@
 /**
  * agentRunner.ts — runs an agent turn WITH tools via /api/agent-run.
- * Falls back to the offline engine (no tools, no actions) on any failure,
- * so the app never breaks when the server, AI key or network is unavailable.
+ * Falls back to the offline engine (no tools, no actions) on network/server
+ * failure so the app never breaks. A plan limit is NOT a failure: it opens the
+ * upgrade modal and returns the server's message (no free offline replies).
  */
 import { getAgentResponse, type AgentType, type AgentMessage, type AgentContext } from './agentService';
 import type { AgentAction } from './applyActions';
+import { authHeaders } from './authFetch';
+import { conversationIdFor } from './conversation';
+import { notifyLimit } from './limitEvents';
 
 export const AGENT_RUN_ENDPOINT = '/api/agent-run';
 const TIMEOUT_MS = 25000;
@@ -13,6 +17,7 @@ export interface AgentRunResult {
   reply: string;
   actions: AgentAction[];
   live: boolean;
+  limitReached?: boolean;
 }
 
 /** Anonymous per-browser id used to group server-side records. */
@@ -39,15 +44,32 @@ export async function runAgentWithTools(
   try {
     const res = await fetch(AGENT_RUN_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({
         agentType,
         sessionId: getSessionId(),
+        conversationId: conversationIdFor(messages),
         messages: messages.slice(-8).map(m => ({ role: m.role, content: m.content })),
         context: ctx,
       }),
       signal: controller.signal,
     });
+
+    if (res.status === 402 || res.status === 403) {
+      const body = await res.json().catch(() => null);
+      const code = String(body?.code ?? 'limit_reached');
+      const message = typeof body?.error === 'string' ? body.error : 'Plan limit reached.';
+      notifyLimit({ code, message });
+      return {
+        reply: code === 'conversation_cap' ? message : `${message} Upgrade your plan to keep chatting.`,
+        actions: [],
+        live: false,
+        limitReached: true,
+      };
+    }
+    if (res.status === 401) {
+      return { reply: 'Your session expired. Please log in again.', actions: [], live: false };
+    }
     if (res.ok) {
       const data = await res.json();
       if (typeof data?.reply === 'string' && data.reply.trim()) {
