@@ -1,25 +1,16 @@
 /**
  * agentService.ts — Central AI response router for all 4 agents.
- * ----------------------------------------------------------------------------
- * Keeps the exact same API surface the agent components already use
- * (`getAgentResponse(agentType, messages, context)`), but now routes replies
- * through a two-tier pipeline:
  *
- *   1. LIVE TIER  — the server endpoint /api/agent-response (Mistral AI).
- *      The provider key lives ONLY in Vercel env vars; the browser sends the
- *      agent type, recent messages and company context, and the server builds
- *      the system prompt (api/_lib/agent.ts).
+ * LIVE TIER:
+ * Uses /api/agent-response. The provider key stays on the server.
  *
- *   2. LOCAL TIER — the deterministic in-browser generator
- *      (src/utils/aiResponseGenerator.ts). Used when no key is configured OR
- *      whenever the live call fails (never throws to the UI). A
- *      "roofflow:fallback" event is dispatched by aiService so the UI can show
- *      a small non-intrusive notice.
+ * LOCAL TIER:
+ * Uses a deterministic in-browser generator when the live call fails.
  *
- * Graceful degradation is a hard requirement: the demo must never break when
- * a key is missing, invalid, or the network is down.
- * ----------------------------------------------------------------------------
+ * Graceful degradation is required so the demo continues working when
+ * the API key is missing, invalid, or the network is unavailable.
  */
+
 import {
   generateAgentReply,
   type AgentType,
@@ -27,25 +18,35 @@ import {
   type AgentContext,
   type Intent,
 } from '../utils/aiResponseGenerator';
+
 import { callAgentApi } from '../utils/aiService';
+import { conversationIdFor } from './conversation';
 
 export type { AgentType, AgentMessage, AgentContext, Intent };
-export { detectIntent, detectLatestIntent, INTENTS } from '../utils/aiResponseGenerator';
 
-/** Deterministic short delay (bounded) so typing indicators animate naturally on the local path. */
+export {
+  detectIntent,
+  detectLatestIntent,
+  INTENTS,
+} from '../utils/aiResponseGenerator';
+
+/** Deterministic delay so local replies have a natural typing indicator. */
 function boundedLatency(seed: string): Promise<void> {
   let hash = 0;
+
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) | 0;
   }
+
   const ms = 450 + (Math.abs(hash) % 700);
+
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
- * Generate the next agent reply for the given conversation.
- * Tries the live server endpoint first; falls back to the
- * local deterministic generator on any failure. Never throws.
+ * Generate a reply for the specified agent and conversation.
+ * Tries the live API first, then falls back to the local generator.
+ * Never intentionally throws an error to the UI.
  */
 export async function getAgentResponse(
   agentType: AgentType,
@@ -55,27 +56,37 @@ export async function getAgentResponse(
 ): Promise<string> {
   const ctx: AgentContext = context || {};
 
-  // ---- Tier 1: live AI via the server endpoint ----
-  const live = options?.skipLive ? null : await callAgentApi({
-    agentType,
-    // Keep the conversation window bounded — last 6 turns is plenty.
-    messages: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
-    context: {
-      companyName: ctx.companyName,
-      city: ctx.city,
-      stormEvent: ctx.stormEvent,
-      stormDate: ctx.stormDate,
-      leadName: ctx.leadName,
-      financingOptions: ctx.financingOptions,
-      agentTone: ctx.agentTone,
-      replyIntent: ctx.replyIntent,
-    },
-  });
-  if (live) return live;
-  // live === null → fallback event already dispatched by aiService (or skipped).
+  // Tier 1: live AI through the server endpoint.
+  const live = options?.skipLive
+    ? null
+    : await callAgentApi({
+        agentType,
+        conversationId: conversationIdFor(messages),
 
-  // ---- Tier 2: local deterministic generator (offline fallback) ----
+        // Keep the conversation window bounded.
+        messages: messages.slice(-6).map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+
+        context: {
+          companyName: ctx.companyName,
+          city: ctx.city,
+          stormEvent: ctx.stormEvent,
+          stormDate: ctx.stormDate,
+          leadName: ctx.leadName,
+          financingOptions: ctx.financingOptions,
+          agentTone: ctx.agentTone,
+          replyIntent: ctx.replyIntent,
+        },
+      });
+
+  if (live) return live;
+
+  // Tier 2: local deterministic fallback.
   const reply = generateAgentReply(agentType, messages, ctx);
+
   await boundedLatency(reply);
+
   return reply;
 }
