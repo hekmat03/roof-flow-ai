@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
@@ -5,7 +6,42 @@ import { detectLatestIntent, type AgentMessage } from '../lib/agentService';
 import { runAgentWithTools } from '../lib/agentRunner';
 import { applyActionsToLeads, type AgentAction } from '../lib/applyActions';
 import { AgentActivity } from './AgentActivity';
-import { extractEmail, extractPhone, extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
+import { extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
+import {
+  validateEmail, validatePhone, validateName, formatPhone,
+  findEmailCandidate, findPhoneCandidate, type Checked,
+} from '../lib/validators';
+
+const nowStamp = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+/**
+ * Newest candidate decides: a valid one is the value, an invalid one is a
+ * "problem" (so the visitor is asked again) and nothing is saved until fixed.
+ */
+function resolveField(
+  texts: string[],
+  pick: (t: string) => string | undefined,
+  check: (v: string) => Checked,
+): { value?: string; problem?: string } {
+  for (let i = texts.length - 1; i >= 0; i--) {
+    const raw = pick(texts[i]);
+    if (!raw) continue;
+    const r = check(raw);
+    return r.ok ? { value: r.value } : { problem: r.error };
+  }
+  return {};
+}
+
+/** Problems with the contact details inside ONE message the visitor just sent. */
+function contactProblems(text: string): string[] {
+  const out: string[] = [];
+  const email = findEmailCandidate(text);
+  if (email) { const r = validateEmail(email); if (!r.ok) out.push(r.error); }
+  const phone = findPhoneCandidate(text);
+  if (phone) { const r = validatePhone(phone); if (!r.ok) out.push(r.error); }
+  return out;
+}
+
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead, leads, setLeads } = useApp();
 
@@ -29,6 +65,7 @@ export const Agent1Chatbot: React.FC = () => {
   const [email, setEmail] = useState('');
   const [ownership, setOwnership] = useState<'Owner' | 'Renter'>('Owner');
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -54,10 +91,13 @@ export const Agent1Chatbot: React.FC = () => {
   const extracted = useMemo(() => {
     const userTexts = messages.filter(m => m.sender === 'User').map(m => m.text);
     const joined = userTexts.join('\n');
+    const email = resolveField(userTexts, findEmailCandidate, validateEmail);
+    const phone = resolveField(userTexts, findPhoneCandidate, validatePhone);
+    const name = resolveField(userTexts, extractName, validateName);
     return {
-      email: userTexts.map(t => extractEmail(t)).find(Boolean),
-      phone: userTexts.map(t => extractPhone(t)).find(Boolean),
-      name: userTexts.map(t => extractName(t)).find(Boolean),
+      email: email.value,
+      phone: phone.value ? formatPhone(phone.value) : undefined,
+      name: name.value,
       zip: extractZip(joined),
       roofIssue: userTexts.map(t => deriveRoofIssue(t)).find(Boolean),
     };
@@ -67,7 +107,7 @@ export const Agent1Chatbot: React.FC = () => {
     if (capturedRef.current || showBookingForm) return;
     if (extracted.email && extracted.phone && extracted.name) {
       capturedRef.current = true;
-      addLead({
+      const saved = addLead({
         name: extracted.name,
         phone: extracted.phone,
         email: extracted.email,
@@ -81,7 +121,8 @@ export const Agent1Chatbot: React.FC = () => {
           text: m.text,
           timestamp: m.timestamp,
         })),
-      });
+      }, { validate: true });
+      if (!saved.ok) { capturedRef.current = false; return; }
       setMessages(prev => [...prev, {
         sender: 'AI',
         text: `Got it, ${extracted.name} — I've saved your details and a specialist will reach out at ${extracted.phone}. Would you like me to book your free inspection now?`,
@@ -109,6 +150,18 @@ export const Agent1Chatbot: React.FC = () => {
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+
+    // Bad contact details? Ask again right here: no AI call, nothing is saved.
+    const problems = contactProblems(text);
+    if (problems.length > 0) {
+      setMessages([...messages, userMsg, {
+        sender: 'AI' as const,
+        text: `${problems.join(' ')} Could you type it again?`,
+        timestamp: nowStamp(),
+      }]);
+      setInputText('');
+      return;
+    }
 
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
@@ -157,10 +210,22 @@ export const Agent1Chatbot: React.FC = () => {
 
   const handleBookingSubmit = () => {
     setFormError(null);
-    if (!name.trim() || !phone.trim() || !email.trim()) {
-      setFormError('Please fill in all fields.');
+    const n = validateName(name);
+    const p = validatePhone(phone);
+    const e = validateEmail(email);
+    if (!n.ok || !p.ok || !e.ok) {
+      setFieldErrors({
+        name: n.ok ? undefined : n.error,
+        phone: p.ok ? undefined : p.error,
+        email: e.ok ? undefined : e.error,
+      });
+      setFormError('Please fix the highlighted fields.');
       return;
     }
+    setFieldErrors({});
+    const cleanName = n.value;
+    const cleanPhone = formatPhone(p.value);
+    const cleanEmail = e.value;
 
     const scheduledDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM';
     const chatLog = messages.map(m => ({
@@ -171,7 +236,7 @@ export const Agent1Chatbot: React.FC = () => {
 
     // If the free-form capture already saved this contact (same phone), UPDATE
     // that lead to booked instead of creating a duplicate.
-    const existing = leads.find(l => l.phone.replace(/\D/g, '') === phone.replace(/\D/g, ''));
+    const existing = leads.find(l => l.phone.replace(/\D/g, '') === p.value);
     if (existing) {
       setLeads(prev => prev.map(l =>
         l.id === existing.id
@@ -180,20 +245,20 @@ export const Agent1Chatbot: React.FC = () => {
       ));
     } else {
       addLead({
-        name,
-        phone,
-        email,
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
         propertyOwnership: ownership,
         status: 'Inspection Scheduled',
         agentType: 'Chatbot',
         scheduledDate,
         chatLog,
-      });
+      }, { validate: true });
     }
 
     setMessages(prev => [...prev, {
       sender: 'AI',
-      text: `Thanks, ${name}! Your free inspection request has been submitted. Our team will confirm your appointment shortly.`,
+      text: `Thanks, ${cleanName}! Your free inspection request has been submitted. Our team will confirm your appointment shortly.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
     setShowBookingForm(false);
@@ -289,27 +354,38 @@ export const Agent1Chatbot: React.FC = () => {
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="Full name"
+                      autoComplete="name"
+                      aria-invalid={Boolean(fieldErrors.name)}
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
+                  {fieldErrors.name && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.name}</p>}
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
-                      placeholder="Phone number"
+                      placeholder="Phone number (10+ digits)"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      aria-invalid={Boolean(fieldErrors.phone)}
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
+                  {fieldErrors.phone && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.phone}</p>}
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="Email address"
+                      inputMode="email"
+                      autoComplete="email"
+                      aria-invalid={Boolean(fieldErrors.email)}
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
+                  {fieldErrors.email && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.email}</p>}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setOwnership('Owner')}
