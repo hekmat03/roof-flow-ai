@@ -60,17 +60,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   ).length;
 
   function handleTabSelect(id: string) {
-    // Locked feature -> show the pricing page instead.
     setActiveTab(canAccess(plan, id) ? id : 'pricing');
-
-    // Close the mobile menu after selecting a tab.
     setMobileMenuOpen(false);
   }
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans relative panel-bg">
-
-      {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
@@ -78,7 +73,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`
           fixed md:static z-40 h-full w-72 md:w-80
@@ -90,7 +84,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         `}
       >
         <div>
-          {/* Sidebar header */}
           <div className="p-4 md:p-6 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900/70 to-slate-900/20">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-br from-accent-400 to-accent-600 p-2.5 rounded-xl shadow-lg shadow-accent-500/30 animate-glow-breathe">
@@ -104,14 +97,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     AI
                   </span>
                 </h1>
-
                 <p className="text-xs text-slate-400 font-medium">
                   Contractor Sales Suite
                 </p>
               </div>
             </div>
 
-            {/* Close button for mobile */}
             <button
               className="md:hidden text-slate-300 hover:text-white transition min-h-0"
               onClick={() => setMobileMenuOpen(false)}
@@ -121,7 +112,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
           </div>
 
-          {/* Navigation menu */}
           <nav className="p-3 md:p-4 space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -153,9 +143,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </nav>
         </div>
 
-        {/* Sidebar footer */}
         <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-400 space-y-3">
-          <div className="truncate" title={user?.email ?? ''}>{user?.email}</div>
+          <div className="truncate" title={user?.email ?? ''}>
+            {user?.email}
+          </div>
+
           <button
             onClick={handleSignOut}
             disabled={signingOut}
@@ -167,13 +159,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-
-        {/* Top header */}
         <header className="relative z-20 h-auto md:h-20 glass-strong flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 gap-4">
-
-          {/* Hamburger button for mobile */}
           <button
             className="md:hidden text-slate-200 shrink-0 bg-slate-800/70 border border-slate-700/70 rounded-xl px-3 flex items-center justify-center hover:bg-slate-700/70 transition active:scale-95"
             onClick={() => setMobileMenuOpen(true)}
@@ -182,13 +169,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Menu className="h-5 w-5" />
           </button>
 
-          {/* Company context */}
           <div className="flex items-center space-x-6 text-sm overflow-x-auto no-scrollbar">
             <div className="shrink-0">
               <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">
                 Contractor Profile
               </span>
-
               <span className="text-white font-bold text-base">
                 {companySettings.companyName}
               </span>
@@ -200,7 +185,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">
                 Service Market
               </span>
-
               <span className="text-white font-semibold">
                 {companySettings.city}
               </span>
@@ -217,7 +201,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">
                   Active Event Nurture
                 </span>
-
                 <span className="text-slate-200 font-semibold text-xs flex items-center gap-1.5">
                   {companySettings.stormName}
                   <span className="text-slate-400 font-mono font-normal">
@@ -228,16 +211,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          {/* Quick metrics */}
           <div className="hidden sm:flex items-center space-x-3 shrink-0">
             <div className="bg-slate-900/50 border border-slate-800/80 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3 backdrop-blur-md">
               <Users className="h-4 w-4 text-accent-400" />
-
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
                   Total Leads
                 </span>
-
                 <span className="text-sm text-slate-100 font-bold font-mono">
                   {totalLeads}
                 </span>
@@ -246,12 +226,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             <div className="hidden md:flex bg-slate-900/50 border border-slate-800/80 px-4 py-2 rounded-xl items-center space-x-3 backdrop-blur-md">
               <Calendar className="h-4 w-4 text-emerald-400" />
-
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
                   Scheduled Inspections
                 </span>
-
                 <span className="text-sm text-slate-100 font-bold font-mono">
                   {scheduledInspections}
                 </span>
@@ -260,7 +238,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        {/* Main panel viewport */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 premium-scroll">
           <div className="max-w-7xl mx-auto h-full">
             {children}
