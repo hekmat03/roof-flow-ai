@@ -1,4 +1,7 @@
+import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { BillingProvider } from './context/BillingContext';
+import { UpgradeModal } from './components/UpgradeModal';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { Agent1Chatbot } from './components/Agent1Chatbot';
@@ -24,7 +27,6 @@ function MainAppContent() {
   const { activeTab: requestedTab } = useApp();
   const plan = usePlan();
 
-  // A locked tab can never render, even if something sets it directly.
   const activeTab = canAccess(plan, requestedTab)
     ? requestedTab
     : 'pricing';
@@ -61,36 +63,44 @@ function MainAppContent() {
         {renderContent()}
       </div>
 
-      {/* Non-intrusive notice when live AI is unavailable */}
       <FallbackNotice />
+      <UpgradeModal />
     </Layout>
   );
 }
 
-/** "/" until the landing page exists (Step 5): send people where they belong. */
 function Home() {
   const { user, loading } = useAuth();
+
   if (loading) return <FullScreenSpinner />;
+
   return <Redirect to={user ? '/app' : '/login'} />;
 }
 
 function Routes() {
   const path = usePath();
+
   switch (path) {
     case '/':
       return <Home />;
+
     case '/login':
       return <AuthPage mode="login" />;
+
     case '/signup':
       return <AuthPage mode="signup" />;
+
     case '/app':
       return (
         <ProtectedRoute>
           <AppProvider>
-            <MainAppContent />
+            <BillingProvider>
+              <MainAppContent />
+            </BillingProvider>
           </AppProvider>
         </ProtectedRoute>
       );
+
     default:
       return <Redirect to="/" />;
   }
@@ -98,9 +108,9 @@ function Routes() {
 
 export default function App() {
   const path = usePath();
+
   return (
     <AuthProvider>
-      {/* key resets the boundary on navigation, so one crash never traps the user */}
       <ErrorBoundary key={path}>
         <Routes />
       </ErrorBoundary>
