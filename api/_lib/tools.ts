@@ -1,9 +1,6 @@
-// api/_lib/tools.ts
-// Tool-calling for the RoofFlow agents: argument validation, guarded executors
-// (Supabase only; email delivery is not available) and the bounded agent loop.
-// Only TYPE imports from other files, so tests can load this with Node directly.
 
 import type { AgentType } from './agent.js';
+import { validateEmail, validatePhone } from './validators.js';
 
 export type ToolName = 'book_inspection' | 'send_message' | 'update_crm' | 'schedule_followup';
 
@@ -33,14 +30,12 @@ export interface ToolAction {
 
 type Fetch = typeof fetch;
 
-// ---------------------------------------------------------------- Supabase
 export interface Supabase {
   insert(table: string, row: Record<string, unknown>): Promise<{ id?: string }>;
   upsert(table: string, row: Record<string, unknown>, onConflict: string): Promise<{ id?: string }>;
   exists(table: string, column: string, value: string): Promise<boolean>;
 }
 
-/** Minimal PostgREST client (no dependency). Returns null when not configured. */
 export function createSupabase(url?: string, key?: string, fetchFn: Fetch = fetch): Supabase | null {
   if (!url || !key) return null;
   const base = url.replace(/\/+$/, '') + '/rest/v1';
@@ -77,7 +72,6 @@ export function createSupabase(url?: string, key?: string, fetchFn: Fetch = fetc
   };
 }
 
-// ---------------------------------------------------------------- contacts
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const PHONE_RE = /\+?\d[\d\s().-]{5,}\d/g;
 
@@ -86,7 +80,6 @@ export function normContact(v: string): string {
   return t.includes('@') ? t.toLowerCase() : t.replace(/\D/g, '');
 }
 
-/** Contacts the CUSTOMER actually provided (their own messages + CRM context). */
 export function collectAllowedContacts(userTexts: string[], extra: (string | undefined)[] = []): Set<string> {
   const out = new Set<string>();
   const add = (v: string) => {
@@ -101,7 +94,6 @@ export function collectAllowedContacts(userTexts: string[], extra: (string | und
   return out;
 }
 
-// -------------------------------------------------------------- validation
 type Args = Record<string, unknown>;
 type Valid = { ok: true; value: Args } | { ok: false; error: string };
 
@@ -110,8 +102,8 @@ const text = (v: unknown, min: number, max: number): string | null => {
   const t = v.replace(/[\u0000-\u001F\u007F]/g, ' ').trim();
   return t.length >= min && t.length <= max ? t : null;
 };
-const isPhone = (v: unknown): v is string => typeof v === 'string' && /^\d{7,15}$/.test(normContact(v));
-const isEmail = (v: unknown): v is string => typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+const isPhone = (v: unknown): v is string => typeof v === 'string' && validatePhone(v).ok;
+const isEmail = (v: unknown): v is string => typeof v === 'string' && validateEmail(v).ok;
 
 export function validateToolArgs(name: string, raw: unknown): Valid {
   const a = (raw && typeof raw === 'object' ? raw : {}) as Args;
@@ -121,19 +113,19 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
       const n = text(a.name, 2, 80), when = text(a.preferred_time, 2, 80);
       const where = text(a.address_or_zip, 3, 120), issue = text(a.issue, 3, 200);
       if (!n) return bad('name is required (2-80 chars)');
-      if (!isPhone(a.phone)) return bad('a valid phone number is required');
+      if (!isPhone(a.phone)) return bad('a valid phone number is required (at least 10 digits)');
       if (!when) return bad('preferred_time is required');
       if (!where) return bad('address_or_zip is required');
       if (!issue) return bad('issue is required');
       if (a.email !== undefined && !isEmail(a.email)) return bad('email is invalid');
-      return { ok: true, value: { name: n, phone: normContact(a.phone), email: a.email ? String(a.email).trim().toLowerCase() : undefined, preferred_time: when, address_or_zip: where, issue } };
+      return { ok: true, value: { name: n, phone: normContact(a.phone as string), email: a.email ? String(a.email).trim().toLowerCase() : undefined, preferred_time: when, address_or_zip: where, issue } };
     }
     case 'send_message': {
       const ch = a.channel, body = text(a.body, 5, 600);
       if (ch !== 'email' && ch !== 'sms') return bad('channel must be email or sms');
       if (!body) return bad('body is required (5-600 chars)');
       if (ch === 'email' && !isEmail(a.to)) return bad('a valid email is required');
-      if (ch === 'sms' && !isPhone(a.to)) return bad('a valid phone number is required');
+      if (ch === 'sms' && !isPhone(a.to)) return bad('a valid phone number is required (at least 10 digits)');
       const subject = text(a.subject, 3, 120) || 'Your roof inspection';
       return { ok: true, value: { channel: ch, to: normContact(String(a.to)), subject, body } };
     }
@@ -142,8 +134,8 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
       const status = a.status;
       if (status !== undefined && !CRM_STATUSES.includes(status as (typeof CRM_STATUSES)[number])) return bad('status not allowed');
       const v: Args = {
-        phone: isPhone(a.phone) ? normContact(a.phone) : undefined,
-        email: isEmail(a.email) ? a.email.trim().toLowerCase() : undefined,
+        phone: isPhone(a.phone) ? normContact(a.phone as string) : undefined,
+        email: isEmail(a.email) ? (a.email as string).trim().toLowerCase() : undefined,
         name: text(a.name, 2, 80) || undefined,
         zip: text(a.zip, 3, 12) || undefined,
         roof_issue: text(a.roof_issue, 3, 200) || undefined,
@@ -164,7 +156,6 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
   }
 }
 
-// --------------------------------------------------------------- executors
 export interface ToolEnv {
   db: Supabase | null;
   sessionId: string;
@@ -201,11 +192,7 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
       }
       case 'send_message': {
         if (await optedOut(a.to, env)) return fail('contact opted out');
-        // BOUNDARY: RoofFlow AI does not send email or SMS. There is deliberately
-        // NO email-provider integration here (Resend was removed): the business
-        // plan's constraint is that no message ever leaves the system, so every
-        // send_message records an intent and reports itself as simulated. Wiring
-        // a real provider back in is a product decision, not a plumbing one.
+        // RoofFlow AI records intent only; it does not deliver email or SMS.
         const status = 'simulated_sent';
         const simulated = true;
         let persisted = false, id: string | undefined;
@@ -245,7 +232,6 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
   return fail('unknown tool');
 }
 
-// ------------------------------------------------------------- tool specs
 const S = (type: string, description: string, extra: Record<string, unknown> = {}) => ({ type, description, ...extra });
 const SPECS: Record<ToolName, { description: string; properties: Record<string, unknown>; required: string[] }> = {
   book_inspection: {
@@ -273,7 +259,6 @@ export function toolSpecsFor(agent: AgentType) {
   return TOOL_SETS[agent].map((n) => ({ type: 'function', function: { name: n, description: SPECS[n].description, parameters: { type: 'object', properties: SPECS[n].properties, required: SPECS[n].required } } }));
 }
 
-// ------------------------------------------------------------- agent loop
 export interface ChatMsg { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; name?: string; tool_call_id?: string; tool_calls?: unknown }
 export interface AssistantMsg { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] }
 export type ChatFn = (messages: ChatMsg[], tools: unknown[] | null) => Promise<AssistantMsg>;
