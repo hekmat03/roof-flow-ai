@@ -41,8 +41,6 @@ export interface AgentPrompts {
   agent4: string;
 }
 
-export type StorageStatus = 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error';
-
 interface AppContextType {
   companySettings: CompanySettings;
   setCompanySettings: React.Dispatch<React.SetStateAction<CompanySettings>>;
@@ -54,9 +52,12 @@ interface AppContextType {
   setActiveTab: (tab: string) => void;
   addLead: (lead: Partial<Omit<Lead, 'id'>> & Pick<Lead, 'name' | 'phone'>) => void;
   tenantId: string | null;
+  /** 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error' */
   storageStatus: StorageStatus;
   storageError: string | null;
 }
+
+export type StorageStatus = 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error';
 
 const defaultCompanySettings: CompanySettings = {
   companyName: 'RoofFlow AI Roofing',
@@ -120,6 +121,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStorageError(msg);
   }, []);
 
+  // ---- Load everything for the signed-in tenant -------------------------
   const loadTenant = useCallback(async () => {
     if (!supabase) return;
     configLoaded.current = false;
@@ -153,6 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!supabase) return;
     if (!userId) {
+      // Signed out: drop all tenant data from memory.
       tenantRef.current = null;
       configLoaded.current = false;
       leadsRef.current = [];
@@ -165,6 +168,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void loadTenant();
   }, [userId, loadTenant]);
 
+  // ---- Persist tenant settings/prompts (debounced) ----------------------
   useEffect(() => {
     if (!configLoaded.current || !tenantRef.current) return;
     const id = tenantRef.current;
@@ -174,6 +178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearTimeout(t);
   }, [companySettings, prompts, fail]);
 
+  // ---- Leads: same setState API, synced to Supabase ---------------------
   const setLeads: React.Dispatch<React.SetStateAction<Lead[]>> = useCallback((action) => {
     const prev = leadsRef.current;
     const next = typeof action === 'function' ? action(prev) : action;
@@ -181,7 +186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeadsState(next);
 
     const id = tenantRef.current;
-    if (!id) return;
+    if (!id) return; // signed out: nothing is persisted
 
     const prevById = new Map(prev.map((l) => [l.id, l]));
     const nextIds = new Set(next.map((l) => l.id));
@@ -193,10 +198,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     Promise.all([upsertLeads(id, changed), deleteLeads(id, removed)]).catch((e) => {
       fail(e);
+      // Storage is the source of truth: reload so the UI never shows unsaved data.
       void fetchLeads(id).then((rows) => {
         leadsRef.current = rows;
         setLeadsState(rows);
-      }).catch(() => { /* keep optimistic state; error already set */ });
+      }).catch(() => { /* keep optimistic state; error banner already set */ });
     });
   }, [fail]);
 
@@ -223,6 +229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setLeads((prev) => [leadWithId, ...prev]);
 
+    // Fire-and-forget Google Sheets webhook (no-op if not configured).
     postLeadToWebhook({
       name: leadWithId.name,
       phone: leadWithId.phone,
