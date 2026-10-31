@@ -9,7 +9,6 @@ import {
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAdminClient } from './auth.js';
 
-const GOOGLE_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 const GOOGLE_CALENDAR_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
@@ -200,7 +199,7 @@ export async function createGoogleCalendarEvent(
       ].filter(Boolean).join('\n'),
       start: { dateTime: start.toISOString() },
       end: { dateTime: end.toISOString() },
-      attendees: [{ email: contractorEmail }],
+      attendees: [{ email: contractorEmail }, { email: details.email }],
       reminders: {
         useDefault: false,
         overrides: [{ method: 'email', minutes: 1440 }],

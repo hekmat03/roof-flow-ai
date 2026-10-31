@@ -52,7 +52,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               onClick={() => {
                 setActiveTab(id);
                 setMobileOpen(false);
-                window.history.replaceState({}, '', id === 'crm' ? '/app/crm' : '/app/chatbot');
+                window.history.pushState({}, '', id === 'crm' ? '/app/crm' : '/app/chatbot');
+                window.dispatchEvent(new PopStateEvent('popstate'));
               }}
               aria-current={activeTab === id ? 'page' : undefined}
             >

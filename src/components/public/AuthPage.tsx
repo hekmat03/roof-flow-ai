@@ -1,4 +1,5 @@
-import React, { FormEvent, useState } from 'react';
+import React, { useState } from 'react';
+import type { FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Check, Mail, ShieldCheck, Workflow } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './public.css';
@@ -41,14 +42,15 @@ export const AuthPage: React.FC = () => {
         setNotice('Your account has been created. Verify your email before continuing to your workspace.');
       } else {
         await signIn(email.trim(), password);
-        if (!isEmailVerified && user?.email === email.trim()) {
-          window.location.assign(`/verify-email?email=${encodeURIComponent(email.trim())}`);
-          return;
-        }
         window.location.assign('/app');
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'We could not complete your request. Please try again.');
+      const message = cause instanceof Error ? cause.message : 'We could not complete your request. Please try again.';
+      if (/email.+(not confirmed|not verified)|confirm.+email/i.test(message) && mode === 'login') {
+        window.location.assign(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+        return;
+      }
+      setError(message);
     } finally {
       setBusy(false);
     }

@@ -5,6 +5,7 @@
  * confirms), never as a confirmed appointment.
  */
 import type { Lead } from '../context/AppContext';
+import { validateContactEmail, validateContactPhone } from './contactValidation';
 
 export interface AgentActionResult {
   ok: boolean;
@@ -42,7 +43,14 @@ export function applyActionsToLeads(leads: Lead[], actions: AgentAction[], now: 
 
   actions.forEach((a, i) => {
     if (!a.result.ok) return;
+    // The chat tool path can only record a request, not create a real calendar
+    // event. Let the explicit booking form handle appointments instead.
+    if (a.tool === 'book_inspection' && (!a.result.persisted || a.result.simulated)) return;
     const args = a.args;
+    const actionPhone = str(args.phone);
+    const actionEmail = str(args.email);
+    if (actionPhone && validateContactPhone(actionPhone)) return;
+    if (actionEmail && actionEmail !== 'N/A' && validateContactEmail(actionEmail)) return;
     let idx = findLead(next, args);
 
     if (a.tool === 'book_inspection' || a.tool === 'update_crm') {

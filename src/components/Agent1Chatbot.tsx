@@ -6,8 +6,21 @@ import { runAgentWithTools } from '../lib/agentRunner';
 import { applyActionsToLeads, type AgentAction } from '../lib/applyActions';
 import { AgentActivity } from './AgentActivity';
 import { extractEmail, extractPhone, extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
+import { contactCorrectionPrompt, validateContactEmail, validateContactPhone } from '../lib/contactValidation';
+import { useAuth } from '../context/AuthContext';
+import { createInspectionEvent, getCalendarStatus } from '../lib/calendarApi';
+
+function defaultInspectionDateTime(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 3);
+  date.setHours(10, 0, 0, 0);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead, leads, setLeads } = useApp();
+  const { session } = useAuth();
 
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>([
     {
@@ -27,6 +40,7 @@ export const Agent1Chatbot: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [startsAt, setStartsAt] = useState(defaultInspectionDateTime);
   const [ownership, setOwnership] = useState<'Owner' | 'Renter'>('Owner');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -55,8 +69,8 @@ export const Agent1Chatbot: React.FC = () => {
     const userTexts = messages.filter(m => m.sender === 'User').map(m => m.text);
     const joined = userTexts.join('\n');
     return {
-      email: userTexts.map(t => extractEmail(t)).find(Boolean),
-      phone: userTexts.map(t => extractPhone(t)).find(Boolean),
+      email: userTexts.map(t => extractEmail(t)).find(value => Boolean(value && !validateContactEmail(value))),
+      phone: userTexts.map(t => extractPhone(t)).find(value => Boolean(value && !validateContactPhone(value))),
       name: userTexts.map(t => extractName(t)).find(Boolean),
       zip: extractZip(joined),
       roofIssue: userTexts.map(t => deriveRoofIssue(t)).find(Boolean),
@@ -109,6 +123,17 @@ export const Agent1Chatbot: React.FC = () => {
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+    const correction = contactCorrectionPrompt(text);
+    if (correction) {
+      setMessages(prev => [...prev, userMsg, {
+        sender: 'AI',
+        text: correction,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      setInputText('');
+      setError(null);
+      return;
+    }
 
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
@@ -155,14 +180,67 @@ export const Agent1Chatbot: React.FC = () => {
     }
   };
 
-  const handleBookingSubmit = () => {
+  const handleBookingSubmit = async () => {
     setFormError(null);
-    if (!name.trim() || !phone.trim() || !email.trim()) {
-      setFormError('Please fill in all fields.');
+    const cleanName = name.trim();
+    const cleanPhone = phone.trim();
+    const cleanEmail = email.trim();
+    if (cleanName.length < 2) {
+      setFormError('Enter your name with at least two characters.');
+      return;
+    }
+    const phoneError = validateContactPhone(cleanPhone);
+    if (phoneError) {
+      setFormError(phoneError);
+      return;
+    }
+    const emailError = validateContactEmail(cleanEmail);
+    if (emailError) {
+      setFormError(emailError);
+      return;
+    }
+    if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+      setFormError('Choose a future date and time for the inspection.');
+      return;
+    }
+    if (!session?.access_token) {
+      setFormError('Your session expired. Sign in again before requesting an inspection.');
       return;
     }
 
-    const scheduledDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM';
+    const appointmentDate = new Date(startsAt);
+    const [datePart] = startsAt.split('T');
+    const timePart = appointmentDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const scheduledDate = `${datePart} ${timePart}`;
+    let calendarEventId: string | undefined;
+    let bookingConfirmed = false;
+    try {
+      const calendar = await getCalendarStatus(session.access_token);
+      if (calendar.connected) {
+        const event = await createInspectionEvent(session.access_token, {
+          name: cleanName,
+          phone: cleanPhone,
+          email: cleanEmail,
+          issue: extracted.roofIssue || 'Roof inspection request',
+          zip: extracted.zip || '',
+          startsAt: appointmentDate.toISOString(),
+          notes: `Property ownership: ${ownership}`,
+        });
+        calendarEventId = event.eventId;
+        bookingConfirmed = true;
+      }
+    } catch (cause) {
+      setFormError(cause instanceof Error ? cause.message : 'The inspection request could not be checked against Google Calendar.');
+      return;
+    }
+
+    const appointmentDetails = {
+      date: datePart,
+      time: timePart,
+      notes: bookingConfirmed
+        ? 'Inspection event created in Google Calendar.'
+        : 'Requested by homeowner. The contractor must confirm a time.',
+    };
     const chatLog = messages.map(m => ({
       sender: m.sender,
       text: m.text,
@@ -171,29 +249,42 @@ export const Agent1Chatbot: React.FC = () => {
 
     // If the free-form capture already saved this contact (same phone), UPDATE
     // that lead to booked instead of creating a duplicate.
-    const existing = leads.find(l => l.phone.replace(/\D/g, '') === phone.replace(/\D/g, ''));
+    const existing = leads.find(l => l.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, ''));
     if (existing) {
       setLeads(prev => prev.map(l =>
         l.id === existing.id
-          ? { ...l, status: 'Inspection Scheduled', scheduledDate, propertyOwnership: ownership, appointmentDetails: { date: scheduledDate.split(' ')[0], time: '10:00 AM', notes: 'Booked via Agent 1 chat.' } }
+          ? {
+              ...l,
+              name: cleanName,
+              email: cleanEmail,
+              status: bookingConfirmed ? 'Inspection Scheduled' : 'New Lead',
+              scheduledDate: bookingConfirmed ? scheduledDate : undefined,
+              calendarEventId,
+              propertyOwnership: ownership,
+              appointmentDetails,
+            }
           : l
       ));
     } else {
       addLead({
-        name,
-        phone,
-        email,
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
         propertyOwnership: ownership,
-        status: 'Inspection Scheduled',
+        status: bookingConfirmed ? 'Inspection Scheduled' : 'New Lead',
         agentType: 'Chatbot',
-        scheduledDate,
+        scheduledDate: bookingConfirmed ? scheduledDate : undefined,
+        calendarEventId,
+        appointmentDetails,
         chatLog,
       });
     }
 
     setMessages(prev => [...prev, {
       sender: 'AI',
-      text: `Thanks, ${name}! Your free inspection request has been submitted. Our team will confirm your appointment shortly.`,
+      text: bookingConfirmed
+        ? `Thanks, ${cleanName}. Your inspection is on the Google Calendar for ${datePart} at ${timePart}. A calendar invitation will be sent to ${cleanEmail}.`
+        : `Thanks, ${cleanName}. Your inspection request is saved. The team will contact you to confirm a time around ${datePart} at ${timePart}.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
     setShowBookingForm(false);
@@ -282,34 +373,57 @@ export const Agent1Chatbot: React.FC = () => {
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-orange-500" /> Book Your Free Inspection
                 </h4>
+                <p className="text-[10px] leading-relaxed text-slate-400">
+                  Connected calendars receive an event and invitation. Otherwise, your request is saved for the team to confirm.
+                </p>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <User className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
+                      type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="Full name"
+                      autoComplete="name"
+                      required
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
+                      type="tel"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
                       placeholder="Phone number"
+                      autoComplete="tel"
+                      required
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
+                      type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="Email address"
+                      autoComplete="email"
+                      required
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
+                  <label className="block space-y-1 text-[10px] text-slate-400">
+                    Preferred date and time
+                    <input
+                      type="datetime-local"
+                      value={startsAt}
+                      min={defaultInspectionDateTime().slice(0, 10)}
+                      onChange={e => setStartsAt(e.target.value)}
+                      required
+                      className="input-premium"
+                    />
+                  </label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setOwnership('Owner')}

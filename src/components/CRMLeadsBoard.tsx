@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Lead } from '../context/AppContext';
-import { RealLeadsBoard } from './RealLeadsBoard';
+import { validateContactEmail, validateContactPhone } from '../lib/contactValidation';
 import { 
   Users, 
   Search, 
@@ -33,6 +33,7 @@ export const CRMLeadsBoard: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [leadFormError, setLeadFormError] = useState<string | null>(null);
   const [newOwnership, setNewOwnership] = useState<'Owner' | 'Renter'>('Owner');
   const [newStatus, setNewStatus] = useState<Lead['status']>('New Lead');
   const [newAgentType, setNewAgentType] = useState<Lead['agentType']>('Chatbot');
@@ -135,12 +136,26 @@ export const CRMLeadsBoard: React.FC = () => {
 
   const handleCreateLead = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || !newPhone) {
-      alert('Please fill in Name and Phone.');
+    const name = newName.trim();
+    const phone = newPhone.trim();
+    const email = newEmail.trim();
+    if (name.length < 2) {
+      setLeadFormError('Enter a name with at least two characters.');
       return;
     }
+    const phoneError = validateContactPhone(phone);
+    if (phoneError) {
+      setLeadFormError(phoneError);
+      return;
+    }
+    const emailError = email ? validateContactEmail(email) : null;
+    if (emailError) {
+      setLeadFormError(emailError);
+      return;
+    }
+    setLeadFormError(null);
 
-    const emailVal = newEmail || 'N/A';
+    const emailVal = email || 'N/A';
     const apptDetailsObj = newStatus === 'Inspection Scheduled' && newApptDate
       ? {
           date: newApptDate,
@@ -154,8 +169,8 @@ export const CRMLeadsBoard: React.FC = () => {
       : undefined;
 
     addLead({
-      name: newName,
-      phone: newPhone,
+      name,
+      phone,
       email: emailVal,
       propertyOwnership: newOwnership,
       status: newStatus,
@@ -248,12 +263,10 @@ export const CRMLeadsBoard: React.FC = () => {
         </button>
       </div>
 
-      {/* LIVE leads captured by the embeddable website widget (server-side). */}
-      <RealLeadsBoard />
-
       {/* Manual Add Form (Collapsible Card) */}
       {isAddOpen && (
         <form onSubmit={handleCreateLead} className="glass rounded-2xl p-6 shadow-xl max-w-3xl animate-slideDown">
+          {leadFormError && <p className="mb-4 rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs text-red-200" role="alert">{leadFormError}</p>}
           <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Plus className="h-4 w-4 text-orange-500" /> Create New Lead Profile

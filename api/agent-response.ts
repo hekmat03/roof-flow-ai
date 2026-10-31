@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model,
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
         temperature: 0.6,
-        max_tokens: agentType === 'phone' ? 120 : 300,
+        max_tokens: 300,
       }),
       signal: controller.signal,
     });
@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Mistral API error:', response.status);
       return res.status(502).json({ error: 'AI provider error' });
     }
-    const data = await response.json();
+    const data = await response.json() as { choices?: { message?: { content?: string } }[] };
     const reply: string = (data?.choices?.[0]?.message?.content ?? '').toString().trim();
     if (!reply) return res.status(502).json({ error: 'Empty AI reply' });
 

@@ -46,7 +46,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const messages = sanitizeMessages(body.messages);
   if (!messages) return res.status(400).json({ error: 'messages must be an array of {role, content}' });
   const ctx = sanitizeContext(body.context);
-  const sessionId = typeof body.sessionId === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(body.sessionId) ? body.sessionId : 'anon';
 
   const systemPrompt = buildSystemPrompt(agentType, ctx) + '\n' + TOOL_POLICY;
   const allowedContacts = collectAllowedContacts(
@@ -65,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         signal: controller.signal,
       });
       if (!r.ok) throw new Error(`provider ${r.status}`);
-      const data = await r.json();
+      const data = await r.json() as { choices?: { message?: Record<string, unknown> }[] };
       return data?.choices?.[0]?.message ?? {};
     } finally {
       clearTimeout(timer);

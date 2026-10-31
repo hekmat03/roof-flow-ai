@@ -4,6 +4,7 @@
 // Only TYPE imports from other files, so tests can load this with Node directly.
 
 import type { AgentType } from './agent.js';
+import { validateContactEmail, validateContactPhone } from '../../src/lib/contactValidation.js';
 
 export type ToolName = 'book_inspection' | 'send_message' | 'update_crm' | 'schedule_followup';
 
@@ -48,7 +49,7 @@ export function createSupabase(url?: string, key?: string, fetchFn: Fetch = fetc
   const send = async (path: string, init: RequestInit) => {
     const r = await fetchFn(base + path, init);
     if (!r.ok) throw new Error(`storage ${r.status}`);
-    return r.json();
+    return r.json() as Promise<{ id?: string }[]>;
   };
   return {
     async insert(table, row) {
@@ -110,8 +111,8 @@ const text = (v: unknown, min: number, max: number): string | null => {
   const t = v.replace(/[\u0000-\u001F\u007F]/g, ' ').trim();
   return t.length >= min && t.length <= max ? t : null;
 };
-const isPhone = (v: unknown): v is string => typeof v === 'string' && /^\d{7,15}$/.test(normContact(v));
-const isEmail = (v: unknown): v is string => typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+const isPhone = (v: unknown): v is string => typeof v === 'string' && validateContactPhone(v) === null;
+const isEmail = (v: unknown): v is string => typeof v === 'string' && validateContactEmail(v) === null;
 
 export function validateToolArgs(name: string, raw: unknown): Valid {
   const a = (raw && typeof raw === 'object' ? raw : {}) as Args;

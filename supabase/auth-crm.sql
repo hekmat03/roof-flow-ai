@@ -115,8 +115,10 @@ begin
 end;
 $$;
 
+-- Replace any earlier demo trigger so each new account receives exactly one tenant.
+drop trigger if exists on_auth_user_created on auth.users;
 drop trigger if exists on_roofflow_user_created on auth.users;
-create trigger on_roofflow_user_created
+create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_roofflow_user();
 

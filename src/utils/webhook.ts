@@ -12,6 +12,7 @@
 
 export const WEBHOOK_URL_STORAGE = 'roofflow_webhook_url';
 export const WEBHOOK_TIMEOUT_MS = 8000;
+let webhookUrl = '';
 
 export interface LeadWebhookPayload {
   name: string;
@@ -25,19 +26,11 @@ export interface LeadWebhookPayload {
 }
 
 export function getWebhookUrl(): string {
-  try {
-    return (localStorage.getItem(WEBHOOK_URL_STORAGE) || '').trim();
-  } catch {
-    return '';
-  }
+  return webhookUrl.trim();
 }
 
 export function setWebhookUrl(url: string): void {
-  try {
-    localStorage.setItem(WEBHOOK_URL_STORAGE, url.trim());
-  } catch {
-    /* storage unavailable — non-fatal */
-  }
+  webhookUrl = url.trim();
 }
 
 /**

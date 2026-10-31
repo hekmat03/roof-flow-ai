@@ -93,7 +93,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [companySettings, setCompanySettings] = useState<CompanySettings>(defaultCompanySettings);
   const [leads, setLeadsState] = useState<Lead[]>([]);
   const [prompts, setPrompts] = useState<AgentPrompts>(defaultPrompts);
-  const [activeTab, setActiveTab] = useState<string>('agent1');
+  const [activeTab, setActiveTab] = useState<string>(() =>
+    window.location.pathname.replace(/\/+$/, '') === '/app/crm' ? 'crm' : 'agent1'
+  );
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageState, setStorageState] = useState<AppContextType['storageState']>('loading');
@@ -236,7 +238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { sender: 'System', text: `Lead initialized via ${newLead.agentType || 'Chatbot'}.`, timestamp: new Date().toLocaleString() }
       ],
     };
-    setLeads([leadWithId, ...leads]);
+    setLeads((current) => [leadWithId, ...current]);
   };
 
   return (
