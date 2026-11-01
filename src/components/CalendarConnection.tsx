@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -60,10 +61,12 @@ export const CalendarConnection: React.FC = () => {
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Checking calendar…
         </span>
       ) : status?.connected ? (
-        <div className="flex items-center gap-2 text-emerald-400">
-          <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="truncate" title={status.email ?? ''}>Calendar: {status.email}</span>
-          <button type="button" onClick={() => void refresh()} aria-label="Refresh calendar status" className="ml-auto text-slate-400 hover:text-white">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-500">
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden /> Calendar connected
+          </span>
+          <span className="min-w-0 flex-1 truncate text-slate-400" title={status.email ?? ''}>{status.email}</span>
+          <button type="button" onClick={() => void refresh()} aria-label="Refresh calendar status" className="min-h-0 text-slate-400 hover:text-white">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
