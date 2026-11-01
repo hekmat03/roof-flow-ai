@@ -1,3 +1,4 @@
+
 /**
  * AnalyticsCharts — Chart.js analytics for the Dashboard.
  * ----------------------------------------------------------------------------
@@ -234,7 +235,7 @@ export const AnalyticsCharts: React.FC = () => {
               Estimated pipeline value from captured leads — window adapts to your CRM history
             </p>
           </div>
-          <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+          <span className="text-xs font-mono font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
             ${revenueData.total.toLocaleString()}
           </span>
         </div>
