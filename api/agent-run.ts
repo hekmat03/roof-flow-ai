@@ -13,7 +13,6 @@ import {
   AGENT_TYPES,
   TOOL_POLICY,
   buildSystemPrompt,
-  rateLimited,
   sanitizeContext,
   sanitizeMessages,
   type AgentType,
@@ -25,6 +24,7 @@ import {
   type ChatFn,
 } from './_lib/tools.js';
 import { guardChat } from './_lib/guard.js';
+import { enforceRateLimit } from './_lib/rateLimit.js';
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 const optOuts = new Set<string>();
@@ -57,15 +57,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'AI is not configured on the server' });
   }
 
-  const fwd = req.headers['x-forwarded-for'];
-  const ip =
-    (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() || 'unknown';
-
-  if (rateLimited(`run:${ip}`, 20)) {
-    return res.status(429).json({
-      error: 'Too many requests, please slow down',
-    });
-  }
+  // 10 requests / minute / IP (shared by both AI endpoints)
+  if (!(await enforceRateLimit(req, res, 'ai'))) return;
 
   const body = (
     req.body && typeof req.body === 'object' ? req.body : {}
