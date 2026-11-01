@@ -11,7 +11,7 @@ import {
 
 export const Configuration: React.FC = () => {
   const { companySettings, setCompanySettings } = useApp();
-  
+
   // Local form state
   const [companyName, setCompanyName] = useState(companySettings.companyName);
   const [city, setCity] = useState(companySettings.city);
@@ -19,7 +19,7 @@ export const Configuration: React.FC = () => {
   const [stormDate, setStormDate] = useState(companySettings.stormDate);
   const [financingOptions, setFinancingOptions] = useState(companySettings.financingOptions);
   const [agentTone, setAgentTone] = useState(companySettings.agentTone);
-  
+
   const [isSaved, setIsSaved] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,7 +44,7 @@ export const Configuration: React.FC = () => {
       setStormDate('May 15, 2026');
       setFinancingOptions('0% APR for 12 months, or low-interest plans starting at $99/mo');
       setAgentTone('Professional, reassuring, hazard-focused, and highly helpful');
-      
+
       setCompanySettings({
         companyName: 'RoofFlow AI Roofing',
         city: 'Dallas-Fort Worth',
@@ -127,7 +127,7 @@ export const Configuration: React.FC = () => {
                 onChange={e => setFinancingOptions(e.target.value)}
                 className="input-premium text-sm font-medium leading-relaxed"
               />
-              <span className="text-[10px] text-slate-500 mt-1.5 block">Used by Phone/Estimate Agents to answer "How will I pay for my deductible?"</span>
+              <span className="text-[10px] text-slate-500 mt-1.5 block">Used by the chatbot to answer "How will I pay for my deductible?"</span>
             </div>
 
             {/* Textarea 2 */}
