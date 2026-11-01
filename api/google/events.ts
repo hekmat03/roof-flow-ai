@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest } from '../_lib/auth.js';
 import {
@@ -25,11 +26,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const notes = typeof body.notes === 'string' ? body.notes.trim().slice(0, 500) : '';
 
     const name = validateName(body.name);
-    if (!name.ok) return res.status(400).json({ error: name.error });
+    if ('error' in name) return res.status(400).json({ error: name.error });
     const phone = validatePhone(body.phone);
-    if (!phone.ok) return res.status(400).json({ error: phone.error });
+    if ('error' in phone) return res.status(400).json({ error: phone.error });
     const email = validateEmail(body.email);
-    if (!email.ok) return res.status(400).json({ error: email.error });
+    if ('error' in email) return res.status(400).json({ error: email.error });
     if (!issue || issue.length > 1000) return res.status(400).json({ error: 'Describe the roof concern before booking.' });
     const start = new Date(startsAt);
     if (!Number.isFinite(start.getTime()) || start.getTime() <= Date.now()) {
