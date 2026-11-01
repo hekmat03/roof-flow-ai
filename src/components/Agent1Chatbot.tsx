@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
@@ -408,174 +409,190 @@ export const Agent1Chatbot: React.FC = () => {
               </div>
             )}
 
-            {/* Inline booking form, shown when the AI signals booking intent */}
-            {showBookingForm && (
-              <div className="bg-slate-900/80 backdrop-blur-md border border-accent-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-orange-500" /> Book Your Free Inspection
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                    <User className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                    <input
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      placeholder="Full name"
-                      autoComplete="name"
-                      aria-invalid={Boolean(fieldErrors.name)}
-                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
-                    />
-                  </div>
-                  {fieldErrors.name && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.name}</p>}
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                    <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                    <input
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      placeholder="Phone number (10+ digits)"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      aria-invalid={Boolean(fieldErrors.phone)}
-                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
-                    />
-                  </div>
-                  {fieldErrors.phone && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.phone}</p>}
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                    <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                    <input
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="Email address"
-                      inputMode="email"
-                      autoComplete="email"
-                      aria-invalid={Boolean(fieldErrors.email)}
-                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
-                    />
-                  </div>
-                  {fieldErrors.email && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.email}</p>}
-                  <label className="block text-[10px] text-slate-400">
-                    Preferred inspection date and time
-                    <input
-                      type="datetime-local"
-                      value={startsAt}
-                      min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
-                      onChange={e => setStartsAt(e.target.value)}
-                      className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none"
-                    />
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setOwnership('Owner')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
-                    >
-                      I own the home
-                    </button>
-                    <button
-                      onClick={() => setOwnership('Renter')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
-                    >
-                      I rent
-                    </button>
-                  </div>
-                </div>
-                {formError && <p className="text-[10px] text-red-400">{formError}</p>}
-                <button
-                  onClick={() => void handleBookingSubmit()}
-                  disabled={booking}
-                  className="w-full btn-accent text-xs py-3 disabled:opacity-60"
-                >
-                  {booking ? 'Booking…' : 'Confirm Free Inspection Request'}
-                </button>
-              </div>
-            )}
-          </div>
+  const handleBookingSubmit = async () => {
+    if (booking) return;
+    setFormError(null);
+    const n = validateName(name);
+    const p = validatePhone(phone);
+    const e = validateEmail(email);
+    if (!n.ok || !p.ok || !e.ok) {
+      setFieldErrors({
+        name: n.ok ? undefined : n.error,
+        phone: p.ok ? undefined : p.error,
+        email: e.ok ? undefined : e.error,
+      });
+      setFormError('Please fix the highlighted fields.');
+      return;
+    }
+    setFieldErrors({});
+    if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+      setFormError('Choose a future date and time for the inspection.');
+      return;
+    }
+    const cleanName = n.value;
+    const cleanPhone = formatPhone(p.value);
+    const cleanEmail = e.value;
 
-          {/* Quick Replies Buttons */}
-          {!showBookingForm && (
-            <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
-              {quickReplies.map((reply, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSend(reply)}
-                  disabled={isLoading}
-                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-2.5 rounded-full transition shrink-0 disabled:opacity-50"
-                >
-                  {reply}
-                </button>
-              ))}
-            </div>
-          )}
+    setBooking(true);
+    const when = new Date(startsAt);
+    const datePart = startsAt.split('T')[0];
+    const timePart = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const scheduledDate = `${datePart} ${timePart}`;
 
-          {/* Input Form */}
-          <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex items-center space-x-3 shrink-0">
-            <input
-              type="text"
-              placeholder="Ask anything about storm damage or inspections..."
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend(inputText)}
-              disabled={isLoading || showBookingForm}
-              className="flex-1 input-premium disabled:opacity-50"
-            />
-            <button
-              onClick={() => handleSend(inputText)}
-              disabled={isLoading || showBookingForm}
-              className="btn-accent p-3 rounded-xl shrink-0 disabled:opacity-50 min-h-0"
-            >
-              <Send className="h-4 w-4 stroke-[2.5]" />
-            </button>
-          </div>
-        </div>
+    // Create a Google Calendar event ONLY if the contractor connected a calendar.
+    // A lead is never lost: if the calendar step fails, the request is still saved.
+    let calendarEventId: string | undefined;
+    let calendarProblem: string | null = null;
+    if (session?.access_token) {
+      try {
+        const calendar = await getCalendarStatus(session.access_token);
+        if (calendar.connected) {
+          const event = await createInspectionEvent(session.access_token, {
+            name: cleanName,
+            phone: cleanPhone,
+            email: cleanEmail,
+            issue: extracted.roofIssue || 'Roof inspection request',
+            zip: extracted.zip || '',
+            startsAt: when.toISOString(),
+            notes: `Property ownership: ${ownership}`,
+          });
+          calendarEventId = event.eventId;
+        }
+      } catch (cause) {
+        calendarProblem = cause instanceof Error ? cause.message : 'The calendar event could not be created.';
+      }
+    }
+    const confirmed = Boolean(calendarEventId);
 
-        {/* Sidebar Simulator explanation (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="glass card-hover rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Sparkles className="h-4.5 w-4.5 text-accent-400" /> How This Works
-            </h3>
-            <p className="text-xs text-slate-400 leading-relaxed mt-3">
-              This is a live AI assistant, not a scripted demo. It answers freely using your company info, and hands off to a real booking form once a visitor is ready to schedule.
-            </p>
-            <div className="mt-4 space-y-3.5 text-xs text-slate-300">
-              <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">1</div>
-                <div>
-                  <p className="font-bold text-white">Live AI Conversation</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">2</div>
-                <div>
-                  <p className="font-bold text-white">Booking Handoff</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
-                <div>
-                  <p className="font-bold text-white">CRM Sync</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+    const appointmentDetails = {
+      date: datePart,
+      time: timePart,
+      calendarEventId,
+      notes: confirmed
+        ? 'Inspection event created in Google Calendar.'
+        : 'Requested by homeowner. The contractor must confirm a time.',
+    };
+    const chatLog = messages.map(m => ({
+      sender: m.sender,
+      text: m.text,
+      timestamp: m.timestamp,
+    }));
 
-          {hasQualified && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
-              <Calendar className="h-5 w-5 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-white">Lead Transferred to CRM!</h4>
-                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                  Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcript.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+    // If the free-form capture already saved this contact (same phone), UPDATE
+    // that lead instead of creating a duplicate.
+    const existing = leads.find(l => l.phone.replace(/\D/g, '') === p.value);
+    if (existing) {
+      setLeads(prev => prev.map(l =>
+        l.id === existing.id
+          ? {
+              ...l,
+              name: cleanName,
+              email: cleanEmail,
+              status: confirmed ? 'Inspection Scheduled' : 'New Lead',
+              scheduledDate: confirmed ? scheduledDate : '',
+              propertyOwnership: ownership,
+              appointmentDetails,
+            }
+          : l
+      ));
+    } else {
+      addLead({
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
+        propertyOwnership: ownership,
+        status: confirmed ? 'Inspection Scheduled' : 'New Lead',
+        agentType: 'Chatbot',
+        scheduledDate: confirmed ? scheduledDate : '',
+        appointmentDetails,
+        chatLog,
+      }, { validate: true });
+    }
+
+    setMessages(prev => [...prev, {
+      sender: 'AI',
+      text: confirmed
+        ? `Thanks, ${cleanName}. Your inspection is on the calendar for ${datePart} at ${timePart}. A calendar invitation will be sent to ${cleanEmail}.`
+        : `Thanks, ${cleanName}. Your inspection request is saved. The team will contact you to confirm a time around ${datePart} at ${timePart}.${calendarProblem ? ' (The calendar event could not be created, so the contractor will confirm it manually.)' : ''}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setBooking(false);
+    setShowBookingForm(false);
+    setHasQualified(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
+        <p className="text-xs text-slate-400 mt-1">
+          Real AI-powered chat. Ask anything about storm damage, insurance, or inspections — the assistant responds live and hands off to a booking form when you're ready to schedule.
+        </p>
       </div>
 
-      <AgentActivity actions={actionLog} />
-    </div>
-  );
-};
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Chat Interface (7 cols) */}
+        <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
+          {/* Top Chat Header */}
+          <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="bg-orange-500/10 p-2 rounded-lg relative">
+                <Bot className="h-5 w-5 text-orange-500" />
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-slate-900"></span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">RoofFlow Virtual Specialist</h3>
+                <p className="text-[10px] text-slate-400">AI Assistant • Online 24/7</p>
+              </div>
+            </div>
+            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
+              AGENT 1
+            </span>
+          </div>
+
+          {/* Chat Messages Log */}
+          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
+            {messages.map((msg, index) => {
+              const isAI = msg.sender === 'AI';
+              return (
+                <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
+                  <div className="flex items-start space-x-2.5 max-w-md">
+                    {isAI && (
+                      <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                        <Bot className="h-4 w-4 text-orange-500" />
+                      </div>
+                    )}
+                    <div className={`px-4 py-2.5 text-xs leading-relaxed ${
+                      isAI
+                        ? 'chat-bubble-ai rounded-tl-none'
+                        : 'chat-bubble-user rounded-tr-none'
+                    }`}>
+                      <p>{msg.text}</p>
+                      <span className="text-[9px] opacity-40 block text-right mt-1.5 font-mono">
+                        {msg.timestamp}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {isLoading && (
+              <div className="flex justify-start animate-slideUp">
+                <div className="flex items-start space-x-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4 text-orange-500" />
+                  </div>
+                  <div className="typing-indicator">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex justify-center">
+                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">{error}</span>
+              </div>
+            )}
