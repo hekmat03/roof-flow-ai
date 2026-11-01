@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { useCountUp } from '../utils/useCountUp';
@@ -115,9 +116,9 @@ export const Dashboard: React.FC = () => {
       display: String(Math.round(animScheduled)),
       sub: `${bookingRate}% Lead-to-Booking Rate`,
       subIcon: null,
-      chip: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+      chip: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
       icon: Calendar,
-      iconColor: 'text-emerald-400',
+      iconColor: 'text-accent-400',
     },
     {
       label: 'Reactivation Queue',
@@ -284,7 +285,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <p className="text-sm font-semibold text-slate-300">No leads captured yet</p>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Run any agent simulator above — a real lead appears here instantly, with its full
+                Chat with the chatbot — a real lead appears here instantly, with its full
                 conversation transcript. Nothing is pre-seeded.
               </p>
             </div>
