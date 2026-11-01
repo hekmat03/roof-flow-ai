@@ -14,13 +14,14 @@ import { PromptPlayground } from './components/PromptPlayground';
 import { BillingGateway } from './components/BillingGateway';
 import { FallbackNotice } from './components/FallbackNotice';
 import { usePlan } from './lib/usePlan';
-import { canAccess } from './lib/planAccess';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { canAccess, fallbackTab } from './lib/planAccess';
+import { StatusBanner } from './components/StatusBanner';
+import { AuthProvider } from './context/AuthContext';
 import { AuthPage } from './components/auth/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { FullScreenSpinner } from './components/Spinner';
 import { Redirect } from './components/Redirect';
+import { LandingPage } from './components/public/LandingPage';
 import { usePath } from './lib/router';
 
 function MainAppContent() {
@@ -29,7 +30,7 @@ function MainAppContent() {
 
   const activeTab = canAccess(plan, requestedTab)
     ? requestedTab
-    : 'pricing';
+    : fallbackTab();
 
   const renderContent = () => {
     switch (activeTab) {
@@ -59,22 +60,14 @@ function MainAppContent() {
 
   return (
     <Layout>
+      <StatusBanner />
       <div key={activeTab} className="animate-tab-in h-full">
         {renderContent()}
       </div>
-
       <FallbackNotice />
       <UpgradeModal />
     </Layout>
   );
-}
-
-function Home() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <FullScreenSpinner />;
-
-  return <Redirect to={user ? '/app' : '/login'} />;
 }
 
 function Routes() {
@@ -82,14 +75,11 @@ function Routes() {
 
   switch (path) {
     case '/':
-      return <Home />;
-
+      return <LandingPage />;
     case '/login':
       return <AuthPage mode="login" />;
-
     case '/signup':
       return <AuthPage mode="signup" />;
-
     case '/app':
       return (
         <ProtectedRoute>
@@ -100,7 +90,6 @@ function Routes() {
           </AppProvider>
         </ProtectedRoute>
       );
-
     default:
       return <Redirect to="/" />;
   }
