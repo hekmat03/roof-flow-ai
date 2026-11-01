@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
@@ -6,6 +5,8 @@ import { detectLatestIntent, type AgentMessage } from '../lib/agentService';
 import { runAgentWithTools } from '../lib/agentRunner';
 import { applyActionsToLeads, type AgentAction } from '../lib/applyActions';
 import { AgentActivity } from './AgentActivity';
+import { useAuth } from '../context/AuthContext';
+import { createInspectionEvent, getCalendarStatus } from '../lib/calendarApi';
 import { extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
 import {
   validateEmail, validatePhone, validateName, formatPhone,
@@ -42,8 +43,17 @@ function contactProblems(text: string): string[] {
   return out;
 }
 
+/** "YYYY-MM-DDTHH:mm" for <input type="datetime-local">: 3 days from now at 10:00 local. */
+function defaultInspectionDateTime(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 3);
+  d.setHours(10, 0, 0, 0);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead, leads, setLeads } = useApp();
+  const { session } = useAuth();
 
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>([
     {
@@ -65,6 +75,8 @@ export const Agent1Chatbot: React.FC = () => {
   const [email, setEmail] = useState('');
   const [ownership, setOwnership] = useState<'Owner' | 'Renter'>('Owner');
   const [formError, setFormError] = useState<string | null>(null);
+  const [startsAt, setStartsAt] = useState(defaultInspectionDateTime);
+  const [booking, setBooking] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -208,7 +220,8 @@ export const Agent1Chatbot: React.FC = () => {
     }
   };
 
-  const handleBookingSubmit = () => {
+  const handleBookingSubmit = async () => {
+    if (booking) return;
     setFormError(null);
     const n = validateName(name);
     const p = validatePhone(phone);
@@ -223,11 +236,53 @@ export const Agent1Chatbot: React.FC = () => {
       return;
     }
     setFieldErrors({});
+    if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+      setFormError('Choose a future date and time for the inspection.');
+      return;
+    }
     const cleanName = n.value;
     const cleanPhone = formatPhone(p.value);
     const cleanEmail = e.value;
 
-    const scheduledDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM';
+    setBooking(true);
+    const when = new Date(startsAt);
+    const datePart = startsAt.split('T')[0];
+    const timePart = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const scheduledDate = `${datePart} ${timePart}`;
+
+    // Create a Google Calendar event ONLY if the contractor connected a calendar.
+    // A lead is never lost: if the calendar step fails, the request is still saved.
+    let calendarEventId: string | undefined;
+    let calendarProblem: string | null = null;
+    if (session?.access_token) {
+      try {
+        const calendar = await getCalendarStatus(session.access_token);
+        if (calendar.connected) {
+          const event = await createInspectionEvent(session.access_token, {
+            name: cleanName,
+            phone: cleanPhone,
+            email: cleanEmail,
+            issue: extracted.roofIssue || 'Roof inspection request',
+            zip: extracted.zip || '',
+            startsAt: when.toISOString(),
+            notes: `Property ownership: ${ownership}`,
+          });
+          calendarEventId = event.eventId;
+        }
+      } catch (cause) {
+        calendarProblem = cause instanceof Error ? cause.message : 'The calendar event could not be created.';
+      }
+    }
+    const confirmed = Boolean(calendarEventId);
+
+    const appointmentDetails = {
+      date: datePart,
+      time: timePart,
+      calendarEventId,
+      notes: confirmed
+        ? 'Inspection event created in Google Calendar.'
+        : 'Requested by homeowner. The contractor must confirm a time.',
+    };
     const chatLog = messages.map(m => ({
       sender: m.sender,
       text: m.text,
@@ -235,12 +290,20 @@ export const Agent1Chatbot: React.FC = () => {
     }));
 
     // If the free-form capture already saved this contact (same phone), UPDATE
-    // that lead to booked instead of creating a duplicate.
+    // that lead instead of creating a duplicate.
     const existing = leads.find(l => l.phone.replace(/\D/g, '') === p.value);
     if (existing) {
       setLeads(prev => prev.map(l =>
         l.id === existing.id
-          ? { ...l, status: 'Inspection Scheduled', scheduledDate, propertyOwnership: ownership, appointmentDetails: { date: scheduledDate.split(' ')[0], time: '10:00 AM', notes: 'Booked via Agent 1 chat.' } }
+          ? {
+              ...l,
+              name: cleanName,
+              email: cleanEmail,
+              status: confirmed ? 'Inspection Scheduled' : 'New Lead',
+              scheduledDate: confirmed ? scheduledDate : '',
+              propertyOwnership: ownership,
+              appointmentDetails,
+            }
           : l
       ));
     } else {
@@ -249,18 +312,22 @@ export const Agent1Chatbot: React.FC = () => {
         phone: cleanPhone,
         email: cleanEmail,
         propertyOwnership: ownership,
-        status: 'Inspection Scheduled',
+        status: confirmed ? 'Inspection Scheduled' : 'New Lead',
         agentType: 'Chatbot',
-        scheduledDate,
+        scheduledDate: confirmed ? scheduledDate : '',
+        appointmentDetails,
         chatLog,
       }, { validate: true });
     }
 
     setMessages(prev => [...prev, {
       sender: 'AI',
-      text: `Thanks, ${cleanName}! Your free inspection request has been submitted. Our team will confirm your appointment shortly.`,
+      text: confirmed
+        ? `Thanks, ${cleanName}. Your inspection is on the calendar for ${datePart} at ${timePart}. A calendar invitation will be sent to ${cleanEmail}.`
+        : `Thanks, ${cleanName}. Your inspection request is saved. The team will contact you to confirm a time around ${datePart} at ${timePart}.${calendarProblem ? ' (The calendar event could not be created, so the contractor will confirm it manually.)' : ''}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
+    setBooking(false);
     setShowBookingForm(false);
     setHasQualified(true);
   };
@@ -386,6 +453,16 @@ export const Agent1Chatbot: React.FC = () => {
                     />
                   </div>
                   {fieldErrors.email && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.email}</p>}
+                  <label className="block text-[10px] text-slate-400">
+                    Preferred inspection date and time
+                    <input
+                      type="datetime-local"
+                      value={startsAt}
+                      min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
+                      onChange={e => setStartsAt(e.target.value)}
+                      className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none"
+                    />
+                  </label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setOwnership('Owner')}
@@ -403,10 +480,11 @@ export const Agent1Chatbot: React.FC = () => {
                 </div>
                 {formError && <p className="text-[10px] text-red-400">{formError}</p>}
                 <button
-                  onClick={handleBookingSubmit}
-                  className="w-full btn-accent text-xs py-3"
+                  onClick={() => void handleBookingSubmit()}
+                  disabled={booking}
+                  className="w-full btn-accent text-xs py-3 disabled:opacity-60"
                 >
-                  Confirm Free Inspection Request
+                  {booking ? 'Booking…' : 'Confirm Free Inspection Request'}
                 </button>
               </div>
             )}
