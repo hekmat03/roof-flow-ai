@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { MailCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -32,7 +33,7 @@ export function VerifyEmail({ email }: { email: string }) {
           Click it to activate your account, then log in.
         </p>
         {msg && (
-          <p role="alert" className={`text-sm mb-4 ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>
+          <p role="alert" className={`text-sm mb-4 ${msg.ok ? 'text-accent-400' : 'text-red-400'}`}>{msg.text}</p>
         )}
         <button
           onClick={resend}
