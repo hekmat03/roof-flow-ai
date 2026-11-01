@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Terminal, Save, Play, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
@@ -123,7 +124,7 @@ Your goals:
               <textarea
                 value={promptText}
                 onChange={e => setPromptText(e.target.value)}
-                className="input-premium flex-1 p-4 text-xs font-mono text-emerald-400 leading-relaxed resize-none h-full"
+                className="input-premium flex-1 p-4 text-xs font-mono text-accent-400 leading-relaxed resize-none h-full"
                 placeholder="Enter system prompts here..."
               />
             </div>
@@ -141,7 +142,7 @@ Your goals:
 
             <div className="flex items-center space-x-3">
               {isSaved && (
-                <span className="text-emerald-400 text-xs font-bold flex items-center gap-1.5">
+                <span className="text-accent-400 text-xs font-bold flex items-center gap-1.5">
                   <CheckCircle2 className="h-4.5 w-4.5 stroke-[2.5]" /> Agent Prompt Synced!
                 </span>
               )}
