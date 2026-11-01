@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Lead } from '../context/AppContext';
@@ -372,7 +371,7 @@ export const Agent4Estimate: React.FC = () => {
                 <HelpCircle className="h-3.5 w-3.5 text-orange-500" /> Dedicated post-inspection estimator follow-ups
               </span>
               {savingSuccess && (
-                <span className="text-emerald-400 font-semibold flex items-center gap-1 animate-fadeIn">
+                <span className="text-accent-400 font-semibold flex items-center gap-1 animate-fadeIn">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Dialogue synced with CRM Board
                 </span>
               )}
