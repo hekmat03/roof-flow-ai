@@ -21,7 +21,9 @@ import {
 import { usePlan } from '../lib/usePlan';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../lib/router';
-import { canAccess, upgradeLabel } from '../lib/planAccess';
+import { canAccess, upgradeLabel, isHidden, requiredPlan, PLAN_NAMES } from '../lib/planAccess';
+import { useBilling } from '../context/BillingContext';
+import { CalendarConnection } from './CalendarConnection';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,6 +33,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { companySettings, activeTab, setActiveTab, leads } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const plan = usePlan();
+  const { openUpgrade } = useBilling();
   const { user, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -53,6 +56,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'prompts', label: 'Prompt Playground', icon: Terminal },
   ];
 
+  // Agents 2-4 are hidden (not deleted): see HIDDEN_TABS in lib/planAccess.ts
+  const visibleItems = menuItems.filter((item) => !isHidden(item.id));
+
   const totalLeads = leads.length;
 
   const scheduledInspections = leads.filter(
@@ -60,7 +66,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   ).length;
 
   function handleTabSelect(id: string) {
-    setActiveTab(canAccess(plan, id) ? id : 'pricing');
+    if (canAccess(plan, id)) {
+      setActiveTab(id);
+    } else {
+      const needs = requiredPlan(id);
+      const label = menuItems.find((m) => m.id === id)?.label ?? 'This feature';
+      openUpgrade(`${label} is included in the ${needs ? PLAN_NAMES[needs] : 'Pro'} plan and above.`);
+    }
     setMobileMenuOpen(false);
   }
 
@@ -113,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
 
           <nav className="p-3 md:p-4 space-y-1">
-            {menuItems.map((item) => {
+            {visibleItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 
@@ -144,6 +156,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-400 space-y-3">
+          <CalendarConnection />
           <div className="truncate" title={user?.email ?? ''}>
             {user?.email}
           </div>
