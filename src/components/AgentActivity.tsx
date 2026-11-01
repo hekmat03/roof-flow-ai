@@ -1,3 +1,4 @@
+
 /**
  * AgentActivity — transparent log of every real action the AI agent took
  * (booking requests, messages, CRM updates, scheduled follow-ups), with an
@@ -32,7 +33,7 @@ export const AgentActivity: React.FC<{ actions: AgentAction[] }> = ({ actions })
             ? 'text-red-400 bg-red-500/10 border-red-500/20'
             : badge === 'DEMO'
               ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-              : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+              : 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
           return (
             <li key={i} className="flex items-start gap-3 bg-slate-900/40 border border-slate-800/80 rounded-xl px-3 py-2">
               {a.result.ok ? <m.Icon className="h-4 w-4 text-slate-300 mt-0.5 shrink-0" /> : <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />}
