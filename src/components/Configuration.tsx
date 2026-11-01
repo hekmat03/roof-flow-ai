@@ -155,7 +155,7 @@ export const Configuration: React.FC = () => {
 
               <div className="flex items-center space-x-3">
                 {isSaved && (
-                  <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                  <span className="text-accent-400 text-xs font-bold flex items-center gap-1">
                     <ShieldCheck className="h-4.5 w-4.5 stroke-[2.5]" /> Configuration Synced!
                   </span>
                 )}
@@ -175,7 +175,7 @@ export const Configuration: React.FC = () => {
           <div className="glass card-hover rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-3">Settings Synchronization</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Updates saved in this configuration panel are instantly propagated across all four simulators.
+              Updates saved in this panel apply to your chatbot right away.
             </p>
             <div className="mt-4 space-y-3">
               <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 flex items-start space-x-2 text-xs">
@@ -244,7 +244,7 @@ const IntegrationPanel: React.FC = () => {
             <PlugZap className="h-4.5 w-4.5 text-orange-500" /> Live Integrations (Free Tier)
           </h3>
           <p className="text-xs text-slate-400 mt-1.5">
-            Wire real AI inference and real CRM storage into the simulators. Everything degrades gracefully —
+            Connect real AI and real lead storage to your chatbot. Everything degrades gracefully —
             the built-in engine keeps working when these are empty.
           </p>
         </div>
@@ -258,7 +258,7 @@ const IntegrationPanel: React.FC = () => {
               <ShieldCheck className="h-4 w-4 text-amber-400" /> AI Engine (server-side)
             </label>
             {aiLive ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                 <CheckCircle2 className="h-3 w-3" /> LIVE AI ON
               </span>
             ) : (
@@ -274,8 +274,8 @@ const IntegrationPanel: React.FC = () => {
           </p>
           {aiLive && (
             <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-              <span className={ai.storage ? 'text-emerald-400' : 'text-slate-500'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
-              <span className={ai.email ? 'text-emerald-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Email delivery — not available</span>
+              <span className={ai.storage ? 'text-accent-400' : 'text-slate-500'}>{ai.storage ? '✓' : '○'} Database (Supabase)</span>
+              <span className={ai.email ? 'text-accent-400' : 'text-slate-500'}>{ai.email ? '✓' : '○'} Email delivery — not available</span>
               <span className="text-amber-400">○ SMS: demo mode</span>
             </div>
           )}
@@ -289,7 +289,7 @@ const IntegrationPanel: React.FC = () => {
               <span className="font-mono text-[9px] text-slate-500 hidden sm:inline">({WEBHOOK_URL_STORAGE})</span>
             </label>
             {urlConfigured ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                 <CheckCircle2 className="h-3 w-3" /> CRM PUSH ON
               </span>
             ) : (
