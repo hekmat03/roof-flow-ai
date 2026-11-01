@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Phone, PhoneOff, Mic, MicOff, Play, Volume2, VolumeX, Calendar, Sparkles, User, ShieldAlert, Send, AudioLines } from 'lucide-react';
@@ -344,7 +343,7 @@ export const Agent2PhoneCall: React.FC = () => {
                 </div>
                 <button
                   onClick={handleStartCall}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-2.5 rounded-full text-xs shadow-lg shadow-emerald-500/20 transition flex items-center gap-2"
+                  className="bg-accent-500 hover:bg-accent-400 text-slate-950 font-black px-6 py-2.5 rounded-full text-xs shadow-lg shadow-accent-500/20 transition flex items-center gap-2"
                 >
                   <Play className="h-3.5 w-3.5 fill-slate-950" /> Place Demo Call
                 </button>
@@ -374,7 +373,7 @@ export const Agent2PhoneCall: React.FC = () => {
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">AI Voice Active</h4>
                   <p className="text-sm font-black text-white">{name || 'Arthur Dent'}</p>
-                  <p className="text-[9px] text-emerald-400 font-mono font-bold">
+                  <p className="text-[9px] text-accent-400 font-mono font-bold">
                     {isSpeaking ? 'Speaking…' : isListening ? 'Listening…' : '00:42 • Connected'}
                   </p>
                 </div>
@@ -536,7 +535,7 @@ export const Agent2PhoneCall: React.FC = () => {
             
             {callStatus === 'completed' && (
               <div className="mt-6 border-t border-slate-800 pt-4 shrink-0 bg-emerald-500/10 border border-emerald-500/15 p-4 rounded-xl flex items-center space-x-3">
-                <Calendar className="h-5 w-5 text-emerald-400" />
+                <Calendar className="h-5 w-5 text-accent-400" />
                 <div>
                   <h4 className="text-xs font-bold text-white">Call Completed! Lead Saved.</h4>
                   <p className="text-[10px] text-slate-400">The inspection callback was scheduled. Lead profile has been added to the CRM Board.</p>
