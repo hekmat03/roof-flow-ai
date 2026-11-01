@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -21,8 +20,8 @@ export const CalendarConnection: React.FC = () => {
     setLoading(true);
     try {
       setStatus(await getCalendarStatus(session.access_token));
-    } catch {
-      setError('Calendar status is unavailable right now.');
+    } catch (cause) {
+      setError(cause instanceof Error && cause.message ? cause.message : 'Calendar status is unavailable right now.');
     } finally {
       setLoading(false);
     }
