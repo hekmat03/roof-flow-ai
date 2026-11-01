@@ -1,4 +1,3 @@
-
 // api/_lib/validators.ts — contact validation shared by the browser and the server.
 // No imports on purpose: it runs in the React app, in Vercel functions and in tests.
 // src/lib/validators.ts re-exports this file, so there is ONE set of rules.
@@ -7,6 +6,7 @@ export type Checked =
   | { ok: true; value: string }
   | { ok: false; error: string; kind: 'format' | 'placeholder' | 'disposable' | 'short' | 'long' | 'fake' };
 
+// ----------------------------------------------------------------------- email
 const EMAIL_SHAPE =
   /^[a-z0-9](?:[a-z0-9._%+'-]*[a-z0-9])?@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,24}$/;
 
@@ -51,8 +51,8 @@ export function validateEmail(raw: unknown): Checked {
     PLACEHOLDER_LOCALS.has(local) ||
     PLACEHOLDER_DOMAINS.has(domain) ||
     RESERVED_TLDS.some((t) => domain.endsWith(t)) ||
-    /^(.)\1{2,}$/.test(local) ||
-    (local.length === 1 && local === firstLabel);
+    /^(.)\1{2,}$/.test(local) ||                       // aaa@..., xxxx@...
+    (local.length === 1 && local === firstLabel);      // a@a.com
   if (isPlaceholder) {
     return {
       ok: false,
@@ -70,12 +70,13 @@ export function validateEmail(raw: unknown): Checked {
   return { ok: true, value: email };
 }
 
+// ----------------------------------------------------------------------- phone
 /** Canonical value = digits only (a leading US "1" is dropped from 11-digit numbers). */
 export function validatePhone(raw: unknown): Checked {
   if (typeof raw !== 'string' || !raw.trim()) {
     return { ok: false, kind: 'format', error: 'Please enter your phone number.' };
   }
-  let text = raw.trim().replace(/(?:ext\.?|x)\s*\d{1,6}$/i, '').trim();
+  let text = raw.trim().replace(/(?:ext\.?|x)\s*\d{1,6}$/i, '').trim(); // ignore an extension
   if (!/^[+\d\s().-]+$/.test(text)) {
     return { ok: false, kind: 'format', error: 'Phone numbers can only contain digits, spaces, + ( ) and -.' };
   }
@@ -89,6 +90,7 @@ export function validatePhone(raw: unknown): Checked {
     return { ok: false, kind: 'long', error: 'That phone number has too many digits.' };
   }
 
+  // US/Canada (NANP): "+1 415 555 2671" and "1 415 555 2671" both become 4155552671.
   let digits = text;
   let nanp = false;
   if (digits.length === 11 && digits.startsWith('1')) {
@@ -99,10 +101,10 @@ export function validatePhone(raw: unknown): Checked {
   }
 
   const fake =
-    /^(\d)\1+$/.test(digits) ||
-    /(\d)\1{6,}/.test(digits) ||
-    '01234567890123456789'.includes(digits) ||
-    '98765432109876543210'.includes(digits);
+    /^(\d)\1+$/.test(digits) ||                          // 0000000000
+    /(\d)\1{6,}/.test(digits) ||                         // 5550000000
+    '01234567890123456789'.includes(digits) ||           // 1234567890
+    '98765432109876543210'.includes(digits);             // 9876543210
   if (fake) {
     return { ok: false, kind: 'fake', error: "That phone number doesn't look real. Please enter a number we can call or text." };
   }
@@ -118,6 +120,7 @@ export function formatPhone(digits: string): string {
   return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : `+${d}`;
 }
 
+// ------------------------------------------------------------------------ name
 const PLACEHOLDER_NAMES = new Set([
   'test', 'tester', 'asdf', 'qwerty', 'none', 'name', 'fake', 'na', 'n/a', 'xxx', 'abc',
   'unknown', 'anonymous', 'nobody', 'john doe', 'jane doe', 'your name', 'full name',
@@ -136,6 +139,7 @@ export function validateName(raw: unknown): Checked {
   return { ok: true, value: name };
 }
 
+// ------------------------------------------- spotting contact details in free text
 /** First token that contains "@" (so "john@gmail" is caught and can be re-prompted). */
 export function findEmailCandidate(text: string): string | undefined {
   const m = text.match(/[^\s,;()<>"']*@[^\s,;()<>"']*/);
@@ -145,7 +149,7 @@ export function findEmailCandidate(text: string): string | undefined {
 
 /** A phone-like sequence: any 10+ digit run, or a number given right after "my phone is…". */
 export function findPhoneCandidate(text: string): string | undefined {
-  const cleaned = text.replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' ');
+  const cleaned = text.replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' '); // ignore ISO dates
   const withContext = cleaned.match(
     /\b(?:phone(?: number)?|cell(?: number)?|mobile(?: number)?|my number|call me(?: at| on)?|text me(?: at| on)?|reach me(?: at| on)?)\b[^\d+(]{0,25}(\+?\(?\d[\d\s().-]*\d)/i,
   );
