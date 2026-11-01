@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Check, Loader2, Sparkles, X } from 'lucide-react';
 import { useBilling } from '../context/BillingContext';
@@ -86,7 +87,7 @@ export function UpgradeModal() {
                 <ul className="mt-3 space-y-1.5 flex-1">
                   {p.includes.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm text-slate-200">
-                      <Check className="h-4 w-4 mt-0.5 shrink-0 text-emerald-400" aria-hidden />
+                      <Check className="h-4 w-4 mt-0.5 shrink-0 text-accent-400" aria-hidden />
                       {f}
                     </li>
                   ))}
