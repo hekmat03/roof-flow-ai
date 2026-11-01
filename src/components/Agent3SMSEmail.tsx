@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { MessageSquarePlus, Mail, Clock, Send, Play, Sparkles, Smartphone, ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -359,7 +358,7 @@ export const Agent3SMSEmail: React.FC = () => {
                     </div>
 
                     <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <span className="text-accent-400 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="h-3.5 w-3.5" /> Synchronized with CRM
                       </span>
                       <button 
