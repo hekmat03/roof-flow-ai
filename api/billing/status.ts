@@ -1,5 +1,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { adminClient, userFromRequest } from '../_lib/supabaseAdmin.js';
 import { statusPayload } from '../_lib/billing.js';
 
@@ -7,6 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  if (!(await enforceRateLimit(req, res, 'billing', 30))) return;
   try {
     const admin = adminClient();
     const user = admin ? await userFromRequest(req) : null;
