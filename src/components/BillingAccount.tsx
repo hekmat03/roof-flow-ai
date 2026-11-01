@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AlertTriangle, CreditCard, LogOut, CheckCircle2 } from 'lucide-react';
 import { formatPeriod, openPortal, type BillingStatus } from '../lib/billingApi';
@@ -73,7 +74,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
         </p>
         {returnFlag && (
           <p className="mt-4 flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-100">
-            <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-emerald-400" aria-hidden />
+            <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-accent-400" aria-hidden />
             <span>{RETURN_TEXT[returnFlag]}</span>
           </p>
         )}
