@@ -1,3 +1,4 @@
+
 {
   "name": "roof-flow-ai",
   "private": true,
@@ -8,7 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --import ./tests/register-ts.mjs tests/generator.test.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/integrations.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/api.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/tools.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/actions.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/validators.check.ts"
+    "test": "node --experimental-strip-types --import ./tests/register-ts.mjs tests/generator.test.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/integrations.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/api.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/tools.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/actions.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/validators.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/google.check.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
