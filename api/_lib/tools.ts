@@ -1,4 +1,5 @@
-// api/_lib/tools.ts
+
+ // api/_lib/tools.ts
 // Tool-calling for the RoofFlow agents: argument validation, guarded executors
 // (Supabase only; email delivery is not available) and the bounded agent loop.
 // Only TYPE imports from other files, so tests can load this with Node directly.
@@ -186,7 +187,7 @@ async function optedOut(contact: string, env: ToolEnv): Promise<boolean> {
 
 export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv): Promise<ToolResult> {
   const v = validateToolArgs(name, rawArgs);
-  if (!v.ok) return fail(v.error);
+  if ('error' in v) return fail(v.error);
   const a = v.value as Record<string, any>;
   const contact: string = a.phone || a.email || a.to || a.contact;
   if (!env.allowedContacts.has(contact) && !(a.email && env.allowedContacts.has(a.email))) {
