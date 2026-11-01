@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { Globe, RefreshCw, X, ShieldCheck, AlertTriangle, Inbox } from 'lucide-react';
 import {
@@ -43,7 +44,7 @@ export const RealLeadsBoard: React.FC = () => {
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" />
+            <Globe className="h-4 w-4 text-accent-400" />
             Live Widget Leads
             {state === 'ok' && (
               <span className="text-[10px] font-bold uppercase tracking-wider rounded-md px-2 py-0.5 border text-emerald-300 bg-emerald-500/10 border-emerald-500/30">
@@ -202,7 +203,7 @@ const RealLeadDetail: React.FC<{ lead: RealLead; onClose: () => void }> = ({ lea
 
       <div className="mb-5">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Consent record
+          <ShieldCheck className="h-3.5 w-3.5 text-accent-400" /> Consent record
         </h4>
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
           <p className="text-xs text-slate-300 leading-relaxed">{lead.consent_text ?? 'No consent text recorded.'}</p>
