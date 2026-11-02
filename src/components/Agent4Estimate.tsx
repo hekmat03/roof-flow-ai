@@ -183,7 +183,7 @@ export const Agent4Estimate: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 agent-workspace agent-estimate">
       <div>
         <h2 className="text-2xl font-black text-white">Agent 4: Estimate Follow-Up Agent</h2>
         <p className="text-xs text-slate-400 mt-1">
