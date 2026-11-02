@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Check, Loader2, Sparkles, X } from 'lucide-react';
 import { useBilling } from '../context/BillingContext';
