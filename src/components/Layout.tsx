@@ -69,6 +69,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (canAccess(plan, id)) {
       setActiveTab(id);
     } else {
+      // Locked: stay where you are and show the upgrade prompt.
       const needs = requiredPlan(id);
       const label = menuItems.find((m) => m.id === id)?.label ?? 'This feature';
       openUpgrade(`${label} is included in the ${needs ? PLAN_NAMES[needs] : 'Pro'} plan and above.`);
@@ -77,7 +78,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans relative panel-bg">
+    <div className="flex h-screen bg-[#0F172A] text-slate-100 overflow-hidden font-sans relative panel-bg">
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
@@ -88,7 +89,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <aside
         className={`
           fixed md:static z-40 h-full w-72 md:w-80
-          bg-slate-950/85 md:bg-slate-950 backdrop-blur-xl
+          bg-[#0F172A]/95 md:bg-[#0F172A] backdrop-blur-xl
           border-r border-slate-800/80 flex flex-col justify-between shrink-0
           transition-transform duration-300 ease-out
           ${mobileMenuOpen ? 'translate-x-0 drawer-in' : '-translate-x-full'}
@@ -238,7 +239,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
 
             <div className="hidden md:flex bg-slate-900/50 border border-slate-800/80 px-4 py-2 rounded-xl items-center space-x-3 backdrop-blur-md">
-              <Calendar className="h-4 w-4 text-emerald-400" />
+              <Calendar className="h-4 w-4 text-accent-400" />
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
                   Scheduled Inspections
