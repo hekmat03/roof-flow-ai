@@ -333,7 +333,7 @@ export const Agent1Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 agent-workspace agent-chatbot">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
