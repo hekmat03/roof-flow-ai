@@ -8,12 +8,6 @@ import { extractEmail, extractPhone, extractZip } from '../utils/leadExtract';
 export const Agent4Estimate: React.FC = () => {
   const { companySettings, leads, setLeads, addLead } = useApp();
 
-  // CRM target — which estimate-stage lead this follow-up conversation belongs
-  // to. Every exchange is synced to that lead's transcript and drives its
-  // workflow status (yes → Closed-Won, no/opt-out → Closed-Lost).
-  // With NO estimate-stage leads in the CRM, a homeowner name can be typed
-  // instead and the conversation CREATES that lead on first sync — so the
-  // closer flow produces a real CRM record from an empty board too.
   const leadTargets = leads.filter(l =>
     ['Estimate Sent', 'Inspection Completed', 'In Contact'].includes(l.status)
   );
@@ -48,7 +42,6 @@ export const Agent4Estimate: React.FC = () => {
         };
       }));
     } else if (coldLeadName.trim()) {
-      // No estimate-stage lead targeted — capture the follow-up as a new lead.
       addLead({
         name: coldLeadName.trim(),
         phone: extractPhone(userText) || 'N/A',
@@ -64,13 +57,12 @@ export const Agent4Estimate: React.FC = () => {
         ],
       });
     } else {
-      return; // nothing to sync to
+      return;
     }
     setSavingSuccess(true);
     setTimeout(() => setSavingSuccess(false), 2500);
   };
-  
-  // Objection flow simulation state
+
   const [activeObjection, setActiveObjection] = useState<'insurance' | 'price' | 'budget'>('insurance');
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>([
     {
@@ -84,9 +76,6 @@ export const Agent4Estimate: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Default objection scenarios — the user message is fixed, but the AI's
-  // reply is GENERATED live by the dynamic closer agent (settings-aware, varied),
-  // not hardcoded.
   const objections = {
     insurance: {
       userText: "My insurance company is denying some of the shingle damage, so the payout won't cover your estimate."
@@ -195,7 +184,6 @@ export const Agent4Estimate: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 4: Estimate Follow-Up Agent</h2>
         <p className="text-xs text-slate-400 mt-1">
@@ -204,7 +192,6 @@ export const Agent4Estimate: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Objection Selections (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="glass card-hover rounded-2xl p-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -299,14 +286,12 @@ export const Agent4Estimate: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Simulation Logs (7 cols) */}
         <div className="lg:col-span-7 glass rounded-2xl p-6 shadow-xl flex flex-col h-[520px] justify-between">
           <div className="flex-1 flex flex-col overflow-hidden space-y-4">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
               <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Interactive Negotiation Panel
             </h3>
 
-            {/* Conversation list */}
             <div className="flex-1 overflow-y-auto space-y-4 bg-[#0f172a]/60 p-4 rounded-xl border border-slate-850">
               {messages.map((msg, index) => {
                 const isAI = msg.sender === 'AI';
@@ -319,8 +304,8 @@ export const Agent4Estimate: React.FC = () => {
                         </div>
                       )}
                       <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                        isAI 
-                          ? 'chat-bubble-ai rounded-tl-none' 
+                        isAI
+                          ? 'chat-bubble-ai rounded-tl-none'
                           : 'chat-bubble-user rounded-tr-none'
                       }`}>
                         <span className="text-[9px] opacity-40 font-black uppercase tracking-wider block mb-1">
@@ -345,7 +330,6 @@ export const Agent4Estimate: React.FC = () => {
             </div>
           </div>
 
-          {/* Form input reply */}
           <div className="pt-4 border-t border-slate-800 shrink-0 space-y-3 mt-4">
             <div className="flex space-x-3">
               <input
