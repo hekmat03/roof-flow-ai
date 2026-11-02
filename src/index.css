@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
@@ -277,7 +276,7 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .st-new         { color: #fb923c; background: rgb(251 146 60 / 0.1);  border-color: rgb(251 146 60 / 0.25); }
 .st-contacted   { color: #fdba74; background: rgb(253 186 116 / 0.1);  border-color: rgb(253 186 116 / 0.25); }
 .st-incontact   { color: #38bdf8; background: rgb(56 189 248 / 0.1);  border-color: rgb(56 189 248 / 0.25); }
-.st-scheduled   { color: #10b981; background: rgb(16 185 129 / 0.1);  border-color: rgb(16 185 129 / 0.28); }
+.st-scheduled   { color: #10b981; background: rgb(16 185 129 / 0.1); border-color: rgb(16 185 129 / 0.28); }
 .st-inspected   { color: #10b981; background: rgb(16 185 129 / 0.1); border-color: rgb(16 185 129 / 0.25); }
 .st-estimate    { color: #a78bfa; background: rgb(167 139 250 / 0.1); border-color: rgb(167 139 250 / 0.25); }
 .st-won         { color: #10b981; background: rgb(16 185 129 / 0.12); border-color: rgb(16 185 129 / 0.3); }
