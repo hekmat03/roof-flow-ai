@@ -57,7 +57,7 @@ export const Configuration: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 settings-workspace">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">System Configuration</h2>
