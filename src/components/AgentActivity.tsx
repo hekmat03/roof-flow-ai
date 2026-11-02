@@ -1,9 +1,3 @@
-
-/**
- * AgentActivity — transparent log of every real action the AI agent took
- * (booking requests, messages, CRM updates, scheduled follow-ups), with an
- * honest badge: SAVED / DEMO / FAILED.
- */
 import React from 'react';
 import { Zap, CalendarCheck, Mail, ClipboardList, Clock, AlertCircle } from 'lucide-react';
 import type { AgentAction } from '../lib/applyActions';
