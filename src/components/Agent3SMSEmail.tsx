@@ -6,14 +6,8 @@ import { extractEmail, extractPhone, extractZip, deriveRoofIssue } from '../util
 
 export const Agent3SMSEmail: React.FC = () => {
   const { companySettings, leads, setLeads, addLead } = useApp();
-
-  // Selection/Simulation states
   const [selectedDay, setSelectedDay] = useState<1 | 2 | 4 | 7>(1);
 
-  // Target recipient dropdown — derived live from the CRM so nurture always
-  // targets real leads (cold/follow-up statuses first, then any lead as a fallback).
-  // NO hardcoded fallback name: with an empty CRM the Launch button is disabled
-  // and the empty state explains how to get a lead.
   const coldStatuses = ['New Lead', 'Contacted', 'In Contact', 'Follow-up Nurture'];
   const targetableLeads = leads.filter(l => coldStatuses.includes(l.status));
   const selectorLeads = targetableLeads.length > 0 ? targetableLeads : leads;
@@ -21,9 +15,6 @@ export const Agent3SMSEmail: React.FC = () => {
   const [simulatedLead, setSimulatedLead] = useState<string>(() => leads[0]?.name || '');
   const [simulationActive, setSimulationActive] = useState(false);
 
-  // Keep the selected recipient in sync with the dropdown's actual options —
-  // otherwise the select can DISPLAY one lead while the state still points at
-  // another (e.g. after the CRM gained a booked lead that left the cold list).
   useEffect(() => {
     if (selectorLeads.length > 0 && !selectorLeads.some(l => l.name === simulatedLead)) {
       setSimulatedLead(selectorLeads[0].name);
@@ -35,7 +26,6 @@ export const Agent3SMSEmail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Campaign templates data
   const templates = {
     1: {
       sms: `Hi {{name}}, this is ${companySettings.companyName}. We saw you requested a roof inspection in {{city}} but haven’t booked a slot. Our specialists can check it for free tomorrow! Do you have 5 minutes?`,
@@ -61,14 +51,10 @@ export const Agent3SMSEmail: React.FC = () => {
 
   const getRenderedTemplate = (day: 1 | 2 | 4 | 7, type: 'sms' | 'emailSubject' | 'emailBody', name: string) => {
     const text = templates[day][type];
-    return text
-      .replace(/{{name}}/g, name)
-      .replace(/{{city}}/g, companySettings.city);
+    return text.replace(/{{name}}/g, name).replace(/{{city}}/g, companySettings.city);
   };
 
   const handleStartSequenceSim = () => {
-    // A CRM recipient OR a typed cold-lead name is enough — with an empty
-    // board the typed name becomes a real captured lead on the first reply.
     if (!simulatedLead.trim()) return;
     setSimulationActive(true);
     setError(null);
@@ -94,7 +80,6 @@ export const Agent3SMSEmail: React.FC = () => {
     setError(null);
 
     try {
-      // Build the message history for the AI (skip the "System" trigger line)
       const aiMessages: AgentMessage[] = updatedLogs
         .filter(l => l.sender !== 'System')
         .map(l => ({ role: l.sender === 'AI' ? 'assistant' : 'user', content: l.text }));
@@ -115,9 +100,6 @@ export const Agent3SMSEmail: React.FC = () => {
         timestamp: new Date().toLocaleTimeString()
       }]);
 
-      // Conversion = the homeowner's reply signals booking intent (same intent
-      // engine that drives the AI). A conversion books the inspection; any
-      // other engaged reply just marks the lead as In Contact.
       const intent = detectLatestIntent(aiMessages);
       const converted = intent === 'yes' || intent === 'schedule' || intent === 'scheduleask';
       const nextStatus = converted ? 'Inspection Scheduled' : 'In Contact';
@@ -134,7 +116,6 @@ export const Agent3SMSEmail: React.FC = () => {
 
       const existingLead = leads.find(l => l.name === simulatedLead);
       if (existingLead) {
-        // Known CRM lead — advance its workflow in place.
         setLeads(prev => prev.map(lead => {
           if (lead.name !== simulatedLead) return lead;
           return {
@@ -145,8 +126,6 @@ export const Agent3SMSEmail: React.FC = () => {
           };
         }));
       } else if (simulatedLead.trim()) {
-        // Nurture reply from a lead that isn't in the CRM yet — capture it now
-        // so every Agent 3 conversation produces a real CRM record.
         addLead({
           name: simulatedLead.trim(),
           phone: extractPhone(userReplyText) || 'N/A',
@@ -169,7 +148,6 @@ export const Agent3SMSEmail: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 3: Follow-Up & Nurture SMS/Email</h2>
         <p className="text-xs text-slate-400 mt-1">
@@ -178,8 +156,6 @@ export const Agent3SMSEmail: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Sequence Timelines (7 cols) */}
         <div className="lg:col-span-7 glass rounded-2xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -190,7 +166,6 @@ export const Agent3SMSEmail: React.FC = () => {
             </span>
           </div>
 
-          {/* Timeline Tab selector */}
           <div className="grid grid-cols-4 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800/80">
             {([1, 2, 4, 7] as const).map(day => (
               <button
@@ -207,9 +182,7 @@ export const Agent3SMSEmail: React.FC = () => {
             ))}
           </div>
 
-          {/* Templates Display cards */}
           <div className="space-y-4">
-            {/* SMS View card */}
             <div className="bg-[#0f172a]/60 border border-slate-800 rounded-xl p-4 space-y-2">
               <span className="text-[9px] text-slate-500 block font-bold uppercase tracking-wider">Simulated Day {selectedDay} SMS Outline</span>
               <p className="text-slate-200 text-xs font-mono bg-slate-900/80 p-3 rounded-lg border border-slate-850">
@@ -217,7 +190,6 @@ export const Agent3SMSEmail: React.FC = () => {
               </p>
             </div>
 
-            {/* Email View card */}
             <div className="bg-[#0f172a]/60 border border-slate-800 rounded-xl p-4 space-y-3">
               <div className="border-b border-slate-800/50 pb-2">
                 <span className="text-[9px] text-slate-500 block font-bold uppercase tracking-wider">Simulated Day {selectedDay} Email Subject</span>
@@ -235,7 +207,6 @@ export const Agent3SMSEmail: React.FC = () => {
           </div>
         </div>
 
-        {/* Nurture Trigger Playground (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="glass card-hover rounded-2xl p-6 flex flex-col justify-between h-[520px]">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
@@ -252,8 +223,7 @@ export const Agent3SMSEmail: React.FC = () => {
                       Pick a cold lead from our CRM list and trigger the automated multi-channel sequence to view the interactive follow-up chat logs.
                     </p>
                   </div>
-                  
-                  {/* Select Lead dropdown (live from CRM) */}
+
                   <div className="w-full max-w-xs text-left">
                     <label className="text-[10px] text-slate-500 block mb-1.5 font-bold uppercase tracking-wider">Target CRM Recipient</label>
                     {selectorLeads.length > 0 ? (
@@ -296,12 +266,11 @@ export const Agent3SMSEmail: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                  {/* Active Simulation logs */}
                   <div className="flex-1 overflow-y-auto space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-850 max-h-[280px]">
                     {simulationLogs.map((log, index) => {
                       const isSystem = log.sender === 'System';
                       const isAI = log.sender === 'AI';
-                      
+
                       if (isSystem) {
                         return (
                           <div key={index} className="flex justify-center">
@@ -315,8 +284,8 @@ export const Agent3SMSEmail: React.FC = () => {
                       return (
                         <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
                           <div className={`max-w-xs rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
-                            isAI 
-                              ? 'bg-slate-850 text-slate-100 border border-slate-750 rounded-tl-none' 
+                            isAI
+                              ? 'bg-slate-850 text-slate-100 border border-slate-750 rounded-tl-none'
                               : 'chat-bubble-user rounded-tr-none'
                           }`}>
                             <p>{log.text}</p>
@@ -336,7 +305,6 @@ export const Agent3SMSEmail: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Form response reply input */}
                   <div className="pt-4 border-t border-slate-800 shrink-0 space-y-3">
                     <div className="flex space-x-2">
                       <input
@@ -361,7 +329,7 @@ export const Agent3SMSEmail: React.FC = () => {
                       <span className="text-accent-400 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="h-3.5 w-3.5" /> Synchronized with CRM
                       </span>
-                      <button 
+                      <button
                         onClick={() => setSimulationActive(false)}
                         className="text-slate-400 hover:text-white underline font-semibold"
                       >
@@ -374,7 +342,6 @@ export const Agent3SMSEmail: React.FC = () => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
