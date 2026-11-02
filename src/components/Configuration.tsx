@@ -194,6 +194,11 @@ export const Configuration: React.FC = () => {
     </div>
   );
 };
+      {/* Live Integrations (server-side AI + Google Sheets webhook) */}
+      <IntegrationPanel />
+    </div>
+  );
+};
 
 /**
  * IntegrationPanel — live integrations.
