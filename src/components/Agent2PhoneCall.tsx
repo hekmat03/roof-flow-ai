@@ -306,7 +306,7 @@ export const Agent2PhoneCall: React.FC = () => {
   const currentScriptStep = scriptSteps.find(s => s.step === currentStep);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 agent-workspace agent-phone">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
