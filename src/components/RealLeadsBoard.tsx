@@ -39,7 +39,7 @@ export const RealLeadsBoard: React.FC = () => {
   const { state, leads, message } = result;
 
   return (
-    <div className="glass rounded-2xl p-5 md:p-6">
+    <div className="crm-live-panel glass rounded-2xl p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
