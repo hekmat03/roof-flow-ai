@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { navigate } from '../lib/router';
 import { canAccess, upgradeLabel, isHidden, requiredPlan, PLAN_NAMES } from '../lib/planAccess';
 import { useBilling } from '../context/BillingContext';
-import { CalendarConnection } from './CalendarConnection';
+import CalendarConnection from './CalendarConnection';
 
 interface LayoutProps {
   children: React.ReactNode;
