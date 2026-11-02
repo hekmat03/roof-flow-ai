@@ -147,7 +147,7 @@ export const Agent3SMSEmail: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 agent-workspace agent-nurture">
       <div>
         <h2 className="text-2xl font-black text-white">Agent 3: Follow-Up & Nurture SMS/Email</h2>
         <p className="text-xs text-slate-400 mt-1">
