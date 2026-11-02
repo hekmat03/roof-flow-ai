@@ -1,4 +1,3 @@
-
 /**
  * AnalyticsCharts — Chart.js analytics for the Dashboard.
  * ----------------------------------------------------------------------------
@@ -53,7 +52,6 @@ ChartJS.register(
 
 const AVG_JOB_VALUE = 12000;
 
-/** Status-weighted share of the average job value attributed to a lead. */
 function leadValueShare(status: Lead['status']): number {
   switch (status) {
     case 'Closed-Won':
@@ -70,7 +68,6 @@ function leadValueShare(status: Lead['status']): number {
   }
 }
 
-/** Best-effort date for a lead: scheduledDate → last chatLog timestamp → today. */
 function leadDate(lead: Lead): Date {
   const fromSchedule = lead.scheduledDate ? new Date(lead.scheduledDate) : null;
   if (fromSchedule && !isNaN(fromSchedule.getTime())) return fromSchedule;
@@ -98,11 +95,6 @@ const darkTooltip = {
 export const AnalyticsCharts: React.FC = () => {
   const { leads } = useApp();
 
-  // ---- Revenue Attribution (adaptive window) ----
-  // The window normally covers the last 14 days, but auto-extends back to the
-  // earliest captured lead so seeded/historical CRM data still charts (bucketed
-  // weekly once the span exceeds 28 days). New captures always land in the
-  // newest bucket, so the chart updates live from any simulator.
   const revenueData = useMemo(() => {
     const DAY = 86400000;
     const now = Date.now();
@@ -112,7 +104,7 @@ export const AnalyticsCharts: React.FC = () => {
       if (!isNaN(t) && t < minTs) minTs = t;
     }
     const naturalSpanDays = Math.ceil((now - minTs) / DAY);
-    const spanDays = Math.max(13, Math.min(naturalSpanDays, 119)); // 14..120 days
+    const spanDays = Math.max(13, Math.min(naturalSpanDays, 119));
     const useWeeks = spanDays > 28;
     const bucketMs = useWeeks ? 7 * DAY : DAY;
     const bucketCount = Math.ceil((spanDays + 1) / (useWeeks ? 7 : 1));
@@ -152,7 +144,6 @@ export const AnalyticsCharts: React.FC = () => {
     };
   }, [leads]);
 
-  // ---- Conversion Funnel ----
   const funnelData = useMemo(() => {
     const total = leads.length;
     const booked = leads.filter(l =>
@@ -224,7 +215,6 @@ export const AnalyticsCharts: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 md:gap-6">
-      {/* Revenue Attribution */}
       <div className="xl:col-span-3 glass card-hover rounded-2xl p-5 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -271,7 +261,6 @@ export const AnalyticsCharts: React.FC = () => {
         </div>
       </div>
 
-      {/* Conversion Funnel */}
       <div className="xl:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
