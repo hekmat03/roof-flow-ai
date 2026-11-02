@@ -3,15 +3,15 @@ import { useApp } from '../context/AppContext';
 import { useCountUp } from '../utils/useCountUp';
 import { AnalyticsCharts } from './AnalyticsCharts';
 import { isHidden } from '../lib/planAccess';
-import {
-  Users,
-  Calendar,
-  TrendingUp,
-  Zap,
-  ArrowRight,
-  MessageSquare,
-  PhoneCall,
-  MessageSquarePlus,
+import { 
+  Users, 
+  Calendar, 
+  TrendingUp, 
+  Zap, 
+  ArrowRight, 
+  MessageSquare, 
+  PhoneCall, 
+  MessageSquarePlus, 
   FileText,
   AlertTriangle,
   BadgeDollarSign
@@ -150,14 +150,14 @@ export const Dashboard: React.FC = () => {
             RoofFlow AI answers homeowners, checks their contact details, and requests roof inspections in the <span className="font-bold text-white">{companySettings.city}</span> market, so leads from events like the <span className="font-bold text-white">{companySettings.stormName}</span>.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-3 sm:space-y-0">
-            <button
+            <button 
               onClick={() => setActiveTab('agent1')}
               className="btn-accent px-5 py-3 text-sm flex items-center justify-center gap-2 group"
             >
-              Open Chatbot
+              Open Chatbot 
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
             </button>
-            <button
+            <button 
               onClick={() => setActiveTab('crm')}
               className="btn-ghost px-5 py-3 text-sm flex items-center justify-center gap-2"
             >
@@ -206,7 +206,7 @@ export const Dashboard: React.FC = () => {
           {agents.filter((agent) => !isHidden(agent.id)).map((agent) => {
             const Icon = agent.icon;
             return (
-              <div
+              <div 
                 key={agent.id}
                 className="glass card-hover rounded-2xl p-6 flex flex-col justify-between group"
               >
@@ -232,7 +232,7 @@ export const Dashboard: React.FC = () => {
                     <span className="text-slate-500 block font-semibold uppercase tracking-wider text-[9px]">Captured so far</span>
                     <span className="text-slate-200 font-bold font-mono">{agent.metric}</span>
                   </div>
-                  <button
+                  <button 
                     onClick={() => setActiveTab(agent.id)}
                     className="btn-ghost px-3 py-2 rounded-lg flex items-center gap-1 text-xs"
                   >
@@ -255,7 +255,7 @@ export const Dashboard: React.FC = () => {
               <h3 className="text-base font-bold text-white">Latest Pipeline Inflow</h3>
               <p className="text-xs text-slate-400 mt-0.5">Real-time leads automatically qualified by active agents</p>
             </div>
-            <button
+            <button 
               onClick={() => setActiveTab('crm')}
               className="text-xs text-accent-400 hover:text-accent-300 font-bold flex items-center gap-1.5 transition-colors hover:gap-2.5"
             >
@@ -325,7 +325,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <button
+          <button 
             onClick={() => setActiveTab('config')}
             className="w-full mt-6 btn-ghost text-xs py-3"
           >
