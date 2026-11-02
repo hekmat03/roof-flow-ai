@@ -75,7 +75,7 @@ Your goals:
   };
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-6 h-full flex flex-col prompt-workspace">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">System Prompt Playground</h2>
