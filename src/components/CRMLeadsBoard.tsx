@@ -231,7 +231,7 @@ export const CRMLeadsBoard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="crm-page space-y-6 animate-fadeIn">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
