@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AlertTriangle, CreditCard, LogOut, CheckCircle2 } from 'lucide-react';
 import { formatPeriod, openPortal, type BillingStatus } from '../lib/billingApi';
@@ -7,7 +6,6 @@ import { useBilling } from '../context/BillingContext';
 import { navigate } from '../lib/router';
 import { UsageMeter } from './PricingPlans';
 
-/** Rendered only when a subscription genuinely reports `past_due`. */
 export const PaymentFailureNotice: React.FC<{ planName: string }> = ({ planName }) => (
   <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-100">
     <div className="flex items-start gap-2">
