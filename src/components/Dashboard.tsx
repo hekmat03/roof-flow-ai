@@ -134,7 +134,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="glass hero-glow rounded-3xl p-6 md:p-10 relative overflow-hidden">
+      <div className="glass hero-glow dashboard-hero rounded-3xl p-6 md:p-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-6 opacity-[0.07] animate-float-slow">
           <TrendingUp className="h-44 w-44 md:h-56 md:w-56 text-accent-400" />
         </div>
@@ -172,7 +172,7 @@ export const Dashboard: React.FC = () => {
         {kpis.map((kpi) => {
           const SubIcon = kpi.subIcon;
           return (
-            <div key={kpi.label} className="glass card-hover rounded-2xl p-5 md:p-6">
+            <div key={kpi.label} className="glass dashboard-kpi card-hover rounded-2xl p-5 md:p-6">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{kpi.label}</p>
@@ -208,7 +208,7 @@ export const Dashboard: React.FC = () => {
             return (
               <div 
                 key={agent.id}
-                className="glass card-hover rounded-2xl p-6 flex flex-col justify-between group"
+                className="glass dashboard-agent card-hover rounded-2xl p-6 flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex justify-between items-center mb-4">
