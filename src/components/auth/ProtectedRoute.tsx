@@ -10,10 +10,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!configured) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6 text-center text-slate-100">
+      <div className="min-h-screen bg-page flex items-center justify-center p-6 text-center text-ink">
         <div className="max-w-md">
           <h2 className="text-xl font-bold mb-2">Authentication is not configured</h2>
-          <p className="text-slate-400 text-sm">
+          <p className="text-ink-mute text-sm">
             Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then rebuild.
           </p>
         </div>

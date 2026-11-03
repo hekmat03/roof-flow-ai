@@ -7,12 +7,12 @@ import { navigate } from '../lib/router';
 import { UsageMeter } from './PricingPlans';
 
 export const PaymentFailureNotice: React.FC<{ planName: string }> = ({ planName }) => (
-  <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-100">
+  <div className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm text-danger">
     <div className="flex items-start gap-2">
       <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" aria-hidden />
       <div>
         <p className="font-semibold">There is a problem with the last payment.</p>
-        <p className="mt-1 text-rose-200/90">
+        <p className="mt-1 text-danger/90">
           The {planName} plan stays active while the payment is retried. Update your payment method in
           the billing portal to avoid losing access.
         </p>
@@ -66,12 +66,12 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
   return (
     <div className="space-y-6">
       <header className="glass rounded-2xl p-5 md:p-7">
-        <h1 className="text-2xl md:text-3xl font-bold text-white">Billing &amp; account</h1>
-        <p className="mt-2 text-slate-300 max-w-3xl">
+        <h1 className="text-2xl md:text-3xl font-bold text-ink">Billing &amp; account</h1>
+        <p className="mt-2 text-ink-soft max-w-3xl">
           Your plan, your monthly chat allowance, and the controls for a paid subscription.
         </p>
         {returnFlag && (
-          <p className="mt-4 flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-100">
+          <p className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-card/70 p-3 text-sm text-ink">
             <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-accent-400" aria-hidden />
             <span>{RETURN_TEXT[returnFlag]}</span>
           </p>
@@ -84,8 +84,8 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
         <section className="glass rounded-2xl p-5 md:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-100">Account</h2>
-              <p className="mt-1 text-sm text-slate-300 break-all">{status.user?.email}</p>
+              <h2 className="font-semibold text-ink">Account</h2>
+              <p className="mt-1 text-sm text-ink-soft break-all">{status.user?.email}</p>
             </div>
             <span className="rounded-full bg-accent-500/15 px-3 py-1 text-xs font-semibold text-accent-300 whitespace-nowrap">
               {planName}
@@ -94,18 +94,18 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
 
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-slate-400">Subscription status</dt>
-              <dd className="text-slate-100 font-medium">{sub?.status ?? 'none'}</dd>
+              <dt className="text-ink-mute">Subscription status</dt>
+              <dd className="text-ink font-medium">{sub?.status ?? 'none'}</dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-slate-400">{sub?.cancelAtPeriodEnd ? 'Access ends on' : 'Renews on'}</dt>
-              <dd className="text-slate-100 font-medium">
+              <dt className="text-ink-mute">{sub?.cancelAtPeriodEnd ? 'Access ends on' : 'Renews on'}</dt>
+              <dd className="text-ink font-medium">
                 {formatPeriod(sub?.currentPeriodEnd, status.paymentsActivated)}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-slate-400">Cancels at period end</dt>
-              <dd className="text-slate-100 font-medium">{sub?.cancelAtPeriodEnd ? 'Yes' : 'No'}</dd>
+              <dt className="text-ink-mute">Cancels at period end</dt>
+              <dd className="text-ink font-medium">{sub?.cancelAtPeriodEnd ? 'Yes' : 'No'}</dd>
             </div>
           </dl>
 
@@ -121,7 +121,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
                     : undefined
               }
               onClick={() => void handlePortal()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] bg-slate-800/70 text-slate-400 disabled:cursor-not-allowed enabled:bg-[#F97316] enabled:text-slate-950 enabled:hover:bg-orange-400"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition min-h-[44px] bg-inset/70 text-ink-mute disabled:cursor-not-allowed enabled:bg-gold enabled:text-gold-ink enabled:hover:bg-gold"
             >
               <CreditCard className="h-4 w-4" aria-hidden />
               {busy ? 'Opening…' : 'Manage billing'}
@@ -129,14 +129,14 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
             <button
               type="button"
               onClick={() => void handleSignOut()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800/60 transition min-h-[44px]"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink hover:bg-inset/60 transition min-h-[44px]"
             >
               <LogOut className="h-4 w-4" aria-hidden />
               Sign out
             </button>
           </div>
           {notice && (
-            <p className="mt-4 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
+            <p className="mt-4 rounded-xl border border-line bg-card/70 p-3 text-sm text-ink">
               {notice}
             </p>
           )}
@@ -146,7 +146,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
           {status.usage ? (
             <UsageMeter usage={status.usage} planName={planName} />
           ) : (
-            <div className="glass rounded-2xl p-5 md:p-6 text-sm text-slate-300">
+            <div className="glass rounded-2xl p-5 md:p-6 text-sm text-ink-soft">
               Usage is unavailable right now.
             </div>
           )}

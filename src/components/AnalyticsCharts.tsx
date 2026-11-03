@@ -38,6 +38,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import { TrendingUp, Filter } from 'lucide-react';
 import { useApp, type Lead } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 
 ChartJS.register(
   CategoryScale,
@@ -79,21 +80,44 @@ function leadDate(lead: Lead): Date {
   return new Date();
 }
 
-const darkTooltip = {
-  backgroundColor: '#0f172a',
-  borderColor: '#334155',
-  borderWidth: 1,
-  titleColor: '#f8fafc',
-  bodyColor: '#cbd5e1',
-  titleFont: { weight: 'bold' as const, size: 11 },
-  bodyFont: { size: 11 },
-  padding: 10,
-  cornerRadius: 8,
-  displayColors: false,
-};
+/**
+ * Chart colours, derived from the theme tokens — Obsidian / Champagne Gold /
+ * Cream only. No neon green, no blue: the palette is rebuilt when the theme
+ * flips so the canvas never fights the CSS surface behind it.
+ */
+function chartPalette(theme: 'light' | 'dark') {
+  const dark = theme === 'dark';
+  return {
+    tooltip: {
+      backgroundColor: dark ? '#141414' : '#ffffff',
+      borderColor: dark ? '#262626' : '#e4e4da',
+      borderWidth: 1,
+      titleColor: dark ? '#ffffff' : '#0a0a0a',
+      bodyColor: dark ? '#d8d8d2' : '#3c3c36',
+      titleFont: { weight: 'bold' as const, size: 11 },
+      bodyFont: { size: 11 },
+      padding: 10,
+      cornerRadius: 8,
+      displayColors: false,
+    },
+    grid: dark ? 'rgba(255,255,255,0.06)' : 'rgba(10,10,10,0.08)',
+    tick: dark ? '#8b8b83' : '#6b6b63',
+    tickStrong: dark ? '#d8d8d2' : '#3c3c36',
+    line: dark ? '#d4af37' : '#8a6f1c',
+    point: dark ? '#e3c55c' : '#d4af37',
+    pointBorder: dark ? '#0f0f0f' : '#ffffff',
+    fillTop: dark ? 'rgba(212,175,55,0.35)' : 'rgba(138,111,28,0.22)',
+    fillBottom: dark ? 'rgba(212,175,55,0.02)' : 'rgba(138,111,28,0.02)',
+    bars: dark
+      ? ['#2a2a2a', '#8a6f1c', '#d4af37', '#e3c55c']
+      : ['#deded2', '#a98a22', '#d4af37', '#8a6f1c'],
+  };
+}
 
 export const AnalyticsCharts: React.FC = () => {
   const { leads } = useApp();
+  const { theme } = useTheme();
+  const pal = chartPalette(theme);
 
   const revenueData = useMemo(() => {
     const DAY = 86400000;
@@ -164,7 +188,7 @@ export const AnalyticsCharts: React.FC = () => {
     plugins: {
       legend: { display: false },
       tooltip: {
-        ...darkTooltip,
+        ...pal.tooltip,
         callbacks: {
           label: ctx => `Pipeline: $${(ctx.parsed.y ?? 0).toLocaleString()}`,
         },
@@ -172,13 +196,13 @@ export const AnalyticsCharts: React.FC = () => {
     },
     scales: {
       x: {
-        grid: { color: 'rgba(51,65,85,0.25)' },
-        ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 0, maxTicksLimit: 7 },
+        grid: { color: pal.grid },
+        ticks: { color: pal.tick, font: { size: 9 }, maxRotation: 0, maxTicksLimit: 7 },
       },
       y: {
-        grid: { color: 'rgba(51,65,85,0.25)' },
+        grid: { color: pal.grid },
         ticks: {
-          color: '#64748b',
+          color: pal.tick,
           font: { size: 9 },
           callback: v => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : v}`,
         },
@@ -194,7 +218,7 @@ export const AnalyticsCharts: React.FC = () => {
     plugins: {
       legend: { display: false },
       tooltip: {
-        ...darkTooltip,
+        ...pal.tooltip,
         callbacks: {
           label: ctx => `${(ctx.parsed.x ?? 0).toLocaleString()} at this stage`,
         },
@@ -202,13 +226,13 @@ export const AnalyticsCharts: React.FC = () => {
     },
     scales: {
       x: {
-        grid: { color: 'rgba(51,65,85,0.25)' },
-        ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 5 },
+        grid: { color: pal.grid },
+        ticks: { color: pal.tick, font: { size: 9 }, maxTicksLimit: 5 },
         beginAtZero: true,
       },
       y: {
         grid: { display: false },
-        ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' } },
+        ticks: { color: pal.tickStrong, font: { size: 10, weight: 'bold' } },
       },
     },
   };
@@ -218,14 +242,14 @@ export const AnalyticsCharts: React.FC = () => {
       <div className="xl:col-span-3 glass card-hover rounded-2xl p-5 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-base font-bold text-ink flex items-center gap-2">
               <TrendingUp className="h-4.5 w-4.5 text-accent-400" /> Revenue Attribution
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-ink-mute mt-0.5">
               Estimated pipeline value from captured leads — window adapts to your CRM history
             </p>
           </div>
-          <span className="text-xs font-mono font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+          <span className="text-xs font-mono font-bold text-gold bg-gold/10 border border-gold/20 px-2.5 py-1 rounded-lg">
             ${revenueData.total.toLocaleString()}
           </span>
         </div>
@@ -238,21 +262,21 @@ export const AnalyticsCharts: React.FC = () => {
                   label: 'Cumulative pipeline value',
                   data: revenueData.cumulative,
                   fill: true,
-                  borderColor: '#f59e0b',
+                  borderColor: pal.line,
                   borderWidth: 2,
                   backgroundColor: (ctx) => {
                     const { chart } = ctx;
                     const { ctx: c, chartArea } = chart;
-                    if (!chartArea) return 'rgba(245,158,11,0.15)';
+                    if (!chartArea) return pal.fillTop;
                     const grad = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                    grad.addColorStop(0, 'rgba(245,158,11,0.35)');
-                    grad.addColorStop(1, 'rgba(245,158,11,0.02)');
+                    grad.addColorStop(0, pal.fillTop);
+                    grad.addColorStop(1, pal.fillBottom);
                     return grad;
                   },
                   tension: 0.35,
                   pointRadius: 2.5,
-                  pointBackgroundColor: '#fbbf24',
-                  pointBorderColor: '#0f172a',
+                  pointBackgroundColor: pal.point,
+                  pointBorderColor: pal.pointBorder,
                 },
               ],
             }}
@@ -264,10 +288,10 @@ export const AnalyticsCharts: React.FC = () => {
       <div className="xl:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Filter className="h-4.5 w-4.5 text-blue-400" /> Conversion Funnel
+            <h3 className="text-base font-bold text-ink flex items-center gap-2">
+              <Filter className="h-4.5 w-4.5 text-gold" /> Conversion Funnel
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Live pipeline derived from the CRM board</p>
+            <p className="text-xs text-ink-mute mt-0.5">Live pipeline derived from the CRM board</p>
           </div>
         </div>
         <div className="h-52 sm:h-60">
@@ -278,7 +302,7 @@ export const AnalyticsCharts: React.FC = () => {
                 {
                   label: 'Stage count',
                   data: funnelData.values,
-                  backgroundColor: ['#334155', '#3b82f6', '#f59e0b', '#10b981'],
+                  backgroundColor: pal.bars,
                   borderRadius: 6,
                   borderSkipped: false,
                   barThickness: 22,
@@ -288,7 +312,7 @@ export const AnalyticsCharts: React.FC = () => {
             options={funnelChartOptions}
           />
         </div>
-        <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
+        <p className="text-[10px] text-ink-mute mt-3 leading-relaxed">
           Impressions use a 40× site-visit default; Leads, Inspections and Closed Deals are computed live from agent-captured leads.
         </p>
       </div>

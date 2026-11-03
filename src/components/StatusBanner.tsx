@@ -15,8 +15,8 @@ export function StatusBanner() {
 
   if (storageStatus === 'loading') {
     return (
-      <div role="status" className={`${box} border-slate-700 bg-slate-900/70 text-slate-200`}>
-        <Loader2 className="h-4 w-4 animate-spin text-[#F97316]" aria-hidden />
+      <div role="status" className={`${box} border-line bg-card/70 text-ink`}>
+        <Loader2 className="h-4 w-4 animate-spin text-ink" aria-hidden />
         Loading your account and leads…
       </div>
     );
@@ -24,7 +24,7 @@ export function StatusBanner() {
 
   if (storageStatus === 'unconfigured') {
     return (
-      <div role="alert" className={`${box} border-amber-500/40 bg-amber-500/10 text-amber-100`}>
+      <div role="alert" className={`${box} border-gold/40 bg-gold/10 text-gold`}>
         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
         The database is not connected, so nothing can be saved yet.
       </div>
@@ -33,7 +33,7 @@ export function StatusBanner() {
 
   if (storageStatus === 'error' || storageError) {
     return (
-      <div role="alert" className={`${box} border-rose-500/40 bg-rose-500/10 text-rose-100`}>
+      <div role="alert" className={`${box} border-danger/40 bg-danger/10 text-danger`}>
         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
         <span className="flex-1 min-w-[12rem]">
           We could not reach the database, so your latest changes may not be saved. Check your connection and reload.
@@ -41,7 +41,7 @@ export function StatusBanner() {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#F97316] px-3 py-1.5 font-semibold text-slate-950 hover:bg-orange-400"
+          className="inline-flex items-center gap-2 rounded-lg bg-gold px-3 py-1.5 font-semibold text-gold-ink hover:bg-gold"
         >
           <RefreshCw className="h-4 w-4" aria-hidden /> Reload
         </button>
@@ -51,13 +51,13 @@ export function StatusBanner() {
 
   if (billingError) {
     return (
-      <div role="alert" className={`${box} border-amber-500/40 bg-amber-500/10 text-amber-100`}>
+      <div role="alert" className={`${box} border-gold/40 bg-gold/10 text-gold`}>
         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
         <span className="flex-1 min-w-[12rem]">Plan and usage details are unavailable right now.</span>
         <button
           type="button"
           onClick={reload}
-          className="inline-flex items-center gap-2 rounded-lg border border-amber-400/50 px-3 py-1.5 font-semibold hover:bg-amber-500/20"
+          className="inline-flex items-center gap-2 rounded-lg border border-gold/50 px-3 py-1.5 font-semibold hover:bg-gold/20"
         >
           <RefreshCw className="h-4 w-4" aria-hidden /> Retry
         </button>

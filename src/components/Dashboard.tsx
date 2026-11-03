@@ -59,8 +59,8 @@ export const Dashboard: React.FC = () => {
       description: 'Answers homeowners 24/7, checks their contact details and requests roof inspections.',
       status: 'Active',
       metric: `${totalLeads} lead${totalLeads === 1 ? '' : 's'} captured`,
-      color: 'from-amber-400 to-orange-600',
-      glow: 'shadow-amber-500/25',
+      color: 'from-gold to-gold-deep',
+      glow: 'shadow-gold/25',
       icon: MessageSquare,
     },
     {
@@ -70,8 +70,8 @@ export const Dashboard: React.FC = () => {
       description: 'Interactive voice agent handling call flows, insurance queries, and booking inspections.',
       status: 'Active',
       metric: '<15s avg response',
-      color: 'from-orange-500 to-red-600',
-      glow: 'shadow-orange-500/25',
+      color: 'from-gold to-danger',
+      glow: 'shadow-gold/25',
       icon: PhoneCall,
     },
     {
@@ -81,8 +81,8 @@ export const Dashboard: React.FC = () => {
       description: 'Automated 7-day multi-channel follow-up sequencers reacting to user replies instantly.',
       status: 'Active',
       metric: '18% reactivation',
-      color: 'from-yellow-400 to-amber-600',
-      glow: 'shadow-yellow-500/25',
+      color: 'from-gold to-gold-deep',
+      glow: 'shadow-gold/25',
       icon: MessageSquarePlus,
     },
     {
@@ -92,8 +92,8 @@ export const Dashboard: React.FC = () => {
       description: 'Follow-up on repair estimates to handle financing, budget, and competitor objections.',
       status: 'Active',
       metric: '+25% closing boost',
-      color: 'from-amber-500 to-red-600',
-      glow: 'shadow-amber-500/25',
+      color: 'from-gold to-danger',
+      glow: 'shadow-gold/25',
       icon: FileText,
     }
   ];
@@ -115,7 +115,7 @@ export const Dashboard: React.FC = () => {
       display: String(Math.round(animScheduled)),
       sub: `${bookingRate}% Lead-to-Booking Rate`,
       subIcon: null,
-      chip: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
+      chip: 'bg-gold/10 text-gold border border-gold/20',
       icon: Calendar,
       iconColor: 'text-accent-400',
     },
@@ -143,11 +143,11 @@ export const Dashboard: React.FC = () => {
             <Zap className="h-3 w-3" />
             RoofFlow Console
           </span>
-          <h2 className="text-fluid-hero font-extrabold text-white mt-4 tracking-tight">
-            Capture More Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-orange-500 bg-clip-text text-transparent">Your AI Chatbot</span>
+          <h2 className="text-fluid-hero font-extrabold text-ink mt-4 tracking-tight">
+            Capture More Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-gold-deep bg-clip-text text-transparent">Your AI Chatbot</span>
           </h2>
-          <p className="text-slate-300 mt-2 text-fluid-body leading-relaxed">
-            RoofFlow AI answers homeowners, checks their contact details, and requests roof inspections in the <span className="font-bold text-white">{companySettings.city}</span> market, so leads from events like the <span className="font-bold text-white">{companySettings.stormName}</span>.
+          <p className="text-ink-soft mt-2 text-fluid-body leading-relaxed">
+            RoofFlow AI answers homeowners, checks their contact details, and requests roof inspections in the <span className="font-bold text-ink">{companySettings.city}</span> market, so leads from events like the <span className="font-bold text-ink">{companySettings.stormName}</span>.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-3 sm:space-y-0">
             <button 
@@ -175,14 +175,14 @@ export const Dashboard: React.FC = () => {
             <div key={kpi.label} className="glass dashboard-kpi card-hover rounded-2xl p-5 md:p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{kpi.label}</p>
-                  <h3 className="text-3xl font-black font-mono text-white mt-1 count-up-flash">{kpi.display}</h3>
+                  <p className="text-xs font-bold uppercase tracking-wider text-ink-mute">{kpi.label}</p>
+                  <h3 className="text-3xl font-black font-mono text-ink mt-1 count-up-flash">{kpi.display}</h3>
                 </div>
                 <div className={`p-3 rounded-xl ${kpi.chip}`}>
                   <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
                 </div>
               </div>
-              <div className="mt-4 flex items-center text-xs text-slate-400">
+              <div className="mt-4 flex items-center text-xs text-ink-mute">
                 {SubIcon ? <SubIcon className="h-3.5 w-3.5 text-accent-400 mr-1" /> : null}
                 <span>{kpi.sub}</span>
               </div>
@@ -197,8 +197,8 @@ export const Dashboard: React.FC = () => {
       <div>
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h3 className="text-fluid-title font-bold text-white">Your AI Chatbot</h3>
-            <p className="text-xs text-slate-400 mt-1">Talk to it the way a homeowner would, then check the lead in your CRM</p>
+            <h3 className="text-fluid-title font-bold text-ink">Your AI Chatbot</h3>
+            <p className="text-xs text-ink-mute mt-1">Talk to it the way a homeowner would, then check the lead in your CRM</p>
           </div>
         </div>
 
@@ -213,24 +213,24 @@ export const Dashboard: React.FC = () => {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <div className={`p-2.5 rounded-xl bg-gradient-to-br ${agent.color} shadow-lg ${agent.glow} group-hover:scale-105 transition-transform duration-200`}>
-                      <Icon className="h-5 w-5 text-slate-950 stroke-[2.5]" />
+                      <Icon className="h-5 w-5 text-gold-ink stroke-[2.5]" />
                     </div>
-                    <span className="text-xs bg-slate-900/70 border border-slate-700/70 text-slate-400 font-mono font-bold px-2 py-0.5 rounded-md uppercase">
+                    <span className="text-xs bg-card/70 border border-line/70 text-ink-mute font-mono font-bold px-2 py-0.5 rounded-md uppercase">
                       Agent {agent.number}
                     </span>
                   </div>
-                  <h4 className="text-base font-bold text-white group-hover:text-accent-300 transition-colors duration-200">
+                  <h4 className="text-base font-bold text-ink group-hover:text-accent-300 transition-colors duration-200">
                     {agent.title}
                   </h4>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  <p className="text-xs text-ink-mute mt-2 leading-relaxed">
                     {agent.description}
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-800/70 flex items-center justify-between text-xs">
+                <div className="mt-6 pt-4 border-t border-line/70 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-slate-500 block font-semibold uppercase tracking-wider text-[9px]">Captured so far</span>
-                    <span className="text-slate-200 font-bold font-mono">{agent.metric}</span>
+                    <span className="text-ink-mute block font-semibold uppercase tracking-wider text-[9px]">Captured so far</span>
+                    <span className="text-ink font-bold font-mono">{agent.metric}</span>
                   </div>
                   <button 
                     onClick={() => setActiveTab(agent.id)}
@@ -252,8 +252,8 @@ export const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-bold text-white">Latest Pipeline Inflow</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Real-time leads automatically qualified by active agents</p>
+              <h3 className="text-base font-bold text-ink">Latest Pipeline Inflow</h3>
+              <p className="text-xs text-ink-mute mt-0.5">Real-time leads automatically qualified by active agents</p>
             </div>
             <button 
               onClick={() => setActiveTab('crm')}
@@ -266,29 +266,29 @@ export const Dashboard: React.FC = () => {
 
           {leads.length === 0 && (
             <div className="py-10 text-center">
-              <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-800/70 border border-slate-700/70 flex items-center justify-center mb-3">
-                <Users className="h-5 w-5 text-slate-500" />
+              <div className="mx-auto h-12 w-12 rounded-2xl bg-inset/70 border border-line/70 flex items-center justify-center mb-3">
+                <Users className="h-5 w-5 text-ink-mute" />
               </div>
-              <p className="text-sm font-semibold text-slate-300">No leads captured yet</p>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+              <p className="text-sm font-semibold text-ink-soft">No leads captured yet</p>
+              <p className="text-xs text-ink-mute mt-1 max-w-xs mx-auto">
                 Chat with the chatbot — a real lead appears here instantly, with its full
                 conversation transcript. Nothing is pre-seeded.
               </p>
             </div>
           )}
 
-          <div className="divide-y divide-slate-800/70">
+          <div className="divide-y divide-line/70">
             {leads.slice(0, 4).map((lead, idx) => (
               <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0 gap-3 animate-slide-up" style={{ animationDelay: `${idx * 60}ms` }}>
                 <div className="flex items-center space-x-3.5 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700/70 flex items-center justify-center font-bold text-accent-300 shrink-0 shadow-lg">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-line-strong to-card border border-line/70 flex items-center justify-center font-bold text-accent-300 shrink-0 shadow-lg">
                     {lead.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-white truncate">{lead.name}</h4>
-                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+                    <h4 className="text-sm font-bold text-ink truncate">{lead.name}</h4>
+                    <p className="text-xs text-ink-mute flex items-center gap-1.5 mt-0.5 truncate">
                       <span>{lead.email}</span>
-                      <span className="text-slate-600">•</span>
+                      <span className="text-ink-mute">•</span>
                       <span>{lead.phone}</span>
                     </p>
                   </div>
@@ -296,8 +296,8 @@ export const Dashboard: React.FC = () => {
 
                 <div className="flex items-center space-x-3 shrink-0">
                   <div className="text-right hidden sm:block">
-                    <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Acquired via</span>
-                    <span className="text-xs text-slate-300 font-medium">{lead.agentType}</span>
+                    <span className="text-[10px] text-ink-mute block font-semibold uppercase tracking-wider">Acquired via</span>
+                    <span className="text-xs text-ink-soft font-medium">{lead.agentType}</span>
                   </div>
                   <span className={`status-pill ${statusPillClass(lead.status)}`}>
                     {lead.status}
@@ -315,11 +315,11 @@ export const Dashboard: React.FC = () => {
               <AlertTriangle className="h-5 w-5 stroke-[2.5]" />
               <span className="text-xs font-bold uppercase tracking-wider">Storm Objection Vector</span>
             </div>
-            <h3 className="text-base font-bold text-white">Local Target Event Analysis</h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              AI agents are currently programmed to inject references to the <span className="text-slate-200 font-bold">{companySettings.stormName}</span> that impacted the <span className="text-slate-200 font-bold">{companySettings.city}</span> region on <span className="text-slate-200 font-bold">{companySettings.stormDate}</span>.
+            <h3 className="text-base font-bold text-ink">Local Target Event Analysis</h3>
+            <p className="text-xs text-ink-mute mt-2 leading-relaxed">
+              AI agents are currently programmed to inject references to the <span className="text-ink font-bold">{companySettings.stormName}</span> that impacted the <span className="text-ink font-bold">{companySettings.city}</span> region on <span className="text-ink font-bold">{companySettings.stormDate}</span>.
             </p>
-            <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-xs text-slate-300 mt-4 space-y-2 font-mono leading-relaxed">
+            <div className="bg-card/60 p-3.5 rounded-xl border border-line/80 text-xs text-ink-soft mt-4 space-y-2 font-mono leading-relaxed">
               <p className="text-accent-400 font-bold uppercase tracking-wider text-[9px] mb-1">Active AI Objection Script</p>
               {`Most insurance policies have a 1-year filing limit from the event date (${companySettings.stormDate}). We provide a free inspection report so you don't miss the deadline.`}
             </div>

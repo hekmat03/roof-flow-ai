@@ -47,46 +47,46 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   }
 
   const input =
-    'w-full bg-slate-950 border border-slate-700 focus:border-[#F97316] outline-none rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500';
+    'w-full bg-page border border-line focus:border-line outline-none rounded-xl px-4 py-3 text-ink placeholder-ink-mute';
 
   return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 text-slate-100">
+    <div className="min-h-screen bg-page flex items-center justify-center p-4 text-ink">
       <div className="w-full max-w-md">
         <button onClick={() => navigate('/')} className="flex items-center gap-2 mx-auto mb-6" aria-label="RoofFlow AI home">
-          <span className="bg-[#F97316] p-2 rounded-xl"><CloudLightning className="h-6 w-6 text-slate-950" /></span>
-          <span className="text-xl font-black">Roof<span className="text-[#F97316]">Flow</span> AI</span>
+          <span className="bg-gold p-2 rounded-xl"><CloudLightning className="h-6 w-6 text-gold-ink" /></span>
+          <span className="text-xl font-black">Roof<span className="text-ink">Flow</span> AI</span>
         </button>
 
-        <form onSubmit={onSubmit} noValidate className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-4">
+        <form onSubmit={onSubmit} noValidate className="bg-card border border-line rounded-2xl p-6 sm:p-8 space-y-4">
           <h1 className="text-2xl font-bold">{isSignup ? 'Create your account' : 'Welcome back'}</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-ink-mute">
             {isSignup ? 'Start free. No credit card required.' : 'Log in to your contractor dashboard.'}
           </p>
 
           <div>
-            <label htmlFor="email" className="block text-sm text-slate-300 mb-1">Email</label>
+            <label htmlFor="email" className="block text-sm text-ink-soft mb-1">Email</label>
             <input id="email" type="email" autoComplete="email" value={email}
               onChange={(e) => setEmail(e.target.value)} className={input} placeholder="you@company.com" />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm text-slate-300 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm text-ink-soft mb-1">Password</label>
             <input id="password" type="password" value={password}
               autoComplete={isSignup ? 'new-password' : 'current-password'}
               onChange={(e) => setPassword(e.target.value)} className={input}
               placeholder={isSignup ? `At least ${MIN_PASSWORD_LENGTH} characters` : 'Your password'} />
           </div>
 
-          {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
           <button type="submit" disabled={busy}
-            className="w-full flex items-center justify-center gap-2 bg-[#F97316] hover:bg-orange-400 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-xl transition">
+            className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold disabled:opacity-60 text-gold-ink font-bold py-3 rounded-xl transition">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             {busy ? 'Please wait…' : isSignup ? 'Start Free - No Credit Card' : 'Log in'}
           </button>
 
-          <p className="text-sm text-slate-400 text-center">
+          <p className="text-sm text-ink-mute text-center">
             {isSignup ? 'Already have an account? ' : 'New here? '}
-            <button type="button" className="text-[#F97316] hover:underline font-semibold"
+            <button type="button" className="text-ink hover:underline font-semibold"
               onClick={() => navigate(isSignup ? '/login' : '/signup')}>
               {isSignup ? 'Log in' : 'Create an account'}
             </button>

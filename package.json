@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --force",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --import ./tests/register-ts.mjs tests/generator.test.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/integrations.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/api.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/tools.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/actions.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/validators.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/google.check.ts"

@@ -86,7 +86,7 @@ export const formatCapturedAt = (iso: string): string => {
 /** Score → tier label + the tailwind classes the CRM uses for it. */
 export const scoreTier = (score: number | null): { label: string; className: string } => {
   const s = typeof score === 'number' ? score : 0;
-  if (s >= 75) return { label: 'Hot', className: 'text-rose-300 bg-rose-500/10 border-rose-500/30' };
-  if (s >= 45) return { label: 'Warm', className: 'text-amber-300 bg-amber-500/10 border-amber-500/30' };
-  return { label: 'Cool', className: 'text-sky-300 bg-sky-500/10 border-sky-500/30' };
+  if (s >= 75) return { label: 'Hot', className: 'text-accent-400 bg-accent-500/10 border-accent-500/30' };
+  if (s >= 45) return { label: 'Warm', className: 'text-accent-300 bg-accent-500/10 border-accent-500/30' };
+  return { label: 'Cool', className: 'text-accent-300 bg-accent-500/10 border-accent-500/30' };
 };
