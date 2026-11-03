@@ -8,18 +8,10 @@ import { VerifyEmail } from './VerifyEmail';
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading, configured, emailVerified } = useAuth();
 
-  if (!configured) {
-    return (
-      <div className="min-h-screen bg-page flex items-center justify-center p-6 text-center text-ink">
-        <div className="max-w-md">
-          <h2 className="text-xl font-bold mb-2">Authentication is not configured</h2>
-          <p className="text-ink-mute text-sm">
-            Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then rebuild.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // No Supabase project configured (the published demo build has no anon key):
+  // fall through to the local-only app instead of a dead end. All state lives in
+  // localStorage, so the simulators/CRM still work end to end for demos.
+  if (!configured) return <>{children}</>;
   if (loading) return <FullScreenSpinner label="Checking your session…" />;
   if (!user) {
     const next = encodeURIComponent(window.location.pathname + window.location.search);
