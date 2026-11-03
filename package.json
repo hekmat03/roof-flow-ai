@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --force",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --experimental-strip-types tests/generator.test.ts && node --experimental-strip-types tests/integrations.check.ts && node --experimental-strip-types tests/api.check.ts && node --experimental-strip-types tests/tools.check.ts && node --experimental-strip-types tests/actions.check.ts"

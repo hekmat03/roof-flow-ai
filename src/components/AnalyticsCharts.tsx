@@ -38,6 +38,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import { TrendingUp, Filter } from 'lucide-react';
 import { useApp, type Lead } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 
 ChartJS.register(
   CategoryScale,
