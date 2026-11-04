@@ -446,13 +446,44 @@ export const insertLead = async (
   return row;
 };
 
+/**
+ * The ONLY columns `GET /api/leads` may return (audit C1).
+ *
+ * An explicit allowlist, never `select=*`. `leads` is a table two applications
+ * write to, so `*` silently hands out whatever column the other app — or a
+ * future migration — adds next. These are the fields the CRM board renders;
+ * `user_agent` is deliberately absent because nothing displays it.
+ */
+export const LEAD_LIST_COLUMNS = [
+  "id",
+  "name",
+  "phone",
+  "email",
+  "zip_code",
+  "roofing_need",
+  "consent",
+  "consent_text",
+  "conversation",
+  "lead_score",
+  "status",
+  "source",
+  "created_at",
+] as const satisfies readonly (keyof LeadRow)[];
+
+/** A lead as the CRM board receives it: {@link LeadRow} minus `user_agent`. */
+export type LeadListRow = Omit<LeadRow, "user_agent">;
+
 /** Latest N real leads, newest first. Server-side only. */
-export const listLeads = async (limit = 200): Promise<LeadRow[]> => {
+export const listLeads = async (
+  limit = 200,
+  columns: readonly (keyof LeadRow)[] = LEAD_LIST_COLUMNS
+): Promise<LeadListRow[]> => {
   const { url } = supabaseEnv();
+  const select = encodeURIComponent(columns.join(","));
   const res = await fetch(
-    `${url}/rest/v1/${LEADS_TABLE}?select=*&order=created_at.desc&limit=${String(limit)}`,
+    `${url}/rest/v1/${LEADS_TABLE}?select=${select}&order=created_at.desc&limit=${String(limit)}`,
     { headers: authHeaders() }
   );
   if (!res.ok) throw new Error(`supabase_select_failed_${String(res.status)}`);
-  return (await res.json()) as LeadRow[];
+  return (await res.json()) as LeadListRow[];
 };

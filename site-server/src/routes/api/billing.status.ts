@@ -63,7 +63,9 @@ export const Route = createFileRoute("/api/billing/status")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!isSameOrigin(request)) return json({ ok: false, error: "forbidden_origin" }, 403);
+        // Browser GETs carry no Origin; a foreign Origin is still rejected.
+        if (!isSameOrigin(request, { allowMissingOrigin: true }))
+          return json({ ok: false, error: "forbidden_origin" }, 403);
         const session = sessionFromRequest(request);
         const payments = paymentsState();
 
