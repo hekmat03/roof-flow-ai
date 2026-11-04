@@ -1,14 +1,46 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDownRight, ArrowRight, Bot, Check, Clock3, LockKeyhole, MessageSquareText, Send, ShieldCheck, Sparkles, Target, Workflow, Zap } from 'lucide-react';
+import { ArrowRight, Bot, Calendar, Check, CloudLightning, Lock, MessageSquare, Send, ShieldCheck, Users } from 'lucide-react';
 import './public.css';
+
+/* ---------------------------------------------------------------------------
+ * Public landing page. All copy describes things the product really does.
+ * The demo chat talks to /api/demo-chat (public, tightly rate-limited, no tools,
+ * never collects personal details or saves anything).
+ * ------------------------------------------------------------------------- */
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
-const openingMessage = 'Hi there. I can show how RoofFlow AI responds to a homeowner asking about a roof issue. This demo is for product questions only; please do not share personal or property details.';
+const openingMessage =
+  'Hi there! Ask me how RoofFlow AI handles a homeowner asking about a roof issue. This demo is for product questions only, so please do not share personal details.';
 const quickQuestions = ['How does lead response work?', 'Can it help request inspections?', 'What happens to my CRM?'];
-const fallbackReply = 'RoofFlow AI helps roofing teams respond to homeowner inquiries quickly, capture qualified leads, manage them in a CRM, and request inspections. This public demo does not collect contact details or save anything to a CRM.';
+const fallbackReply =
+  'RoofFlow AI helps roofing teams answer homeowner inquiries quickly, capture verified leads, manage them in a CRM, and request inspections. This public demo does not collect contact details or save anything.';
 
-export const LandingPage: React.FC = () => {
+/** Fades sections in as they scroll into view (skipped for reduced motion / old browsers). */
+function useReveal() {
+  useEffect(() => {
+    const items = Array.from(document.querySelectorAll<HTMLElement>('.lp-reveal'));
+    if (!('IntersectionObserver' in window)) {
+      items.forEach((el) => el.classList.add('is-in'));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-in');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' },
+    );
+    items.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+}
+
+const DemoChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'assistant', content: openingMessage }]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -44,189 +76,278 @@ export const LandingPage: React.FC = () => {
       setMessages((current) => [...current, { role: 'assistant', content: data.reply as string }]);
     } catch {
       setMessages((current) => [...current, { role: 'assistant', content: fallbackReply }]);
-      setDemoError('The live assistant is unavailable right now. A safe local product explanation was shown instead.');
+      setDemoError('The live assistant is unavailable right now. A short product summary was shown instead.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <main className="rf-public">
-      <header className="rf-container rf-nav">
-        <a className="rf-brand" href="/" aria-label="RoofFlow AI home">
-          <span className="rf-brand-mark"><Workflow size={19} strokeWidth={2.3} /></span>
-          <span className="rf-brand-name">RoofFlow <span>AI</span></span>
-        </a>
-        <nav className="rf-nav-actions" aria-label="Main navigation">
-          <a className="rf-text-link" href="#pricing">Pricing</a>
-          <a className="rf-text-link" href="/login">Log in</a>
-          <a className="rf-button" href="/signup">Start free <ArrowRight size={15} /></a>
-        </nav>
-      </header>
-
-      <section className="rf-container rf-hero">
-        <div className="rf-hero-grid">
-          <div className="rf-hero-copy">
-            <span className="rf-kicker">The lead-response workspace for roofers</span>
-            <h1>Stop Losing Roofing Leads <em>Forever</em></h1>
-            <p>When a homeowner reaches out, the next move matters. RoofFlow AI helps your team respond quickly, qualify the conversation, manage leads, and request inspections—all in one workspace.</p>
-            <div className="rf-hero-ctas">
-              <a href="/signup" className="rf-button">Start Free - No Credit Card <ArrowRight size={16} /></a>
-              <a href="#how-it-works" className="rf-button rf-button-quiet">See how it works <ArrowDownRight size={15} /></a>
-            </div>
-            <div className="rf-proof-line">
-              <span><ShieldCheck size={15} /> Built for contractor teams</span>
-              <span><Clock3 size={15} /> Faster first response</span>
-            </div>
+    <div className="lp-demo">
+      <div className="lp-demo-top">
+        <div className="lp-demo-who">
+          <span className="lp-mark"><Bot size={20} aria-hidden /></span>
+          <div>
+            <div className="lp-demo-name">RoofFlow assistant</div>
+            <div className="lp-demo-sub">Public product demo</div>
           </div>
-
-          <section className="rf-demo-card" aria-label="Interactive public chatbot demo">
-            <div className="rf-demo-top">
-              <div className="rf-demo-heading">
-                <span className="rf-bot-mark"><Bot size={19} /></span>
-                <div>
-                  <div className="rf-demo-title">RoofFlow assistant</div>
-                  <div className="rf-demo-subtitle">PUBLIC PRODUCT DEMO</div>
-                </div>
-              </div>
-              <span className="rf-live-badge"><i /> Demo live</span>
-            </div>
-            <div className="rf-chat-area" ref={scrollRef} aria-live="polite">
-              {messages.map((message, index) => (
-                <div className={`rf-chat-msg${message.role === 'user' ? ' user' : ''}`} key={`${index}-${message.role}`}>
-                  {message.content}
-                </div>
-              ))}
-              {busy && <div className="rf-chat-loading" aria-label="Assistant is responding"><i /><i /><i /></div>}
-            </div>
-            {demoError && <div className="rf-demo-error" role="status">{demoError}</div>}
-            <div className="rf-quick-picks" aria-label="Suggested questions">
-              {quickQuestions.map((question) => (
-                <button key={question} type="button" disabled={busy} onClick={() => void sendMessage(question)}>{question}</button>
-              ))}
-            </div>
-            <form className="rf-chat-form" onSubmit={(event) => { event.preventDefault(); void sendMessage(input); }}>
-              <input aria-label="Ask about RoofFlow AI" placeholder="Ask about RoofFlow AI..." value={input} onChange={(event) => setInput(event.target.value)} disabled={busy} />
-              <button aria-label="Send message" type="submit" disabled={busy || !input.trim()}><Send size={16} /></button>
-            </form>
-            <div className="rf-demo-footnote"><LockKeyhole size={13} /> Please don't enter personal details. This demo never saves to a CRM.</div>
-          </section>
         </div>
-      </section>
+        <span className="lp-live"><i /> Interactive demo</span>
+      </div>
 
-      <div className="rf-strip">
-        <div className="rf-container rf-strip-inner">
-          <span className="rf-strip-label">One clear workflow</span>
-          <span className="rf-strip-item"><MessageSquareText size={17} /> Answer inquiries</span>
-          <span className="rf-strip-item"><Target size={17} /> Qualify leads</span>
-          <span className="rf-strip-item"><Workflow size={17} /> Manage your CRM</span>
-          <span className="rf-strip-item"><Clock3 size={17} /> Request inspections</span>
+      <div className="lp-chat" ref={scrollRef} aria-live="polite">
+        {messages.map((message, index) => (
+          <div className={`lp-msg${message.role === 'user' ? ' user' : ''}`} key={`${index}-${message.role}`}>
+            {message.content}
+          </div>
+        ))}
+        {busy && <div className="lp-dots" aria-label="The assistant is typing"><i /><i /><i /></div>}
+      </div>
+
+      {demoError && <div className="lp-demo-err" role="status">{demoError}</div>}
+
+      <div className="lp-picks" aria-label="Suggested questions">
+        {quickQuestions.map((question) => (
+          <button key={question} type="button" disabled={busy} onClick={() => void sendMessage(question)}>
+            {question}
+          </button>
+        ))}
+      </div>
+
+      <form className="lp-form" onSubmit={(event) => { event.preventDefault(); void sendMessage(input); }}>
+        <input
+          aria-label="Ask about RoofFlow AI"
+          placeholder="Ask about RoofFlow AI..."
+          value={input}
+          maxLength={400}
+          onChange={(event) => setInput(event.target.value)}
+          disabled={busy}
+        />
+        <button aria-label="Send message" type="submit" disabled={busy || !input.trim()}>
+          <Send size={17} aria-hidden />
+        </button>
+      </form>
+      <div className="lp-note"><Lock size={13} aria-hidden /> Please don&apos;t enter personal details. This demo never saves to a CRM.</div>
+    </div>
+  );
+};
+
+export const LandingPage: React.FC = () => {
+  useReveal();
+
+  return (
+    <div className="lp">
+      <div className="lp-glow lp-glow--a"></div>
+      <div className="lp-glow lp-glow--b"></div>
+      <div className="lp-glow lp-glow--c"></div>
+
+      <div className="lp-nav-outer">
+        <div className="lp-wrap">
+          <header className="lp-nav">
+            <a className="lp-brand" href="/" aria-label="RoofFlow AI home">
+              <span className="lp-mark"><CloudLightning size={19} aria-hidden /></span>
+              <span>RoofFlow <b>AI</b></span>
+            </a>
+            <nav className="lp-links" aria-label="Main navigation">
+              <a href="#features">Features</a>
+              <a href="#how-it-works">How it works</a>
+              <a href="#demo">Demo</a>
+              <a href="#pricing">Pricing</a>
+            </nav>
+            <div className="lp-nav-cta">
+              <a className="lp-signin" href="/login">Sign in</a>
+              <a className="lp-btn lp-btn--primary lp-btn--sm" href="/signup">Start free <ArrowRight size={16} aria-hidden /></a>
+            </div>
+          </header>
         </div>
       </div>
 
-      <section className="rf-container rf-section rf-problem">
-        <div className="rf-problem-aside">
-          <span className="rf-kicker">The moment that matters</span>
-          <h2 className="rf-display" style={{ fontSize: 'clamp(31px,4vw,47px)', lineHeight: 1.08, letterSpacing: '-.06em', margin: '17px 0 0' }}>A missed message can become a missed job.</h2>
-          <p style={{ color: '#9ca8b9', fontSize: 14, lineHeight: 1.7, marginTop: 16 }}>Roofing teams are in the field, on calls, and juggling the next job. RoofFlow gives incoming conversations a clear path forward.</p>
-          <blockquote className="rf-quote">“Be there when the homeowner is ready to talk.”</blockquote>
-        </div>
-        <div className="rf-problem-list">
-          <article className="rf-problem-row">
-            <span className="rf-problem-index">01 / RESPONSE</span>
-            <h3>Get back to homeowners sooner</h3>
-            <p>Give new inquiries a prompt, helpful first response while your team is working.</p>
-          </article>
-          <article className="rf-problem-row">
-            <span className="rf-problem-index">02 / QUALIFICATION</span>
-            <h3>Keep the conversation focused</h3>
-            <p>Capture the details your team needs to understand whether a lead is qualified.</p>
-          </article>
-          <article className="rf-problem-row">
-            <span className="rf-problem-index">03 / ORGANIZATION</span>
-            <h3>See every lead in one place</h3>
-            <p>Manage your incoming opportunities through a dedicated roofing CRM workspace.</p>
-          </article>
-          <article className="rf-problem-row">
-            <span className="rf-problem-index">04 / NEXT STEP</span>
-            <h3>Move toward an inspection</h3>
-            <p>Make inspection requests a natural next step in the lead conversation.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="rf-flow-section" id="how-it-works">
-        <div className="rf-container rf-section rf-flow-grid">
-          <div>
-            <div className="rf-section-head">
-              <span className="rf-kicker">A calmer way to follow up</span>
-              <h2>From first hello to a clear next step.</h2>
-              <p>RoofFlow keeps the process straightforward for the homeowner and your crew.</p>
+      <main>
+        <section className="lp-hero">
+          <div className="lp-wrap lp-hero-grid">
+            <div>
+              <span className="lp-badge"><i></i> AI lead capture for roofing contractors</span>
+              <h1>Stop Losing Roofing Leads <span className="lp-grad">Forever</span></h1>
+              <p className="lp-lead">When a homeowner reaches out after a storm, the next few minutes decide who gets the job. RoofFlow AI answers their questions, checks their contact details, and requests the roof inspection, so every lead lands in your CRM.</p>
+              <div className="lp-ctas">
+                <a className="lp-btn lp-btn--primary" href="/signup">Start Free - No Credit Card <ArrowRight size={18} aria-hidden /></a>
+                <a className="lp-btn lp-btn--ghost" href="#how-it-works">See how it works</a>
+              </div>
+              <div className="lp-fine">
+                <span><Check size={15} aria-hidden /> 20 chats a month on the free plan</span>
+                <span><Check size={15} aria-hidden /> Set up in minutes</span>
+              </div>
             </div>
-            <div className="rf-flow-steps">
-              <div className="rf-flow-step"><span className="rf-step-no">01</span><div><h3>A homeowner reaches out</h3><p>Start with the conversation and the roof concern they want to discuss.</p></div></div>
-              <div className="rf-flow-step"><span className="rf-step-no">02</span><div><h3>Respond and qualify</h3><p>Help your team answer quickly and collect the context needed to follow up.</p></div></div>
-              <div className="rf-flow-step"><span className="rf-step-no">03</span><div><h3>Keep the lead moving</h3><p>Manage the conversation in your CRM and request an inspection when appropriate.</p></div></div>
+
+            <div className="lp-phone-wrap">
+              <div className="lp-phone" aria-label="Example roofing chat conversation">
+                <div className="lp-phone-head"><span>Roofing chat</span><span>Now</span></div>
+                <div className="lp-bubble lp-bubble--ai">Hi! Are you seeing leaks or storm damage on your roof?</div>
+                <div className="lp-bubble lp-bubble--me">Yeah, hail damage on the north side.</div>
+                <div className="lp-bubble lp-bubble--ai">Sorry to hear that. What&apos;s the best number to reach you?</div>
+                <div className="lp-bubble lp-bubble--me">(415) 555-2671</div>
+                <div className="lp-bubble lp-bubble--ai">Thanks! I can request a free inspection. Does Thursday at 10 am work?</div>
+                <div className="lp-phone-tag">Example conversation</div>
+              </div>
             </div>
           </div>
-          <div className="rf-flow-visual" aria-label="Diagram showing homeowner inquiry routed through RoofFlow to a contractor team">
-            <div className="rf-flow-node n1"><MessageSquareText size={15} /> Homeowner inquiry</div>
-            <div className="rf-flow-node n2"><Zap size={15} /> Quick response</div>
-            <div className="rf-flow-node n3"><Target size={15} /> Qualified lead</div>
-            <div className="rf-flow-node n4"><Clock3 size={15} /> Inspection request</div>
-            <div className="rf-flow-center"><Workflow size={42} strokeWidth={1.6} /></div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="rf-container rf-section rf-pricing" id="pricing">
-        <div className="rf-pricing-top">
-          <div className="rf-section-head">
-            <span className="rf-kicker">Straightforward pricing</span>
-            <h2>Choose your starting point.</h2>
-            <p>See the available options. Start with Free—no credit card required.</p>
+        <section className="lp-section" id="features">
+          <div className="lp-wrap">
+            <div className="lp-head lp-reveal">
+              <h2>Everything you need to turn roof inquiries <span className="lp-muted">into booked inspections.</span></h2>
+              <p className="lp-sub">Six tools, one goal: never lose a homeowner lead again.</p>
+            </div>
+            <div className="lp-grid3">
+              <article className="lp-card lp-reveal">
+                <span className="lp-card-ico"><Bot size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
+                <h3>AI website chatbot</h3>
+                <p>Answers homeowner questions about storm damage, insurance and inspections, day and night.</p>
+              </article>
+              <article className="lp-card lp-reveal">
+                <span className="lp-card-ico"><ShieldCheck size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
+                <h3>Verified contact details</h3>
+                <p>Checks phone numbers and emails as they are typed, and blocks fake or placeholder addresses.</p>
+              </article>
+              <article className="lp-card lp-reveal">
+                <span className="lp-card-ico"><Users size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
+                <h3>CRM leads board</h3>
+                <p>Move leads from New Lead to Inspection Scheduled to Closed-Won, with the whole chat attached.</p>
+              </article>
+              <article className="lp-card lp-reveal">
+                <span className="lp-card-ico"><Calendar size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
+                <h3>Google Calendar booking</h3>
+                <p>Connect your calendar and an inspection request becomes an event, with an invite and a 24-hour reminder.</p>
+              </article>
+              <article className="lp-card lp-reveal">
+                <span className="lp-card-ico"><MessageSquare size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
+                <h3>Conversation history</h3>
+                <p>Every message stays on the lead, in order, with timestamps, so you know exactly what was said.</p>
+              </article>
+              <article className="lp-card lp-reveal">
+                <span className="lp-card-ico"><Lock size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
+                <h3>Private by account</h3>
+                <p>Each company&apos;s leads are kept separate. Only you can see your leads and conversations.</p>
+              </article>
+            </div>
           </div>
-          <p className="rf-pricing-note">Start free. Upgrade or cancel any time from your account.</p>
-        </div>
-        <div className="rf-price-list">
-          <div className="rf-price-row">
-            <div className="rf-price-level"><span className="rf-price-index">01</span><span className="rf-price-name">Free</span></div>
-            <span className="rf-price-amount">$0</span>
-            <div className="rf-price-status">20 chats / month · AI chatbot<br /><a href="/signup">Start Free <ArrowRight size={14} /></a></div>
-          </div>
-          <div className="rf-price-row">
-            <div className="rf-price-level"><span className="rf-price-index">02</span><span className="rf-price-name">Starter</span></div>
-            <span className="rf-price-amount">$19</span>
-            <div className="rf-price-status">250 chats / month · chatbot + CRM<br /><a href="/signup">Get Starter <ArrowRight size={14} /></a></div>
-          </div>
-          <div className="rf-price-row">
-            <div className="rf-price-level"><span className="rf-price-index">03</span><span className="rf-price-name">Pro</span></div>
-            <span className="rf-price-amount">$39</span>
-            <div className="rf-price-status">1,000 chats / month · every feature<br /><a href="/signup">Get Pro <ArrowRight size={14} /></a></div>
-          </div>
-        </div>
-        <div className="rf-pricing-disclaimer"><span>No credit card to start.</span><span>Pay only when you choose to upgrade.</span></div>
-      </section>
+        </section>
 
-      <section className="rf-container rf-final-cta">
-        <div className="rf-final-card">
-          <div>
-            <span className="rf-kicker">Your next lead deserves a reply</span>
-            <h2>Put a better first response within reach.</h2>
+        <section className="lp-section" id="how-it-works">
+          <div className="lp-wrap">
+            <div className="lp-head lp-reveal">
+              <h2>From first message to booked inspection <span className="lp-muted">in three steps.</span></h2>
+              <p className="lp-sub">No forms for the homeowner to fight with. Just a conversation.</p>
+            </div>
+            <div className="lp-steps">
+              <article className="lp-step lp-reveal">
+                <span className="lp-step-n">01</span>
+                <h3>A homeowner starts a chat</h3>
+                <p>They ask about a leak, hail damage or an insurance claim. The assistant answers in plain language.</p>
+              </article>
+              <article className="lp-step lp-reveal">
+                <span className="lp-step-n">02</span>
+                <h3>RoofFlow captures the lead</h3>
+                <p>It collects the name, phone and email, and only accepts details that look real.</p>
+              </article>
+              <article className="lp-step lp-reveal">
+                <span className="lp-step-n">03</span>
+                <h3>You get a lead and a booking</h3>
+                <p>The lead appears on your CRM board, and with Google Calendar connected, the inspection lands on your calendar.</p>
+              </article>
+            </div>
           </div>
-          <a className="rf-button" href="/signup">Start Free - No Credit Card <ArrowRight size={16} /></a>
-        </div>
-      </section>
+        </section>
 
-      <footer className="rf-footer">
-        <div className="rf-container rf-footer-inner">
-          <a className="rf-brand" href="/" aria-label="RoofFlow AI home">
-            <span className="rf-brand-mark"><Workflow size={17} /></span><span className="rf-brand-name">RoofFlow <span>AI</span></span>
-          </a>
-          <span>Lead response, made practical for roofing teams.</span>
-          <div className="rf-footer-links"><a href="/login">Log in</a><a href="/signup">Create account</a></div>
+        <section className="lp-section" id="demo">
+          <div className="lp-wrap lp-demo-wrap">
+            <div className="lp-reveal">
+              <span className="lp-eyebrow">Live demo</span>
+              <h2>Ask it anything <span className="lp-muted">about RoofFlow.</span></h2>
+              <ul className="lp-points">
+                <li><Check size={18} aria-hidden /> <span>This is a real AI assistant, not a recording.</span></li>
+                <li><Check size={18} aria-hidden /> <span>It explains how RoofFlow works. It does not collect personal details.</span></li>
+                <li><Check size={18} aria-hidden /> <span>Create a free account to try the full chatbot on your own leads.</span></li>
+              </ul>
+            </div>
+            <div className="lp-reveal">
+              <DemoChat />
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section" id="pricing">
+          <div className="lp-wrap lp-center">
+            <div className="lp-reveal">
+              <span className="lp-eyebrow">Pricing</span>
+              <h2>Simple pricing. <span className="lp-muted">Start free.</span></h2>
+              <p className="lp-lead">Pick the plan that fits your monthly chat volume. No credit card to start.</p>
+            </div>
+            <div className="lp-prices">
+              <article className="lp-price lp-reveal">
+                <h3>Free</h3>
+                <div className="lp-amount">$0<small>/month</small></div>
+                <div className="lp-chats">20 chats / month</div>
+                <ul>
+                  <li><Check size={18} aria-hidden /> AI website chatbot</li>
+                  <li><Check size={18} aria-hidden /> Phone and email validation</li>
+                  <li><Check size={18} aria-hidden /> Lead capture</li>
+                </ul>
+                <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Start Free <ArrowRight size={16} aria-hidden /></a>
+              </article>
+              <article className="lp-price lp-price--pop lp-reveal">
+                <span className="lp-pop">MOST POPULAR</span>
+                <h3>Starter</h3>
+                <div className="lp-amount">$19<small>/month</small></div>
+                <div className="lp-chats">250 chats / month</div>
+                <ul>
+                  <li><Check size={18} aria-hidden /> Everything in Free</li>
+                  <li><Check size={18} aria-hidden /> CRM leads board</li>
+                  <li><Check size={18} aria-hidden /> Dashboard and lead reporting</li>
+                </ul>
+                <a className="lp-btn lp-btn--primary lp-btn--block" href="/signup">Get Started <ArrowRight size={16} aria-hidden /></a>
+              </article>
+              <article className="lp-price lp-reveal">
+                <h3>Pro</h3>
+                <div className="lp-amount">$39<small>/month</small></div>
+                <div className="lp-chats">1,000 chats / month</div>
+                <ul>
+                  <li><Check size={18} aria-hidden /> Everything in Starter</li>
+                  <li><Check size={18} aria-hidden /> All features unlocked</li>
+                  <li><Check size={18} aria-hidden /> Highest chat volume</li>
+                </ul>
+                <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Get Started <ArrowRight size={16} aria-hidden /></a>
+              </article>
+            </div>
+            <p className="lp-price-note lp-reveal">No credit card to start. Upgrade or cancel any time from your account.</p>
+          </div>
+        </section>
+
+        <section className="lp-section">
+          <div className="lp-wrap">
+            <div className="lp-cta lp-reveal">
+              <h2>Ready to stop <span className="lp-grad">losing leads?</span></h2>
+              <p className="lp-lead">Create your free workspace in a few minutes and let the next storm-season inquiry land in your CRM.</p>
+              <div className="lp-ctas">
+                <a className="lp-btn lp-btn--primary" href="/signup">Start Free - No Credit Card <ArrowRight size={18} aria-hidden /></a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="lp-footer">
+        <div className="lp-wrap lp-footer-in">
+          <a className="lp-brand" href="/"><span className="lp-mark"><CloudLightning size={19} aria-hidden /></span><span>RoofFlow <b>AI</b></span></a>
+          <nav aria-label="Footer navigation">
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="/login">Sign in</a>
+          </nav>
+          <span>&copy; 2026 RoofFlow AI</span>
         </div>
       </footer>
-    </main>
+    </div>
   );
 };
