@@ -11,14 +11,10 @@ import { extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
 import {
   validateEmail, validatePhone, validateName, formatPhone,
   findEmailCandidate, findPhoneCandidate, type Checked,
-} from '../lib/validators';
+} from '../utils/validators';
 
 const nowStamp = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-/**
- * Newest candidate decides: a valid one is the value, an invalid one is a
- * "problem" (so the visitor is asked again) and nothing is saved until fixed.
- */
 function resolveField(
   texts: string[],
   pick: (t: string) => string | undefined,
@@ -33,7 +29,6 @@ function resolveField(
   return {};
 }
 
-/** Problems with the contact details inside ONE message the visitor just sent. */
 function contactProblems(text: string): string[] {
   const out: string[] = [];
   const email = findEmailCandidate(text);
@@ -43,7 +38,6 @@ function contactProblems(text: string): string[] {
   return out;
 }
 
-/** "YYYY-MM-DDTHH:mm" for <input type="datetime-local">: 3 days from now at 10:00 local. */
 function defaultInspectionDateTime(): string {
   const d = new Date();
   d.setDate(d.getDate() + 3);
@@ -69,7 +63,6 @@ export const Agent1Chatbot: React.FC = () => {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [actionLog, setActionLog] = useState<AgentAction[]>([]);
 
-  // Booking form state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -92,12 +85,6 @@ export const Agent1Chatbot: React.FC = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, showBookingForm]);
 
-  // ---- Free-form lead capture ------------------------------------------------
-  // Scan ONLY the visitor's own messages for contact details. As soon as the
-  // conversation yields a name AND a phone AND an email, the lead is captured
-  // to the CRM with status 'New Lead' — no form required. Extraction runs on
-  // user text only, so it behaves identically on the live-AI path and the local
-  // fallback engine. capturedRef makes it strictly once-per-conversation.
   const capturedRef = useRef(false);
 
   const extracted = useMemo(() => {
@@ -144,7 +131,6 @@ export const Agent1Chatbot: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extracted, showBookingForm]);
 
-  // Prefill the booking form with anything the visitor already typed.
   useEffect(() => {
     if (showBookingForm) {
       if (extracted.name && !name) setName(extracted.name);
@@ -163,7 +149,6 @@ export const Agent1Chatbot: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Bad contact details? Ask again right here: no AI call, nothing is saved.
     const problems = contactProblems(text);
     if (problems.length > 0) {
       setMessages([...messages, userMsg, {
@@ -208,8 +193,6 @@ export const Agent1Chatbot: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
-      // Open the booking form when the visitor's latest message signals booking intent
-      // (schedule detection from the same intent engine that drives the reply).
       if (!booked && detectLatestIntent(aiMessages) === 'schedule') {
         setShowBookingForm(true);
       }
@@ -250,8 +233,6 @@ export const Agent1Chatbot: React.FC = () => {
     const timePart = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const scheduledDate = `${datePart} ${timePart}`;
 
-    // Create a Google Calendar event ONLY if the contractor connected a calendar.
-    // A lead is never lost: if the calendar step fails, the request is still saved.
     let calendarEventId: string | undefined;
     let calendarProblem: string | null = null;
     if (session?.access_token) {
@@ -289,8 +270,6 @@ export const Agent1Chatbot: React.FC = () => {
       timestamp: m.timestamp,
     }));
 
-    // If the free-form capture already saved this contact (same phone), UPDATE
-    // that lead instead of creating a duplicate.
     const existing = leads.find(l => l.phone.replace(/\D/g, '') === p.value);
     if (existing) {
       setLeads(prev => prev.map(l =>
@@ -333,45 +312,41 @@ export const Agent1Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 agent-workspace agent-chatbot">
-      {/* Header */}
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-black text-ink">Agent 1: Website Lead Capture Chatbot</h2>
-        <p className="text-xs text-ink-mute mt-1">
+        <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
+        <p className="text-xs text-slate-400 mt-1">
           Real AI-powered chat. Ask anything about storm damage, insurance, or inspections — the assistant responds live and hands off to a booking form when you're ready to schedule.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Chat Interface (7 cols) */}
         <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
-          {/* Top Chat Header */}
-          <div className="bg-page/60 px-6 py-4 border-b border-line/80 flex items-center justify-between shrink-0">
+          <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-3">
-              <div className="bg-gold/10 p-2 rounded-lg relative">
-                <Bot className="h-5 w-5 text-gold" />
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-gold border border-line"></span>
+              <div className="bg-orange-500/10 p-2 rounded-lg relative">
+                <Bot className="h-5 w-5 text-orange-500" />
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-slate-900"></span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-ink">RoofFlow Virtual Specialist</h3>
-                <p className="text-[10px] text-ink-mute">AI Assistant • Online 24/7</p>
+                <h3 className="text-sm font-bold text-white">RoofFlow Virtual Specialist</h3>
+                <p className="text-[10px] text-slate-400">AI Assistant • Online 24/7</p>
               </div>
             </div>
-            <span className="text-[10px] bg-gold/10 text-gold border border-gold/20 px-2 py-0.5 rounded font-bold font-mono">
+            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
               AGENT 1
             </span>
           </div>
 
-          {/* Chat Messages Log */}
-          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-page/40 premium-scroll">
+          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
               return (
                 <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
                   <div className="flex items-start space-x-2.5 max-w-md">
                     {isAI && (
-                      <div className="h-8 w-8 rounded-lg bg-inset border border-line flex items-center justify-center shrink-0">
-                        <Bot className="h-4 w-4 text-gold" />
+                      <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                        <Bot className="h-4 w-4 text-orange-500" />
                       </div>
                     )}
                     <div className={`px-4 py-2.5 text-xs leading-relaxed ${
@@ -392,8 +367,8 @@ export const Agent1Chatbot: React.FC = () => {
             {isLoading && (
               <div className="flex justify-start animate-slideUp">
                 <div className="flex items-start space-x-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-inset border border-line flex items-center justify-center shrink-0">
-                    <Bot className="h-4 w-4 text-gold" />
+                  <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4 text-orange-500" />
                   </div>
                   <div className="typing-indicator">
                     <span></span><span></span><span></span>
@@ -404,31 +379,30 @@ export const Agent1Chatbot: React.FC = () => {
 
             {error && (
               <div className="flex justify-center">
-                <span className="text-[10px] text-danger bg-danger/10 border border-danger/20 px-3 py-1.5 rounded-lg">{error}</span>
+                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">{error}</span>
               </div>
             )}
 
-            {/* Inline booking form, shown when the AI signals booking intent */}
             {showBookingForm && (
-              <div className="bg-card/80 backdrop-blur-md border border-accent-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
-                <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-gold" /> Book Your Free Inspection
+              <div className="bg-slate-900/80 backdrop-blur-md border border-accent-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-orange-500" /> Book Your Free Inspection
                 </h4>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-page border border-line rounded-lg px-3 py-2">
-                    <User className="h-3.5 w-3.5 text-ink-mute shrink-0" />
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                    <User className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="Full name"
                       autoComplete="name"
                       aria-invalid={Boolean(fieldErrors.name)}
-                      className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
+                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
-                  {fieldErrors.name && <p role="alert" className="text-[10px] text-danger -mt-1">{fieldErrors.name}</p>}
-                  <div className="flex items-center gap-2 bg-page border border-line rounded-lg px-3 py-2">
-                    <Phone className="h-3.5 w-3.5 text-ink-mute shrink-0" />
+                  {fieldErrors.name && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.name}</p>}
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                    <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
@@ -436,12 +410,12 @@ export const Agent1Chatbot: React.FC = () => {
                       inputMode="tel"
                       autoComplete="tel"
                       aria-invalid={Boolean(fieldErrors.phone)}
-                      className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
+                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
-                  {fieldErrors.phone && <p role="alert" className="text-[10px] text-danger -mt-1">{fieldErrors.phone}</p>}
-                  <div className="flex items-center gap-2 bg-page border border-line rounded-lg px-3 py-2">
-                    <Mail className="h-3.5 w-3.5 text-ink-mute shrink-0" />
+                  {fieldErrors.phone && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.phone}</p>}
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                    <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
                       value={email}
                       onChange={e => setEmail(e.target.value)}
@@ -449,36 +423,36 @@ export const Agent1Chatbot: React.FC = () => {
                       inputMode="email"
                       autoComplete="email"
                       aria-invalid={Boolean(fieldErrors.email)}
-                      className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
+                      className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
-                  {fieldErrors.email && <p role="alert" className="text-[10px] text-danger -mt-1">{fieldErrors.email}</p>}
-                  <label className="block text-[10px] text-ink-mute">
+                  {fieldErrors.email && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.email}</p>}
+                  <label className="block text-[10px] text-slate-400">
                     Preferred inspection date and time
                     <input
                       type="datetime-local"
                       value={startsAt}
                       min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
                       onChange={e => setStartsAt(e.target.value)}
-                      className="mt-1 w-full bg-page border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none"
+                      className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none"
                     />
                   </label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setOwnership('Owner')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-accent-500 text-gold-ink border-accent-400' : 'bg-page text-ink-mute border-line'}`}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Owner' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
                     >
                       I own the home
                     </button>
                     <button
                       onClick={() => setOwnership('Renter')}
-                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-accent-500 text-gold-ink border-accent-400' : 'bg-page text-ink-mute border-line'}`}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg border transition ${ownership === 'Renter' ? 'bg-accent-500 text-slate-950 border-accent-400' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
                     >
                       I rent
                     </button>
                   </div>
                 </div>
-                {formError && <p className="text-[10px] text-danger">{formError}</p>}
+                {formError && <p className="text-[10px] text-red-400">{formError}</p>}
                 <button
                   onClick={() => void handleBookingSubmit()}
                   disabled={booking}
@@ -490,15 +464,14 @@ export const Agent1Chatbot: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Replies Buttons */}
           {!showBookingForm && (
-            <div className="p-4 border-t border-line/60 bg-page/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
+            <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
               {quickReplies.map((reply, i) => (
                 <button
                   key={i}
                   onClick={() => handleSend(reply)}
                   disabled={isLoading}
-                  className="bg-inset/80 hover:bg-line-strong border border-line/60 text-[11px] text-ink-soft px-3.5 py-2.5 rounded-full transition shrink-0 disabled:opacity-50"
+                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-2.5 rounded-full transition shrink-0 disabled:opacity-50"
                 >
                   {reply}
                 </button>
@@ -506,8 +479,7 @@ export const Agent1Chatbot: React.FC = () => {
             </div>
           )}
 
-          {/* Input Form */}
-          <div className="p-4 bg-card/60 border-t border-line flex items-center space-x-3 shrink-0">
+          <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex items-center space-x-3 shrink-0">
             <input
               type="text"
               placeholder="Ask anything about storm damage or inspections..."
@@ -527,46 +499,75 @@ export const Agent1Chatbot: React.FC = () => {
           </div>
         </div>
 
-        {/* Sidebar Simulator explanation (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="glass card-hover rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-line">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
               <Sparkles className="h-4.5 w-4.5 text-accent-400" /> How This Works
             </h3>
-            <p className="text-xs text-ink-mute leading-relaxed mt-3">
+            <p className="text-xs text-slate-400 leading-relaxed mt-3">
               This is a live AI assistant, not a scripted demo. It answers freely using your company info, and hands off to a real booking form once a visitor is ready to schedule.
             </p>
-            <div className="mt-4 space-y-3.5 text-xs text-ink-soft">
+            <div className="mt-4 space-y-3.5 text-xs text-slate-300">
               <div className="flex items-start space-x-3">
-                <div className="bg-gold/10 text-gold p-1 rounded-md font-mono font-bold text-[10px]">1</div>
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">1</div>
                 <div>
-                  <p className="font-bold text-ink">Live AI Conversation</p>
-                  <p className="text-[11px] text-ink-mute mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
+                  <p className="font-bold text-white">Live AI Conversation</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-gold/10 text-gold p-1 rounded-md font-mono font-bold text-[10px]">2</div>
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">2</div>
                 <div>
-                  <p className="font-bold text-ink">Booking Handoff</p>
-                  <p className="text-[11px] text-ink-mute mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
+                  <p className="font-bold text-white">Booking Handoff</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-gold/10 text-gold p-1 rounded-md font-mono font-bold text-[10px]">3</div>
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
                 <div>
-                  <p className="font-bold text-ink">CRM Sync</p>
-                  <p className="text-[11px] text-ink-mute mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
+                  <p className="font-bold text-white">CRM Sync</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {hasQualified && (
-            <div className="bg-gold/10 border border-gold/20 text-gold p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
               <Calendar className="h-5 w-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-ink">Lead Transferred to CRM!</h4>
-                <p className="text-[11px] text-ink-mute mt-1 leading-relaxed">
+                <h4 className="text-xs font-bold text-white">Lead Transferred to CRM!</h4>
+                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcript.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AgentActivity actions={actionLog} />
+    </div>
+  );
+};
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
+                <div>
+                  <p className="font-bold text-white">CRM Sync</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {hasQualified && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
+              <Calendar className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-white">Lead Transferred to CRM!</h4>
+                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                   Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcript.
                 </p>
               </div>
