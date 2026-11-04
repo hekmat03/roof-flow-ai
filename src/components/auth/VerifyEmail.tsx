@@ -23,25 +23,25 @@ export function VerifyEmail({ email }: { email: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-page flex items-center justify-center p-4 text-ink">
-      <div className="w-full max-w-md bg-card border border-line rounded-2xl p-6 sm:p-8 text-center">
-        <MailCheck className="h-12 w-12 text-ink mx-auto mb-4" />
+    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 text-slate-100">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 text-center">
+        <MailCheck className="h-12 w-12 text-[#F97316] mx-auto mb-4" />
         <h1 className="text-2xl font-bold mb-2">Verify your email</h1>
-        <p className="text-ink-mute text-sm mb-6">
-          We sent a confirmation link to <span className="text-ink font-semibold break-all">{email}</span>.
+        <p className="text-slate-400 text-sm mb-6">
+          We sent a confirmation link to <span className="text-slate-200 font-semibold break-all">{email}</span>.
           Click it to activate your account, then log in.
         </p>
         {msg && (
-          <p role="alert" className={`text-sm mb-4 ${msg.ok ? 'text-accent-400' : 'text-danger'}`}>{msg.text}</p>
+          <p role="alert" className={`text-sm mb-4 ${msg.ok ? 'text-accent-400' : 'text-red-400'}`}>{msg.text}</p>
         )}
         <button
           onClick={resend}
           disabled={busy || !email}
-          className="w-full bg-gold hover:bg-gold disabled:opacity-60 text-gold-ink font-bold py-3 rounded-xl transition"
+          className="w-full bg-[#F97316] hover:bg-orange-400 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-xl transition"
         >
           {busy ? 'Sending…' : 'Resend verification email'}
         </button>
-        <button onClick={back} className="mt-3 text-sm text-ink-mute hover:text-ink underline">
+        <button onClick={back} className="mt-3 text-sm text-slate-400 hover:text-white underline">
           Back to login
         </button>
       </div>
