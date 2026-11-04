@@ -1,10 +1,196 @@
-  const speakFreeForm = async (userText: string) => {
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useApp } from '../context/AppContext';
+import { Phone, PhoneOff, Mic, MicOff, Play, Volume2, VolumeX, Calendar, Sparkles, User, ShieldAlert, Send, AudioLines } from 'lucide-react';
+import { getAgentResponse, type AgentContext } from '../lib/agentService';
+import {
+  speakText,
+  stopSpeaking,
+  startListening,
+  isSpeechSynthesisSupported,
+  isSpeechRecognitionSupported,
+} from '../utils/speech';
+
+interface ScriptOption {
+  text: string;
+  next: number;
+  name?: string;
+  phone?: string;
+  owner?: 'Owner' | 'Renter';
+}
+
+interface ScriptStep {
+  step: number;
+  /** Intent the AI generator should use for the response spoken after this option is chosen. */
+  intent: 'greeting' | 'hail' | 'insurance' | 'owner' | 'renter' | 'scheduleask' | 'schedule' | 'thanks';
+  options: ScriptOption[];
+}
+
+export const Agent2PhoneCall: React.FC = () => {
+  const { companySettings, addLead } = useApp();
+
+  const agentContext: AgentContext = {
+    companyName: companySettings.companyName,
+    city: companySettings.city,
+    stormEvent: companySettings.stormName,
+    stormDate: companySettings.stormDate,
+    financingOptions: companySettings.financingOptions,
+    agentTone: companySettings.agentTone,
+  };
+
+  // Call state
+  const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'completed'>('idle');
+  const [dialogue, setDialogue] = useState<Array<{ speaker: 'AI' | 'Homeowner'; text: string }>>([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [customReply, setCustomReply] = useState('');
+
+  // Lead info captured via phone call
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [propertyStatus, setPropertyStatus] = useState<'Owner' | 'Renter'>('Owner');
+
+  // ---- Voice AI (Web Speech API) ----
+  // TTS speaks every AI reply; STT transcribes the homeowner when the mic
+  // button is held. Both feature-detect gracefully (Firefox → text fallback).
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState('');
+  const listenHandle = useRef<{ stop: () => void } | null>(null);
+  const ttsSupported = useRef(isSpeechSynthesisSupported());
+  const sttSupported = useRef(isSpeechRecognitionSupported());
+
+  // Stop any audio/recognition when the component unmounts.
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      listenHandle.current?.stop();
+    };
+  }, []);
+
+  /** Speak an AI reply aloud when voice is enabled. Never blocks or throws. */
+  const speakAloud = async (text: string) => {
+    if (!voiceOn || !ttsSupported.current) return;
+    setIsSpeaking(true);
+    await speakText(text);
+    setIsSpeaking(false);
+  };
+
+  const stopListening = () => {
+    listenHandle.current?.stop();
+    listenHandle.current = null;
+    setIsListening(false);
+  };
+
+  /** Microphone press: listen once, transcribe, then reply as free-form. */
+  const handleMicToggle = () => {
+    if (isListening) {
+      stopListening();
+      return;
+    }
+    if (!sttSupported.current) {
+      setVoiceNotice('Speech recognition is not available in this browser — use the text reply below.');
+      setTimeout(() => setVoiceNotice(''), 5000);
+      return;
+    }
+    setVoiceNotice('');
+    const handle = startListening({
+      onFinal: transcript => {
+        setDialogue(prev => [...prev, { speaker: 'Homeowner', text: transcript }]);
+        speakFreeForm(transcript);
+      },
+      onError: code => {
+        const friendly =
+          code === 'not-allowed' || code === 'service-not-allowed'
+            ? 'Microphone permission denied — allow mic access to use voice input.'
+            : code === 'no-speech'
+              ? 'No speech detected — try again or type your reply.'
+              : 'Voice input error — use the text reply below.';
+        setVoiceNotice(friendly);
+        setTimeout(() => setVoiceNotice(''), 5000);
+      },
+      onEnd: () => {
+        listenHandle.current = null;
+        setIsListening(false);
+      },
+    });
+    if (handle) {
+      listenHandle.current = handle;
+      setIsListening(true);
+    } else {
+      setVoiceNotice('Speech recognition is not available in this browser — use the text reply below.');
+      setTimeout(() => setVoiceNotice(''), 5000);
+    }
+  };
+
+  // Phone quick dialogue flow — each step declares which AI intent voices the next response,
+  // so every line is generated (settings-aware, varied) instead of hardcoded.
+  const scriptSteps: ScriptStep[] = [
+    {
+      step: 0,
+      intent: 'greeting',
+      options: [
+        { text: "Yes, I need an inspection. Our roof has major storm damage.", next: 1 },
+        { text: "No, I just want a general estimate.", next: 2 }
+      ]
+    },
+    {
+      step: 1,
+      intent: 'hail',
+      options: [
+        { text: "Yes, I am the homeowner.", next: 3, owner: 'Owner' as const },
+        { text: "No, I rent the property.", next: 4, owner: 'Renter' as const }
+      ]
+    },
+    {
+      step: 2,
+      intent: 'insurance',
+      options: [
+        { text: "Yes, I own the home.", next: 3, owner: 'Owner' as const },
+        { text: "No, I rent.", next: 4, owner: 'Renter' as const }
+      ]
+    },
+    {
+      step: 3,
+      intent: 'scheduleask',
+      options: [
+        { text: "My name is Arthur Dent, call me at (817) 555-0411", next: 5, name: "Arthur Dent", phone: "(817) 555-0411" },
+        { text: "I'm Ford Prefect, phone is (214) 555-1215", next: 5, name: "Ford Prefect", phone: "(214) 555-1215" }
+      ]
+    },
+    {
+      step: 4,
+      intent: 'renter',
+      options: [
+        { text: "I will have my landlord call you back directly.", next: 6 },
+        { text: "My landlord's name is Mr. Prosser, (214) 555-0012", next: 5, name: "Mr. Prosser (Landlord)", phone: "(214) 555-0012" }
+      ]
+    },
+    {
+      step: 5,
+      intent: 'scheduleask',
+      options: [
+        { text: "Morning slots are best.", next: 7 },
+        { text: "Afternoon slots work better.", next: 7 }
+      ]
+    },
+    {
+      step: 7,
+      intent: 'schedule',
+      options: [
+        { text: "No, that's perfect. Thank you!", next: 8 }
+      ]
+    }
+  ];
+
+  const speak = async (intent: ScriptStep['intent'], userText: string) => {
     setIsGenerating(true);
     try {
       const reply = await getAgentResponse(
         'phone',
         [{ role: 'user', content: userText }],
-        agentContext
+        { ...agentContext, replyIntent: intent }
       );
       setDialogue(prev => [...prev, { speaker: 'AI', text: reply }]);
       await speakAloud(reply);
@@ -13,165 +199,6 @@
       setIsGenerating(false);
     }
   };
-
-  const handleStartCall = async () => {
-    setCallStatus('calling');
-    setDialogue([]);
-    setCurrentStep(0);
-    setName('');
-    setPhone('');
-    setPropertyStatus('Owner');
-
-    setTimeout(async () => {
-      setCallStatus('connected');
-      await speak('greeting', 'incoming call');
-    }, 1200);
-  };
-
-  const handleSelectOption = async (option: ScriptOption) => {
-    if (isGenerating) return;
-
-    // Homeowner speech
-    setDialogue(prev => [...prev, { speaker: 'Homeowner', text: option.text }]);
-
-    // Capture lead fields offered by the option
-    if (option.name) setName(option.name);
-    if (option.phone) setPhone(option.phone);
-    if (option.owner) setPropertyStatus(option.owner);
-
-    const nextStepIndex = option.next;
-    const step = scriptSteps.find(s => s.step === currentStep);
-
-    if (nextStepIndex === 8) {
-      // Completed call — book inspection and push lead to CRM with the FULL transcript
-      const confirmLine = await speak(step?.intent ?? 'schedule', option.text);
-      const goodbyeMsg = 'Thank you for calling! Goodbye!';
-      const fullTranscript: Array<{ speaker: 'AI' | 'Homeowner'; text: string }> = [
-        ...dialogue,
-        { speaker: 'Homeowner', text: option.text },
-        { speaker: 'AI', text: confirmLine },
-        { speaker: 'AI', text: goodbyeMsg },
-      ];
-      setDialogue(fullTranscript);
-      setCallStatus('completed');
-      addLead({
-        name: name || 'Arthur Dent',
-        phone: phone || '(817) 555-0411',
-        email: `${(name || 'arthur').toLowerCase().replace(/\s/g, '')}@gmail.com`,
-        propertyOwnership: propertyStatus,
-        status: 'Inspection Scheduled',
-        agentType: 'Phone Call',
-        scheduledDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 10:00 AM',
-        chatLog: fullTranscript.map(d => ({
-          sender: d.speaker === 'AI' ? 'AI' : 'User',
-          text: d.text,
-          timestamp: new Date().toLocaleTimeString()
-        }))
-      });
-      return;
-    }
-
-    if (nextStepIndex === 6) {
-      // Landlord will call back — cordial close, no booking
-      await speak('thanks', option.text);
-      setCallStatus('completed');
-      return;
-    }
-
-    // Move to next step and voice it with that step's intent
-    const nextStep = scriptSteps.find(s => s.step === nextStepIndex);
-    if (nextStep) {
-      setCurrentStep(nextStepIndex);
-      await speak(nextStep.intent, option.text);
-    }
-  };
-
-  const handleCustomReply = async () => {
-    if (!customReply.trim() || isGenerating || callStatus !== 'connected') return;
-    const text = customReply.trim();
-    setCustomReply('');
-    setDialogue(prev => [...prev, { speaker: 'Homeowner', text }]);
-    await speakFreeForm(text);
-  };
-
-  const handleEndCall = () => {
-    stopSpeaking();
-    stopListening();
-    setCallStatus('idle');
-    setDialogue([]);
-    setCurrentStep(0);
-  };
-
-  const currentScriptStep = scriptSteps.find(s => s.step === currentStep);
-
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-white tracking-tight">AI Phone Call Agent</h2>
-          <p className="text-xs text-slate-500 mt-1">Simulate inbound homeowner calls with a live AI voice agent.</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className={`h-2 w-2 rounded-full ${callStatus === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            {callStatus === 'idle' ? 'System Ready' : callStatus === 'calling' ? 'Connecting...' : callStatus === 'connected' ? 'Live Call' : 'Call Ended'}
-          </span>
-        </div>
-      </div>
-
-      {/* Main Call Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Phone Device Mockup (5 cols) */}
-        <div className="lg:col-span-5 flex justify-center">
-          <div className="call-glass w-full max-w-[320px] rounded-[2.5rem] p-5 border border-slate-700/50 shadow-2xl relative overflow-hidden flex flex-col min-h-[480px]">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
-            <div className="flex items-center justify-between mb-8">
-              <span className="text-[10px] font-black text-slate-500 tracking-widest uppercase">RoofFlow AI</span>
-              <span className="text-[9px] font-mono text-slate-600">SECURE LINE</span>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center">
-              {callStatus === 'idle' && (
-                <div className="text-center space-y-5">
-                  <div className="h-20 w-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto">
-                    <Phone className="h-8 w-8 text-orange-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-white">Incoming Call</h3>
-                    <p className="text-xs text-slate-500 mt-1">Homeowner • Unknown Number</p>
-                  </div>
-                  <button
-                    onClick={handleStartCall}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-full font-bold text-xs shadow-lg shadow-emerald-500/20 transition flex items-center gap-2 mx-auto"
-                  >
-                    <Phone className="h-4 w-4" /> Answer Call
-                  </button>
-                </div>
-              )}
-
-              {callStatus === 'calling' && (
-                <div className="text-center space-y-5">
-                  <div className="h-20 w-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto animate-pulse">
-                    <Phone className="h-8 w-8 text-orange-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-white">Connecting...</h3>
-                    <p className="text-xs text-slate-500 mt-1">Establishing secure connection</p>
-                  </div>
-                </div>
-              )}
-
-              {(callStatus === 'connected' || callStatus === 'completed') && (
-                <div className="flex-1 flex flex-col justify-between items-center text-center py-4">
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">AI Voice Active</h4>
-                    <p className="text-sm font-black text-white">{name || 'Arthur Dent'}</p>
-                    <p className="text-[9px] text-accent-400 font-mono font-bold">
-                      {isSpeaking ? 'Speaking…' : isListening ? 'Listening…' : '00:42 • Connected'}
-                    </p>
-                  </div>
-                    };
 
   /** Free-form reply: NO forced intent — the generator detects the intent live. */
   const speakFreeForm = async (userText: string) => {
@@ -371,7 +398,7 @@
                     <span className={`text-[9px] mt-1.5 font-bold ${isListening ? 'text-red-400' : 'text-slate-500'}`}>
                       {isListening ? 'Listening' : 'Mic'}
                     </span>
-                                      </div>
+                  </div>
                   <div className="flex flex-col items-center col-span-1">
                     <button
                       onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn(v => !v); }}
@@ -506,7 +533,7 @@
                 </p>
               </div>
             )}
-
+            
             {callStatus === 'completed' && (
               <div className="mt-6 border-t border-slate-800 pt-4 shrink-0 bg-emerald-500/10 border border-emerald-500/15 p-4 rounded-xl flex items-center space-x-3">
                 <Calendar className="h-5 w-5 text-accent-400" />
@@ -522,4 +549,3 @@
     </div>
   );
 };
-                  </div>
