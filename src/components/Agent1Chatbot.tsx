@@ -11,10 +11,14 @@ import { extractName, extractZip, deriveRoofIssue } from '../utils/leadExtract';
 import {
   validateEmail, validatePhone, validateName, formatPhone,
   findEmailCandidate, findPhoneCandidate, type Checked,
-} from '../utils/validators';
+} from '../lib/validators';
 
 const nowStamp = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+/**
+ * Newest candidate decides: a valid one is the value, an invalid one is a
+ * "problem" (so the visitor is asked again) and nothing is saved until fixed.
+ */
 function resolveField(
   texts: string[],
   pick: (t: string) => string | undefined,
@@ -29,6 +33,7 @@ function resolveField(
   return {};
 }
 
+/** Problems with the contact details inside ONE message the visitor just sent. */
 function contactProblems(text: string): string[] {
   const out: string[] = [];
   const email = findEmailCandidate(text);
@@ -38,6 +43,7 @@ function contactProblems(text: string): string[] {
   return out;
 }
 
+/** "YYYY-MM-DDTHH:mm" for <input type="datetime-local">: 3 days from now at 10:00 local. */
 function defaultInspectionDateTime(): string {
   const d = new Date();
   d.setDate(d.getDate() + 3);
@@ -63,6 +69,7 @@ export const Agent1Chatbot: React.FC = () => {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [actionLog, setActionLog] = useState<AgentAction[]>([]);
 
+  // Booking form state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -85,6 +92,12 @@ export const Agent1Chatbot: React.FC = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, showBookingForm]);
 
+  // ---- Free-form lead capture ------------------------------------------------
+  // Scan ONLY the visitor's own messages for contact details. As soon as the
+  // conversation yields a name AND a phone AND an email, the lead is captured
+  // to the CRM with status 'New Lead' — no form required. Extraction runs on
+  // user text only, so it behaves identically on the live-AI path and the local
+  // fallback engine. capturedRef makes it strictly once-per-conversation.
   const capturedRef = useRef(false);
 
   const extracted = useMemo(() => {
@@ -131,6 +144,7 @@ export const Agent1Chatbot: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extracted, showBookingForm]);
 
+  // Prefill the booking form with anything the visitor already typed.
   useEffect(() => {
     if (showBookingForm) {
       if (extracted.name && !name) setName(extracted.name);
@@ -149,6 +163,7 @@ export const Agent1Chatbot: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    // Bad contact details? Ask again right here: no AI call, nothing is saved.
     const problems = contactProblems(text);
     if (problems.length > 0) {
       setMessages([...messages, userMsg, {
@@ -193,6 +208,8 @@ export const Agent1Chatbot: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
+      // Open the booking form when the visitor's latest message signals booking intent
+      // (schedule detection from the same intent engine that drives the reply).
       if (!booked && detectLatestIntent(aiMessages) === 'schedule') {
         setShowBookingForm(true);
       }
@@ -233,6 +250,8 @@ export const Agent1Chatbot: React.FC = () => {
     const timePart = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const scheduledDate = `${datePart} ${timePart}`;
 
+    // Create a Google Calendar event ONLY if the contractor connected a calendar.
+    // A lead is never lost: if the calendar step fails, the request is still saved.
     let calendarEventId: string | undefined;
     let calendarProblem: string | null = null;
     if (session?.access_token) {
@@ -270,6 +289,8 @@ export const Agent1Chatbot: React.FC = () => {
       timestamp: m.timestamp,
     }));
 
+    // If the free-form capture already saved this contact (same phone), UPDATE
+    // that lead instead of creating a duplicate.
     const existing = leads.find(l => l.phone.replace(/\D/g, '') === p.value);
     if (existing) {
       setLeads(prev => prev.map(l =>
@@ -313,6 +334,7 @@ export const Agent1Chatbot: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
         <p className="text-xs text-slate-400 mt-1">
@@ -321,7 +343,9 @@ export const Agent1Chatbot: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Chat Interface (7 cols) */}
         <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
+          {/* Top Chat Header */}
           <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-3">
               <div className="bg-orange-500/10 p-2 rounded-lg relative">
@@ -338,6 +362,7 @@ export const Agent1Chatbot: React.FC = () => {
             </span>
           </div>
 
+          {/* Chat Messages Log */}
           <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
@@ -383,6 +408,7 @@ export const Agent1Chatbot: React.FC = () => {
               </div>
             )}
 
+            {/* Inline booking form, shown when the AI signals booking intent */}
             {showBookingForm && (
               <div className="bg-slate-900/80 backdrop-blur-md border border-accent-500/30 rounded-xl p-4 space-y-3 animate-slideUp">
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -464,6 +490,7 @@ export const Agent1Chatbot: React.FC = () => {
             )}
           </div>
 
+          {/* Quick Replies Buttons */}
           {!showBookingForm && (
             <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
               {quickReplies.map((reply, i) => (
@@ -479,6 +506,7 @@ export const Agent1Chatbot: React.FC = () => {
             </div>
           )}
 
+          {/* Input Form */}
           <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex items-center space-x-3 shrink-0">
             <input
               type="text"
@@ -499,6 +527,7 @@ export const Agent1Chatbot: React.FC = () => {
           </div>
         </div>
 
+        {/* Sidebar Simulator explanation (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="glass card-hover rounded-2xl p-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
@@ -520,36 +549,6 @@ export const Agent1Chatbot: React.FC = () => {
                 <div>
                   <p className="font-bold text-white">Booking Handoff</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
-                <div>
-                  <p className="font-bold text-white">CRM Sync</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {hasQualified && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 p-4 rounded-2xl flex items-start space-x-3 animate-fadeIn">
-              <Calendar className="h-5 w-5 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-white">Lead Transferred to CRM!</h4>
-                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                  Check the <strong>CRM Leads Board</strong> tab to view the live dashboard profile and chat transcript.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AgentActivity actions={actionLog} />
-    </div>
-  );
-};
                 </div>
               </div>
               <div className="flex items-start space-x-3">
