@@ -1,337 +1,262 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { useCountUp } from '../utils/useCountUp';
-import { AnalyticsCharts } from './AnalyticsCharts';
-import { isHidden } from '../lib/planAccess';
-import { 
-  Users, 
-  Calendar, 
-  TrendingUp, 
-  Zap, 
-  ArrowRight, 
-  MessageSquare, 
-  PhoneCall, 
-  MessageSquarePlus, 
+import {
+  LayoutDashboard,
+  MessageSquare,
+  PhoneCall,
+  MessageSquarePlus,
   FileText,
-  AlertTriangle,
-  BadgeDollarSign
+  Users,
+  Settings,
+  Terminal,
+  CreditCard,
+  Wallet,
+  CloudLightning,
+  Calendar,
+  Menu,
+  X,
+  Lock,
+  LogOut
 } from 'lucide-react';
+import { usePlan } from '../lib/usePlan';
+import { useAuth } from '../context/AuthContext';
+import { navigate } from '../lib/router';
+import { canAccess, upgradeLabel, isHidden, requiredPlan, PLAN_NAMES } from '../lib/planAccess';
+import { useBilling } from '../context/BillingContext';
+import { CalendarConnection } from './CalendarConnection';
 
-/** Maps a CRM status to its premium .st-* pill class (10 statuses). */
-export function statusPillClass(status: string): string {
-  switch (status) {
-    case 'New Lead': return 'st-new';
-    case 'Contacted': return 'st-contacted';
-    case 'In Contact': return 'st-incontact';
-    case 'Inspection Scheduled': return 'st-scheduled';
-    case 'Inspection Completed': return 'st-inspected';
-    case 'Estimate Sent': return 'st-estimate';
-    case 'Closed-Won': return 'st-won';
-    case 'Closed-Lost': return 'st-lost';
-    case 'Follow-up Nurture': return 'st-nurture';
-    default: return 'st-closed';
-  }
+interface LayoutProps {
+  children: React.ReactNode;
 }
 
-export const Dashboard: React.FC = () => {
-  const { leads, setActiveTab, companySettings } = useApp();
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { companySettings, activeTab, setActiveTab, leads } = useApp();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const plan = usePlan();
+  const { openUpgrade } = useBilling();
+  const { user, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+    navigate('/login', true);
+  }
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'agent1', label: 'Agent 1: Chatbot', icon: MessageSquare },
+    { id: 'agent2', label: 'Agent 2: Phone Call', icon: PhoneCall },
+    { id: 'agent3', label: 'Agent 3: SMS & Email', icon: MessageSquarePlus },
+    { id: 'agent4', label: 'Agent 4: Estimate Follow-up', icon: FileText },
+    { id: 'crm', label: 'CRM Leads Board', icon: Users },
+    { id: 'pricing', label: 'Plans & Pricing', icon: Wallet },
+    { id: 'billing', label: 'Billing & Account', icon: CreditCard },
+    { id: 'config', label: 'Configuration', icon: Settings },
+    { id: 'prompts', label: 'Prompt Playground', icon: Terminal },
+  ];
+
+  // Agents 2-4 are hidden (not deleted): see HIDDEN_TABS in lib/planAccess.ts
+  const visibleItems = menuItems.filter((item) => !isHidden(item.id));
 
   const totalLeads = leads.length;
-  const scheduledInspections = leads.filter(l => l.status === 'Inspection Scheduled').length;
-  const followUpLeads = leads.filter(l => l.status === 'Follow-up Nurture').length;
 
-  // Calculate a realistic pipeline estimation
-  // Assuming a 35% close rate on scheduled inspections and $12,000 average roof job value
-  const estimatedRevenue = scheduledInspections * 12000 * 0.35;
-  const bookingRate = totalLeads > 0 ? Math.round((scheduledInspections / totalLeads) * 100) : 0;
+  const scheduledInspections = leads.filter(
+    l => l.status === 'Inspection Scheduled'
+  ).length;
 
-  // Count-up animated KPIs
-  const animTotal = useCountUp(totalLeads);
-  const animScheduled = useCountUp(scheduledInspections);
-  const animFollowUp = useCountUp(followUpLeads);
-  const animRevenue = useCountUp(estimatedRevenue);
-
-  const agents = [
-    {
-      id: 'agent1',
-      number: '1',
-      title: 'Website Lead Chatbot',
-      description: 'Answers homeowners 24/7, checks their contact details and requests roof inspections.',
-      status: 'Active',
-      metric: `${totalLeads} lead${totalLeads === 1 ? '' : 's'} captured`,
-      color: 'from-amber-400 to-orange-600',
-      glow: 'shadow-amber-500/25',
-      icon: MessageSquare,
-    },
-    {
-      id: 'agent2',
-      number: '2',
-      title: 'Inbound Call Handler',
-      description: 'Interactive voice agent handling call flows, insurance queries, and booking inspections.',
-      status: 'Active',
-      metric: '<15s avg response',
-      color: 'from-orange-500 to-red-600',
-      glow: 'shadow-orange-500/25',
-      icon: PhoneCall,
-    },
-    {
-      id: 'agent3',
-      number: '3',
-      title: 'SMS & Email Nurturer',
-      description: 'Automated 7-day multi-channel follow-up sequencers reacting to user replies instantly.',
-      status: 'Active',
-      metric: '18% reactivation',
-      color: 'from-yellow-400 to-amber-600',
-      glow: 'shadow-yellow-500/25',
-      icon: MessageSquarePlus,
-    },
-    {
-      id: 'agent4',
-      number: '4',
-      title: 'Estimate Follow-up',
-      description: 'Follow-up on repair estimates to handle financing, budget, and competitor objections.',
-      status: 'Active',
-      metric: '+25% closing boost',
-      color: 'from-amber-500 to-red-600',
-      glow: 'shadow-amber-500/25',
-      icon: FileText,
+  function handleTabSelect(id: string) {
+    if (canAccess(plan, id)) {
+      setActiveTab(id);
+    } else {
+      // Locked: stay where you are and show the upgrade prompt.
+      const needs = requiredPlan(id);
+      const label = menuItems.find((m) => m.id === id)?.label ?? 'This feature';
+      openUpgrade(`${label} is included in the ${needs ? PLAN_NAMES[needs] : 'Pro'} plan and above.`);
     }
-  ];
-
-  const kpis = [
-    {
-      label: 'Captured Leads',
-      value: Math.round(animTotal),
-      display: String(Math.round(animTotal)),
-      sub: '24/7 Automated capture',
-      subIcon: Zap,
-      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/20',
-      icon: Users,
-      iconColor: 'text-accent-400',
-    },
-    {
-      label: 'Inspections Scheduled',
-      value: Math.round(animScheduled),
-      display: String(Math.round(animScheduled)),
-      sub: `${bookingRate}% Lead-to-Booking Rate`,
-      subIcon: null,
-      chip: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
-      icon: Calendar,
-      iconColor: 'text-accent-400',
-    },
-    {
-      label: 'Est. Pipeline Value',
-      value: Math.round(animRevenue),
-      display: `$${Math.round(animRevenue).toLocaleString()}`,
-      sub: 'Illustrative: 35% close × $12k job',
-      subIcon: null,
-      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/20',
-      icon: BadgeDollarSign,
-      iconColor: 'text-accent-400',
-    },
-  ];
+    setMobileMenuOpen(false);
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <div className="glass hero-glow rounded-3xl p-6 md:p-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-6 opacity-[0.07] animate-float-slow">
-          <TrendingUp className="h-44 w-44 md:h-56 md:w-56 text-accent-400" />
-        </div>
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex items-center gap-2 bg-accent-500/10 text-accent-300 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider border border-accent-500/25 animate-pop-in">
-            <Zap className="h-3 w-3" />
-            RoofFlow Console
-          </span>
-          <h2 className="text-fluid-hero font-extrabold text-white mt-4 tracking-tight">
-            Capture More Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-orange-500 bg-clip-text text-transparent">Your AI Chatbot</span>
-          </h2>
-          <p className="text-slate-300 mt-2 text-fluid-body leading-relaxed">
-            RoofFlow AI answers homeowners, checks their contact details, and requests roof inspections in the <span className="font-bold text-white">{companySettings.city}</span> market, so leads from events like the <span className="font-bold text-white">{companySettings.stormName}</span>.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-3 sm:space-y-0">
-            <button 
-              onClick={() => setActiveTab('agent1')}
-              className="btn-accent px-5 py-3 text-sm flex items-center justify-center gap-2 group"
-            >
-              Open Chatbot 
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-            </button>
-            <button 
-              onClick={() => setActiveTab('crm')}
-              className="btn-ghost px-5 py-3 text-sm flex items-center justify-center gap-2"
-            >
-              View Leads Board
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className="flex h-screen bg-[#0F172A] text-slate-100 overflow-hidden font-sans relative panel-bg">
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
-      {/* Main KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-        {kpis.map((kpi) => {
-          const SubIcon = kpi.subIcon;
-          return (
-            <div key={kpi.label} className="glass card-hover rounded-2xl p-5 md:p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{kpi.label}</p>
-                  <h3 className="text-3xl font-black font-mono text-white mt-1 count-up-flash">{kpi.display}</h3>
-                </div>
-                <div className={`p-3 rounded-xl ${kpi.chip}`}>
-                  <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
-                </div>
+      <aside
+        className={`
+          fixed md:static z-40 h-full w-72 md:w-80
+          bg-[#0F172A]/95 md:bg-[#0F172A] backdrop-blur-xl
+          border-r border-slate-800/80 flex flex-col justify-between shrink-0
+          transition-transform duration-300 ease-out
+          ${mobileMenuOpen ? 'translate-x-0 drawer-in' : '-translate-x-full'}
+          md:translate-x-0
+        `}
+      >
+        <div>
+          <div className="p-4 md:p-6 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900/70 to-slate-900/20">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-accent-400 to-accent-600 p-2.5 rounded-xl shadow-lg shadow-accent-500/30 animate-glow-breathe">
+                <CloudLightning className="h-6 w-6 text-slate-950 stroke-[2.5]" />
               </div>
-              <div className="mt-4 flex items-center text-xs text-slate-400">
-                {SubIcon ? <SubIcon className="h-3.5 w-3.5 text-accent-400 mr-1" /> : null}
-                <span>{kpi.sub}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Live Analytics: Revenue Attribution + Conversion Funnel */}
-      <AnalyticsCharts />
-      {/* Agents 2-4 are hidden (not deleted): see HIDDEN_TABS in lib/planAccess.ts */}
-      <div>
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div>
-            <h3 className="text-fluid-title font-bold text-white">Your AI Chatbot</h3>
-            <p className="text-xs text-slate-400 mt-1">Talk to it the way a homeowner would, then check the lead in your CRM</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-          {agents.filter((agent) => !isHidden(agent.id)).map((agent) => {
-            const Icon = agent.icon;
-            return (
-              <div 
-                key={agent.id}
-                className="glass card-hover rounded-2xl p-6 flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${agent.color} shadow-lg ${agent.glow} group-hover:scale-105 transition-transform duration-200`}>
-                      <Icon className="h-5 w-5 text-slate-950 stroke-[2.5]" />
-                    </div>
-                    <span className="text-xs bg-slate-900/70 border border-slate-700/70 text-slate-400 font-mono font-bold px-2 py-0.5 rounded-md uppercase">
-                      Agent {agent.number}
-                    </span>
-                  </div>
-                  <h4 className="text-base font-bold text-white group-hover:text-accent-300 transition-colors duration-200">
-                    {agent.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                    {agent.description}
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-800/70 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-slate-500 block font-semibold uppercase tracking-wider text-[9px]">Captured so far</span>
-                    <span className="text-slate-200 font-bold font-mono">{agent.metric}</span>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab(agent.id)}
-                    className="btn-ghost px-3 py-2 rounded-lg flex items-center gap-1 text-xs"
-                  >
-                    Open
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Bottom Row: Recent Leads & Active Storm Warnings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Recent Leads (Left/Mid) */}
-        <div className="lg:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-bold text-white">Latest Pipeline Inflow</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Real-time leads automatically qualified by active agents</p>
-            </div>
-            <button 
-              onClick={() => setActiveTab('crm')}
-              className="text-xs text-accent-400 hover:text-accent-300 font-bold flex items-center gap-1.5 transition-colors hover:gap-2.5"
-            >
-              Open CRM Board
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {leads.length === 0 && (
-            <div className="py-10 text-center">
-              <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-800/70 border border-slate-700/70 flex items-center justify-center mb-3">
-                <Users className="h-5 w-5 text-slate-500" />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">No leads captured yet</p>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Chat with the chatbot — a real lead appears here instantly, with its full
-                conversation transcript. Nothing is pre-seeded.
-              </p>
-            </div>
-          )}
-
-          <div className="divide-y divide-slate-800/70">
-            {leads.slice(0, 4).map((lead, idx) => (
-              <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0 gap-3 animate-slide-up" style={{ animationDelay: `${idx * 60}ms` }}>
-                <div className="flex items-center space-x-3.5 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700/70 flex items-center justify-center font-bold text-accent-300 shrink-0 shadow-lg">
-                    {lead.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-white truncate">{lead.name}</h4>
-                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
-                      <span>{lead.email}</span>
-                      <span className="text-slate-600">•</span>
-                      <span>{lead.phone}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 shrink-0">
-                  <div className="text-right hidden sm:block">
-                    <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Acquired via</span>
-                    <span className="text-xs text-slate-300 font-medium">{lead.agentType}</span>
-                  </div>
-                  <span className={`status-pill ${statusPillClass(lead.status)}`}>
-                    {lead.status}
+              <div>
+                <h1 className="text-lg md:text-xl font-black tracking-tight text-white flex items-center gap-1">
+                  Roof<span className="text-accent-400">Flow</span>
+                  <span className="text-[10px] bg-accent-500/10 text-accent-300 px-1.5 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider border border-accent-500/20">
+                    AI
                   </span>
-                </div>
+                </h1>
+                <p className="text-xs text-slate-400 font-medium">
+                  Contractor Sales Suite
+                </p>
               </div>
-            ))}
+            </div>
+
+            <button
+              className="md:hidden text-slate-300 hover:text-white transition min-h-0"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
+
+          <nav className="p-3 md:p-4 space-y-1">
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabSelect(item.id)}
+                  className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
+                >
+                  <Icon
+                    className={`h-5 w-5 shrink-0 ${
+                      isActive ? 'text-accent-400' : 'text-slate-500'
+                    }`}
+                  />
+
+                  <span className="truncate">{item.label}</span>
+
+                  {!canAccess(plan, item.id) && (
+                    <span className="ml-auto flex items-center gap-1 text-[10px] font-bold uppercase text-accent-400 shrink-0">
+                      <Lock className="h-3.5 w-3.5" />
+                      {upgradeLabel(plan)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Storm/Objection Focus (Right) */}
-        <div className="glass card-hover rounded-2xl p-5 md:p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center space-x-2 text-accent-400 mb-4 bg-accent-500/10 p-3 rounded-xl border border-accent-500/25">
-              <AlertTriangle className="h-5 w-5 stroke-[2.5]" />
-              <span className="text-xs font-bold uppercase tracking-wider">Storm Objection Vector</span>
-            </div>
-            <h3 className="text-base font-bold text-white">Local Target Event Analysis</h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              AI agents are currently programmed to inject references to the <span className="text-slate-200 font-bold">{companySettings.stormName}</span> that impacted the <span className="text-slate-200 font-bold">{companySettings.city}</span> region on <span className="text-slate-200 font-bold">{companySettings.stormDate}</span>.
-            </p>
-            <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-xs text-slate-300 mt-4 space-y-2 font-mono leading-relaxed">
-              <p className="text-accent-400 font-bold uppercase tracking-wider text-[9px] mb-1">Active AI Objection Script</p>
-              {`Most insurance policies have a 1-year filing limit from the event date (${companySettings.stormDate}). We provide a free inspection report so you don't miss the deadline.`}
-            </div>
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-400 space-y-3">
+          <CalendarConnection />
+          <div className="truncate" title={user?.email ?? ''}>
+            {user?.email}
           </div>
 
-          <button 
-            onClick={() => setActiveTab('config')}
-            className="w-full mt-6 btn-ghost text-xs py-3"
+          <button
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="w-full flex items-center justify-center gap-2 border border-slate-700 hover:border-accent-500 hover:text-white disabled:opacity-60 rounded-lg py-2 font-semibold transition"
           >
-            Adjust Target Event Settings
+            <LogOut className="h-4 w-4" />
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </button>
         </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
+        <header className="relative z-20 h-auto md:h-20 glass-strong flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 gap-4">
+          <button
+            className="md:hidden text-slate-200 shrink-0 bg-slate-800/70 border border-slate-700/70 rounded-xl px-3 flex items-center justify-center hover:bg-slate-700/70 transition active:scale-95"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <div className="flex items-center space-x-6 text-sm overflow-x-auto no-scrollbar">
+            <div className="shrink-0">
+              <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">
+                Contractor Profile
+              </span>
+              <span className="text-white font-bold text-base">
+                {companySettings.companyName}
+              </span>
+            </div>
+
+            <div className="h-8 w-[1px] bg-slate-700/70 hidden sm:block shrink-0"></div>
+
+            <div className="shrink-0 hidden sm:block">
+              <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">
+                Service Market
+              </span>
+              <span className="text-white font-semibold">
+                {companySettings.city}
+              </span>
+            </div>
+
+            <div className="h-8 w-[1px] bg-slate-700/70 hidden lg:block shrink-0"></div>
+
+            <div className="flex items-center space-x-2 shrink-0 hidden lg:flex">
+              <div className="bg-red-500/10 text-red-400 p-1 rounded-lg border border-red-500/10">
+                <CloudLightning className="h-4 w-4" />
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-medium text-xs block uppercase tracking-wider">
+                  Active Event Nurture
+                </span>
+                <span className="text-slate-200 font-semibold text-xs flex items-center gap-1.5">
+                  {companySettings.stormName}
+                  <span className="text-slate-400 font-mono font-normal">
+                    ({companySettings.stormDate})
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center space-x-3 shrink-0">
+            <div className="bg-slate-900/50 border border-slate-800/80 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3 backdrop-blur-md">
+              <Users className="h-4 w-4 text-accent-400" />
+              <div>
+                <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
+                  Total Leads
+                </span>
+                <span className="text-sm text-slate-100 font-bold font-mono">
+                  {totalLeads}
+                </span>
+              </div>
+            </div>
+
+            <div className="hidden md:flex bg-slate-900/50 border border-slate-800/80 px-4 py-2 rounded-xl items-center space-x-3 backdrop-blur-md">
+              <Calendar className="h-4 w-4 text-accent-400" />
+              <div>
+                <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">
+                  Scheduled Inspections
+                </span>
+                <span className="text-sm text-slate-100 font-bold font-mono">
+                  {scheduledInspections}
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 premium-scroll">
+          <div className="max-w-7xl mx-auto h-full">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
