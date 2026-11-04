@@ -54,7 +54,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(201).json({ ok: true, eventId: event.id, htmlLink: event.htmlLink });
   } catch (error) {
     console.error('Google Calendar event error:', error instanceof Error ? error.message : error);
-    // Never leak internal details; Google's own message is safe to show for expected failures.
     return res.status(502).json({ error: 'Google Calendar could not create the inspection event. Reconnect your calendar and try again.' });
   }
 }
