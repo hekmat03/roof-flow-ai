@@ -28,9 +28,9 @@ export async function saveOnboarding(
   data: OnboardingData
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Accounts are not configured.' };
-  const { error } = await supabase
-    .from('contractor_profiles')
-    .upsert({
+
+  const { error } = await supabase.from('contractor_profiles').upsert(
+    {
       user_id: userId,
       company_name: data.companyName,
       owner_name: data.ownerName,
@@ -54,7 +54,9 @@ export async function saveOnboarding(
       license_number: data.licenseNumber,
       onboarding_complete: true,
       updated_at: new Date().toISOString(),
-    });
+    },
+    { onConflict: 'user_id' }
+  );
 
   if (error) return { error: error.message };
   return { error: null };
@@ -64,11 +66,12 @@ export async function getOnboarding(
   userId: string
 ): Promise<OnboardingData | null> {
   if (!supabase) return null;
+
   const { data, error } = await supabase
     .from('contractor_profiles')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 
@@ -100,13 +103,15 @@ export async function isOnboardingComplete(
   userId: string
 ): Promise<boolean | null> {
   if (!supabase) return null;
+
   const { data, error } = await supabase
     .from('contractor_profiles')
     .select('onboarding_complete')
     .eq('user_id', userId)
     .maybeSingle();
 
-  // null = could not check (network / table missing). No row = not onboarded yet.
+  // null = could not check (network / table missing).
+  // No row = not onboarded yet.
   if (error) {
     console.warn('onboarding check failed:', error.message);
     return null;
