@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { saveOnboarding } from "../lib/onboarding";
+import { supabase } from "../lib/supabaseClient";
 
 interface OnboardingData {
   companyName: string;
@@ -38,6 +40,8 @@ export default function OnboardingWizard({
   onComplete: () => void;
 }) {
   const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [data, setData] = useState<OnboardingData>({
     companyName: "",
     ownerName: "",
@@ -107,6 +111,30 @@ export default function OnboardingWizard({
     return true;
   };
 
+  const handleComplete = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const result = await saveOnboarding(user.id, data);
+        if (result.error) {
+          setError(result.error);
+          setSaving(false);
+          return;
+        }
+      }
+      localStorage.setItem("onboarding_complete", "true");
+      onComplete();
+    } catch (e) {
+      setError("Something went wrong. Please try again.");
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl bg-gray-900 rounded-2xl p-8">
@@ -117,8 +145,12 @@ export default function OnboardingWizard({
             <span className="text-white font-bold text-lg">R</span>
           </div>
           <div>
-            <h1 className="text-white font-bold text-lg">RoofFlow AI</h1>
-            <p className="text-gray-400 text-sm">Setup your account</p>
+            <h1 className="text-white font-bold text-lg">
+              RoofFlow AI
+            </h1>
+            <p className="text-gray-400 text-sm">
+              Setup your account
+            </p>
           </div>
         </div>
 
@@ -151,7 +183,7 @@ export default function OnboardingWizard({
           </p>
         </div>
 
-        {/* STEP 1 - Company Basics */}
+        {/* STEP 1 - Company */}
         {step === 1 && (
           <div className="space-y-4">
             <h2 className="text-white text-2xl font-bold">
@@ -199,13 +231,15 @@ export default function OnboardingWizard({
           </div>
         )}
 
-        {/* STEP 2 - Business Hours */}
+        {/* STEP 2 - Hours */}
         {step === 2 && (
           <div className="space-y-4">
             <h2 className="text-white text-2xl font-bold">
               Business Hours
             </h2>
-            <p className="text-gray-400">When are you available?</p>
+            <p className="text-gray-400">
+              When are you available?
+            </p>
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="text-gray-400 text-sm mb-1 block">
@@ -309,12 +343,14 @@ export default function OnboardingWizard({
               className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-orange-500 outline-none"
               placeholder="Typical Inspection Price (e.g. $150)"
               value={data.inspectionPrice}
-              onChange={(e) => update("inspectionPrice", e.target.value)}
+              onChange={(e) =>
+                update("inspectionPrice", e.target.value)
+              }
             />
             <div className="flex gap-4">
               <input
                 className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-orange-500 outline-none"
-                placeholder="Min Repair Price (e.g. $500)"
+                placeholder="Min Repair Price"
                 value={data.repairPriceMin}
                 onChange={(e) =>
                   update("repairPriceMin", e.target.value)
@@ -322,7 +358,7 @@ export default function OnboardingWizard({
               />
               <input
                 className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-orange-500 outline-none"
-                placeholder="Max Repair Price (e.g. $5000)"
+                placeholder="Max Repair Price"
                 value={data.repairPriceMax}
                 onChange={(e) =>
                   update("repairPriceMax", e.target.value)
@@ -361,12 +397,10 @@ export default function OnboardingWizard({
                 key={i}
                 className="space-y-2 p-4 bg-gray-800 rounded-lg"
               >
-                <p className="text-gray-400 text-sm">
-                  FAQ {i + 1}
-                </p>
+                <p className="text-gray-400 text-sm">FAQ {i + 1}</p>
                 <input
                   className="w-full bg-gray-900 text-white rounded-lg p-3 border border-gray-700 focus:border-orange-500 outline-none"
-                  placeholder={`Question ${i + 1} (e.g. Do you work with insurance?)`}
+                  placeholder={`Question ${i + 1}`}
                   value={faq.question}
                   onChange={(e) =>
                     updateFaq(i, "question", e.target.value)
@@ -391,7 +425,7 @@ export default function OnboardingWizard({
             />
             <input
               className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-orange-500 outline-none"
-              placeholder="Years in Business (e.g. 10)"
+              placeholder="Years in Business"
               value={data.yearsInBusiness}
               onChange={(e) =>
                 update("yearsInBusiness", e.target.value)
@@ -406,11 +440,19 @@ export default function OnboardingWizard({
           </div>
         )}
 
+        {/* Error Message */}
+        {error && (
+          <p className="text-red-400 text-sm mt-4 p-3 bg-red-900/20 rounded-lg">
+            ⚠️ {error}
+          </p>
+        )}
+
         {/* Buttons */}
         <div className="flex justify-between mt-8">
           {step > 1 ? (
             <button
               onClick={() => setStep((s) => s - 1)}
+              disabled={saving}
               className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
             >
               ← Back
@@ -422,6 +464,7 @@ export default function OnboardingWizard({
             {step === 4 && (
               <button
                 onClick={onComplete}
+                disabled={saving}
                 className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
               >
                 Skip
@@ -430,20 +473,24 @@ export default function OnboardingWizard({
             <button
               onClick={() => {
                 if (step < 4) setStep((s) => s + 1);
-                else onComplete();
+                else handleComplete();
               }}
-              disabled={!canProceed()}
+              disabled={!canProceed() || saving}
               className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                canProceed()
+                canProceed() && !saving
                   ? "bg-orange-500 text-white hover:bg-orange-600"
                   : "bg-gray-700 text-gray-500 cursor-not-allowed"
               }`}
             >
-              {step === 4 ? "Complete Setup ✓" : "Next →"}
+              {saving
+                ? "Saving..."
+                : step === 4
+                ? "Complete Setup ✓"
+                : "Next →"}
             </button>
           </div>
         </div>
       </div>
     </div>
   );
-    }
+  }
