@@ -16,17 +16,14 @@ import {
   Menu,
   X,
   Lock,
-  LogOut,
-  Sun,
-  Moon
+  LogOut
 } from 'lucide-react';
 import { usePlan } from '../lib/usePlan';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../lib/router';
 import { canAccess, upgradeLabel, isHidden, requiredPlan, PLAN_NAMES } from '../lib/planAccess';
 import { useBilling } from '../context/BillingContext';
-import CalendarConnection from './CalendarConnection';
-import { useTheme } from '../context/ThemeContext';
+import { CalendarConnection } from './CalendarConnection';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,9 +32,6 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { companySettings, activeTab, setActiveTab, leads } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // The owner's toggle UI drives the shared ThemeProvider so the whole app
-  // (and every token in index.css) flips from one place.
-  const { theme, toggleTheme } = useTheme();
   const plan = usePlan();
   const { openUpgrade } = useBilling();
   const { user, signOut } = useAuth();
@@ -84,7 +78,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div data-theme={theme} className="roofflow-shell flex h-screen bg-page text-ink overflow-hidden font-sans relative panel-bg">
+    <div className="roofflow-shell flex h-screen bg-page text-ink overflow-hidden font-sans relative panel-bg">
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-page/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
@@ -232,16 +226,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
 
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="theme-toggle inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all"
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              <span className="hidden lg:inline">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-            </button>
             <div className="hidden sm:flex items-center space-x-3 shrink-0">
             <div className="bg-card/50 border border-line/80 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3 backdrop-blur-md">
               <Users className="h-4 w-4 text-accent-400" />
