@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 export interface ContractorProfile {
   companyName: string;
@@ -28,6 +28,7 @@ export function useContractorProfile() {
 
   useEffect(() => {
     async function load() {
+      if (!supabase) { setLoading(false); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
