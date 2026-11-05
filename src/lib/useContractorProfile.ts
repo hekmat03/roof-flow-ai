@@ -28,15 +28,23 @@ export function useContractorProfile() {
 
   useEffect(() => {
     async function load() {
-      if (!supabase) { setLoading(false); return; }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const { data } = await supabase
         .from('contractor_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setProfile({
@@ -68,40 +76,51 @@ export function useContractorProfile() {
   return { profile, loading };
 }
 
-export function buildSystemPrompt(profile: ContractorProfile): string {
-  const hours = `${profile.openTime} - ${profile.closeTime}`;
-  const days = profile.days.join(', ');
-  const services = profile.services.join(', ');
-  const faqText = profile.faqs
-    .filter(f => f.question && f.answer)
-    .map(f => `Q: ${f.question}\nA: ${f.answer}`)
-    .join('\n\n');
+/**
+ * Compact plain-text facts about the contractor. Sent to the server as
+ * context.businessInfo; the server adds it to the system prompt.
+ * Empty fields are skipped so the AI is never given blanks.
+ */
+export function buildBusinessInfo(profile: ContractorProfile): string {
+  const lines: string[] = [];
 
-  return `You are an AI sales assistant for ${profile.companyName} 
-located in ${profile.location}.
+  if (profile.companyName) lines.push(`Company: ${profile.companyName}`);
+  if (profile.location) lines.push(`Location: ${profile.location}`);
+  if (profile.serviceRadius)
+    lines.push(`Service area: ${profile.serviceRadius} miles`);
+  if (profile.yearsInBusiness)
+    lines.push(`Years in business: ${profile.yearsInBusiness}`);
 
-BUSINESS HOURS: ${hours} (${days})
-${profile.emergency ? `EMERGENCY LINE: ${profile.emergencyPhone} (24/7 available)` : ''}
+  if (profile.days.length > 0)
+    lines.push(
+      `Hours: ${profile.days.join(', ')} ${profile.openTime}-${profile.closeTime}`
+    );
 
-SERVICES OFFERED: ${services}
+  if (profile.emergency) {
+    lines.push(
+      profile.emergencyPhone
+        ? `After-hours/emergency service: yes, phone ${profile.emergencyPhone}`
+        : 'After-hours/emergency service: yes'
+    );
+  } else {
+    lines.push('After-hours/emergency service: no');
+  }
 
-PRICING:
-- Inspection: ${profile.inspectionPrice || 'Free'}
-- Repairs: ${profile.repairPriceMin} - ${profile.repairPriceMax}
-- Financing: ${profile.financing ? 'Available' : 'Not available'}
+  if (profile.services.length > 0)
+    lines.push(`Services: ${profile.services.join(', ')}`);
+  if (profile.inspectionPrice)
+    lines.push(`Inspection price: ${profile.inspectionPrice}`);
+  if (profile.repairPriceMin || profile.repairPriceMax)
+    lines.push(
+      `Typical repair range: ${profile.repairPriceMin || '?'} to ${profile.repairPriceMax || '?'}`
+    );
+  lines.push(`Financing: ${profile.financing ? 'available' : 'not offered'}`);
 
-SERVICE AREA: ${profile.serviceRadius} miles radius
+  const faqs = profile.faqs.filter((f) => f.question && f.answer);
+  if (faqs.length > 0) {
+    lines.push('FAQ:');
+    faqs.forEach((f) => lines.push(`Q: ${f.question}\nA: ${f.answer}`));
+  }
 
-EXPERIENCE: ${profile.yearsInBusiness} years in business
-
-FREQUENTLY ASKED QUESTIONS:
-${faqText}
-
-YOUR GOALS:
-1. Answer customer questions accurately using the info above
-2. Qualify the homeowner (storm damage, ownership)
-3. Capture their Name, Phone, Email
-4. Book a FREE roof inspection
-5. Be professional, friendly and helpful
-6. Never make up information not provided above`;
+  return lines.join('\n').slice(0, 1800);
 }
