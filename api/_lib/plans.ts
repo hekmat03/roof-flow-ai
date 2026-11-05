@@ -93,9 +93,17 @@ export function checkoutUrlForPlan(plan: PlanId): string | null {
   return url.startsWith('https://') ? url : null;
 }
 
+/**
+ * Payments are only "on" when a purchase can actually be fulfilled: a buyer must be
+ * able to reach checkout (buy links), and the webhook must be able to verify the
+ * event (secret) and map the paid variant back to a plan (variant ids). Without the
+ * variant ids a customer would pay and never be upgraded.
+ */
 export const paymentsActivated = (): boolean =>
   Boolean(
     (process.env.LS_WEBHOOK_SECRET ?? '').trim() &&
+    (process.env.LS_VARIANT_STARTER ?? '').trim() &&
+    (process.env.LS_VARIANT_PRO ?? '').trim() &&
     checkoutUrlForPlan('starter') &&
     checkoutUrlForPlan('pro'),
   );
