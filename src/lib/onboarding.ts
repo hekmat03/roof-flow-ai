@@ -98,13 +98,18 @@ export async function getOnboarding(
 
 export async function isOnboardingComplete(
   userId: string
-): Promise<boolean> {
-  if (!supabase) return false;
-  const { data } = await supabase
+): Promise<boolean | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
     .from('contractor_profiles')
     .select('onboarding_complete')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
+  // null = could not check (network / table missing). No row = not onboarded yet.
+  if (error) {
+    console.warn('onboarding check failed:', error.message);
+    return null;
+  }
   return data?.onboarding_complete === true;
 }
