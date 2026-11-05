@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Bot, Calendar, Check, CloudLightning, Lock, MessageSquare, Send, ShieldCheck, Users } from 'lucide-react';
+import { ArrowRight, Bot, Calendar, Check, CloudLightning, CreditCard, LayoutDashboard, Lock, MessageSquare, Send, ShieldCheck, Users } from 'lucide-react';
 import './public.css';
 
 /* ---------------------------------------------------------------------------
@@ -179,14 +179,39 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="lp-phone-wrap">
+            <div className="lp-preview" aria-label="Preview of the RoofFlow AI dashboard">
+              <div className="lp-dash">
+                <aside className="lp-dash-side">
+                  <div className="lp-dash-logo"><span className="lp-mark"><CloudLightning size={15} aria-hidden /></span><span>Roof<b>Flow</b> AI</span></div>
+                  <div className="lp-dash-nav">
+                    <span className="on"><LayoutDashboard size={15} aria-hidden /> Dashboard</span>
+                    <span><MessageSquare size={15} aria-hidden /> Chatbot</span>
+                    <span><Users size={15} aria-hidden /> CRM Leads</span>
+                    <span><Calendar size={15} aria-hidden /> Calendar</span>
+                    <span><CreditCard size={15} aria-hidden /> Billing</span>
+                  </div>
+                </aside>
+                <div className="lp-dash-main">
+                  <div className="lp-dash-title">Dashboard <small>Sample data</small></div>
+                  <div className="lp-stats">
+                    <div className="lp-stat"><span>Leads</span><b>128</b><em>+18%</em></div>
+                    <div className="lp-stat"><span>Inspections</span><b>34</b><em>+9%</em></div>
+                    <div className="lp-stat"><span>Won</span><b>21</b><em>+6%</em></div>
+                  </div>
+                  <div className="lp-bars" aria-hidden>
+                    {[34, 52, 40, 66, 48, 78, 60, 92].map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}
+                  </div>
+                  <div className="lp-leads">
+                    <div className="lp-lead-row"><div>Dana R.<br /><span>Hail damage, north side</span></div><b className="lp-pill">New Lead</b></div>
+                    <div className="lp-lead-row"><div>Marcus T.<br /><span>Leak after storm</span></div><b className="lp-pill lp-pill--ok">Inspection Scheduled</b></div>
+                  </div>
+                </div>
+              </div>
               <div className="lp-phone" aria-label="Example roofing chat conversation">
                 <div className="lp-phone-head"><span>Roofing chat</span><span>Now</span></div>
-                <div className="lp-bubble lp-bubble--ai">Hi! Are you seeing leaks or storm damage on your roof?</div>
-                <div className="lp-bubble lp-bubble--me">Yeah, hail damage on the north side.</div>
-                <div className="lp-bubble lp-bubble--ai">Sorry to hear that. What&apos;s the best number to reach you?</div>
-                <div className="lp-bubble lp-bubble--me">(415) 555-2671</div>
-                <div className="lp-bubble lp-bubble--ai">Thanks! I can request a free inspection. Does Thursday at 10 am work?</div>
+                <div className="lp-bubble lp-bubble--ai">Seeing leaks or storm damage on your roof?</div>
+                <div className="lp-bubble lp-bubble--me">Hail damage on the north side.</div>
+                <div className="lp-bubble lp-bubble--ai">I can request a free inspection. Does Thursday at 10 am work?</div>
                 <div className="lp-phone-tag">Example conversation</div>
               </div>
             </div>
