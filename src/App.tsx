@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { BillingProvider } from './context/BillingContext';
 import { UpgradeModal } from './components/UpgradeModal';
@@ -23,14 +23,30 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Redirect } from './components/Redirect';
 import { LandingPage } from './components/public/LandingPage';
 import { usePath } from './lib/router';
+import OnboardingWizard from './components/OnboardingWizard';
 
 function MainAppContent() {
   const { activeTab: requestedTab } = useApp();
   const plan = usePlan();
+  const [onboardingDone, setOnboardingDone] = useState(
+    () => localStorage.getItem('onboarding_complete') === 'true'
+  );
 
   const activeTab = canAccess(plan, requestedTab)
     ? requestedTab
     : fallbackTab();
+
+  // Show onboarding wizard if not done
+  if (!onboardingDone) {
+    return (
+      <OnboardingWizard
+        onComplete={() => {
+          localStorage.setItem('onboarding_complete', 'true');
+          setOnboardingDone(true);
+        }}
+      />
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -96,13 +112,11 @@ function Routes() {
 }
 
 export default function App() {
-  const path = usePath();
-
   return (
-    <AuthProvider>
-      <ErrorBoundary key={path}>
+    <ErrorBoundary>
+      <AuthProvider>
         <Routes />
-      </ErrorBoundary>
-    </AuthProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
