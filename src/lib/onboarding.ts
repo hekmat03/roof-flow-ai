@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 export interface OnboardingData {
   companyName: string;
@@ -27,6 +27,7 @@ export async function saveOnboarding(
   userId: string,
   data: OnboardingData
 ): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Accounts are not configured.' };
   const { error } = await supabase
     .from('contractor_profiles')
     .upsert({
@@ -62,6 +63,7 @@ export async function saveOnboarding(
 export async function getOnboarding(
   userId: string
 ): Promise<OnboardingData | null> {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('contractor_profiles')
     .select('*')
@@ -97,6 +99,7 @@ export async function getOnboarding(
 export async function isOnboardingComplete(
   userId: string
 ): Promise<boolean> {
+  if (!supabase) return false;
   const { data } = await supabase
     .from('contractor_profiles')
     .select('onboarding_complete')
