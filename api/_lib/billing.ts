@@ -37,7 +37,10 @@ export async function getProfile(
 }
 
 /** The plan the user is entitled to right now. Never trusts the browser. */
-export function effectivePlan(p: ProfileRow | null, now = Date.now()): PlanId {
+export function effectivePlan(
+  p: Pick<ProfileRow, 'current_plan' | 'subscription_status' | 'current_period_end'> | null,
+  now = Date.now(),
+): PlanId {
   if (!p || !isPlanId(p.current_plan) || p.current_plan === 'free') return 'free';
 
   const status = p.subscription_status ?? '';
