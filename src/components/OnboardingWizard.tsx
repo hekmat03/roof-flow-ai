@@ -458,9 +458,10 @@ export default function OnboardingWizard({
             <div />
           )}
           <div className="flex gap-3">
+            {/* FIX: Skip now saves the answers entered so far */}
             {step === 4 && (
               <button
-                onClick={handleComplete}  {/* FIX: Skip now saves the answers entered so far */}
+                onClick={handleComplete}
                 disabled={saving}
                 className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
               >
