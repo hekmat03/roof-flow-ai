@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { saveOnboarding } from "../lib/onboarding";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabase";
 
 interface OnboardingData {
   companyName: string;
@@ -115,9 +115,7 @@ export default function OnboardingWizard({
     setSaving(true);
     setError("");
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = supabase ? (await supabase.auth.getUser()).data.user : null;
 
       if (user) {
         const result = await saveOnboarding(user.id, data);
