@@ -125,7 +125,6 @@ export default function OnboardingWizard({
           return;
         }
       }
-      localStorage.setItem("onboarding_complete", "true");
       onComplete();
     } catch (e) {
       setError("Something went wrong. Please try again.");
@@ -461,7 +460,7 @@ export default function OnboardingWizard({
           <div className="flex gap-3">
             {step === 4 && (
               <button
-                onClick={onComplete}
+                onClick={handleComplete}  {/* FIX: Skip now saves the answers entered so far */}
                 disabled={saving}
                 className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all"
               >
@@ -491,4 +490,4 @@ export default function OnboardingWizard({
       </div>
     </div>
   );
-  }
+}
