@@ -39,7 +39,7 @@ import {
   isValidZip,
   cleanConversation,
   RATE_LIMIT_MAX,
-} from '../../site/src/lib/leads-core.ts';
+} from '../site-server/src/lib/leads-core.ts';
 
 let passed = 0;
 let failed = 0;
