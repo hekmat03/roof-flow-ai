@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { BillingProvider } from './context/BillingContext';
 import { UpgradeModal } from './components/UpgradeModal';
@@ -16,7 +16,9 @@ import { FallbackNotice } from './components/FallbackNotice';
 import { usePlan } from './lib/usePlan';
 import { canAccess, fallbackTab } from './lib/planAccess';
 import { StatusBanner } from './components/StatusBanner';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { FullScreenSpinner } from './components/Spinner';
+import { useOnboardingStatus } from './lib/useOnboardingStatus';
 import { AuthPage } from './components/auth/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -28,25 +30,16 @@ import OnboardingWizard from './components/OnboardingWizard';
 function MainAppContent() {
   const { activeTab: requestedTab } = useApp();
   const plan = usePlan();
-  const [onboardingDone, setOnboardingDone] = useState(
-    () => localStorage.getItem('onboarding_complete') === 'true'
-  );
+  const { user, configured } = useAuth();
+  const { status: onboarding, markComplete } = useOnboardingStatus(user?.id ?? null, configured);
 
   const activeTab = canAccess(plan, requestedTab)
     ? requestedTab
     : fallbackTab();
 
-  // Show onboarding wizard if not done
-  if (!onboardingDone) {
-    return (
-      <OnboardingWizard
-        onComplete={() => {
-          localStorage.setItem('onboarding_complete', 'true');
-          setOnboardingDone(true);
-        }}
-      />
-    );
-  }
+  // One-time company info: asked only if this account has never completed it.
+  if (onboarding === 'checking') return <FullScreenSpinner label="Loading your account…" />;
+  if (onboarding === 'needed') return <OnboardingWizard onComplete={markComplete} />;
 
   const renderContent = () => {
     switch (activeTab) {
