@@ -1,604 +1,426 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Lead } from '../context/AppContext';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Plus, 
-  MessageSquare, 
-  Calendar, 
-  X, 
-  User, 
-  Phone, 
-  Mail, 
-  Home, 
-  Clock, 
-  ShieldCheck,
-  CheckCircle2,
-  Trash2,
+import {
+  Users,
+  Search,
+  Plus,
+  MessageSquare,
+  Calendar,
+  X,
+  Phone,
+  Mail,
+  Home,
   MapPin,
-  FileText
+  Trash2,
+  FileText,
 } from 'lucide-react';
+
+type Status = Lead['status'];
+
+// One list for the filter, the row dropdown and the add form.
+const STATUSES: Status[] = [
+  'New Lead',
+  'Contacted',
+  'In Contact',
+  'Inspection Scheduled',
+  'Inspection Completed',
+  'Estimate Sent',
+  'Closed-Won',
+  'Closed-Lost',
+  'Follow-up Nurture',
+  'Closed',
+];
+
+const STATUS_STYLE: Record<Status, string> = {
+  'New Lead': 'st-new',
+  'Contacted': 'st-contacted',
+  'In Contact': 'st-incontact',
+  'Inspection Scheduled': 'st-scheduled',
+  'Inspection Completed': 'st-inspected',
+  'Estimate Sent': 'st-estimate',
+  'Closed-Won': 'st-won',
+  'Closed-Lost': 'st-lost',
+  'Follow-up Nurture': 'st-nurture',
+  'Closed': 'st-closed',
+};
+
+const BLANK_FORM = {
+  name: '',
+  phone: '',
+  email: '',
+  zip: '',
+  issue: '',
+  status: 'New Lead' as Status,
+  ownership: 'Owner' as Lead['propertyOwnership'],
+  source: 'Chatbot' as Lead['agentType'],
+  apptDate: '',
+  apptTime: '',
+  apptNotes: '',
+};
+
+const initials = (name: string) =>
+  name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+
+const nowStamp = () => new Date().toLocaleString();
+
+// Date + time of a booked inspection, if there is one.
+const inspectionOf = (l: Lead): { date: string; time: string } | null => {
+  if (l.status !== 'Inspection Scheduled') return null;
+  if (l.appointmentDetails) return { date: l.appointmentDetails.date, time: l.appointmentDetails.time };
+  if (l.scheduledDate) {
+    const [date, ...rest] = l.scheduledDate.split(' ');
+    return { date, time: rest.join(' ') };
+  }
+  return null;
+};
 
 export const CRMLeadsBoard: React.FC = () => {
   const { leads, setLeads, addLead } = useApp();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [selectedLeadForChat, setSelectedLeadForChat] = useState<Lead | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | Status>('All');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = leads.find(l => l.id === selectedId) ?? null;
 
-  // Form State for Adding New Lead
+  // Add-lead form
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newOwnership, setNewOwnership] = useState<'Owner' | 'Renter'>('Owner');
-  const [newStatus, setNewStatus] = useState<Lead['status']>('New Lead');
-  const [newAgentType, setNewAgentType] = useState<Lead['agentType']>('Chatbot');
-  const [newZipCode, setNewZipCode] = useState('75201');
-  const [newRoofIssue, setNewRoofIssue] = useState('Storm damage assessment');
+  const [form, setForm] = useState(BLANK_FORM);
+  const setField = <K extends keyof typeof BLANK_FORM>(key: K, value: (typeof BLANK_FORM)[K]) =>
+    setForm(prev => ({ ...prev, [key]: value }));
 
-  // New Lead inline scheduling fields
-  const [newApptDate, setNewApptDate] = useState('');
-  const [newApptTime, setNewApptTime] = useState('');
-  const [newApptNotes, setNewApptNotes] = useState('');
-
-  // Edit fields for selected lead's appointment inside the slide-over panel
+  // Inspection editor in the side panel
   const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
-  const [editApptDate, setEditApptDate] = useState('');
-  const [editApptTime, setEditApptTime] = useState('');
-  const [editApptNotes, setEditApptNotes] = useState('');
+  const [apptDate, setApptDate] = useState('');
+  const [apptTime, setApptTime] = useState('');
+  const [apptNotes, setApptNotes] = useState('');
 
-  // Status style helper — maps the 10 CRM statuses to premium pill tokens
-  const getStatusStyles = (status: Lead['status']) => {
-    switch (status) {
-      case 'New Lead': return 'st-new';
-      case 'Contacted': return 'st-contacted';
-      case 'In Contact': return 'st-incontact';
-      case 'Inspection Scheduled': return 'st-scheduled';
-      case 'Inspection Completed': return 'st-inspected';
-      case 'Estimate Sent': return 'st-estimate';
-      case 'Closed-Won': return 'st-won';
-      case 'Closed-Lost': return 'st-lost';
-      case 'Follow-up Nurture': return 'st-nurture';
-      case 'Closed':
-      default:
-        return 'st-closed';
-    }
-  };
-
-  // Search & Filter leads
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.zipCode.includes(searchTerm) ||
-      lead.roofIssue.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+  const q = search.trim().toLowerCase();
+  const filteredLeads = leads.filter(l => {
+    const matchesSearch =
+      !q ||
+      l.name.toLowerCase().includes(q) ||
+      l.phone.includes(search.trim()) ||
+      l.email.toLowerCase().includes(q) ||
+      l.zipCode.includes(search.trim()) ||
+      l.roofIssue.toLowerCase().includes(q);
+    return matchesSearch && (statusFilter === 'All' || l.status === statusFilter);
   });
 
-  const handleStatusChange = (leadId: string, newStatus: Lead['status']) => {
-    setLeads(prev => prev.map(lead => {
-      if (lead.id === leadId) {
-        const updatedChat = [...lead.chatLog];
-        updatedChat.push({
-          sender: 'System',
-          text: `Lead status updated manually to "${newStatus}"`,
-          timestamp: new Date().toLocaleString()
-        });
+  // Only offer statuses that have leads (plus the active filter), so the list stays short.
+  const counts = STATUSES.reduce(
+    (acc, s) => ({ ...acc, [s]: leads.filter(l => l.status === s).length }),
+    {} as Record<Status, number>,
+  );
 
-        // Auto schedule in 3 days if scheduled but no details
-        const defaultSchedDate = newStatus === 'Inspection Scheduled' && !lead.scheduledDate 
-          ? new Date(Date.now() + 3*24*60*60*1000).toISOString().split('T')[0] + ' 10:00 AM'
-          : lead.scheduledDate;
+  const closePanel = () => {
+    setSelectedId(null);
+    setIsSchedulingOpen(false);
+  };
 
-        const defaultApptDetails = newStatus === 'Inspection Scheduled' && !lead.appointmentDetails
-          ? {
-              date: new Date(Date.now() + 3*24*60*60*1000).toISOString().split('T')[0],
-              time: '10:00 AM',
-              notes: 'Scheduled manually during status change.'
-            }
-          : lead.appointmentDetails;
-
-        const updatedLead = {
+  const handleStatusChange = (leadId: string, status: Status) => {
+    setLeads(prev =>
+      prev.map(lead => {
+        if (lead.id !== leadId) return lead;
+        const inThreeDays = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const needsDefaultSlot = status === 'Inspection Scheduled' && !lead.scheduledDate;
+        return {
           ...lead,
-          status: newStatus,
-          chatLog: updatedChat,
-          scheduledDate: defaultSchedDate,
-          appointmentDetails: defaultApptDetails
+          status,
+          chatLog: [
+            ...lead.chatLog,
+            { sender: 'System', text: `Status changed to "${status}"`, timestamp: nowStamp() },
+          ],
+          scheduledDate: needsDefaultSlot ? `${inThreeDays} 10:00 AM` : lead.scheduledDate,
+          appointmentDetails:
+            status === 'Inspection Scheduled' && !lead.appointmentDetails
+              ? { date: inThreeDays, time: '10:00 AM', notes: 'Scheduled manually during status change.' }
+              : lead.appointmentDetails,
         };
-
-        // If active lead in slide-over, update slide-over state too
-        if (selectedLeadForChat && selectedLeadForChat.id === leadId) {
-          setSelectedLeadForChat(updatedLead);
-        }
-
-        return updatedLead;
-      }
-      return lead;
-    }));
+      }),
+    );
   };
 
   const handleDeleteLead = (leadId: string) => {
-    if (window.confirm('Are you sure you want to delete this lead?')) {
-      setLeads(prev => prev.filter(l => l.id !== leadId));
-      if (selectedLeadForChat?.id === leadId) {
-        setSelectedLeadForChat(null);
-      }
-    }
+    if (!window.confirm('Delete this lead? This cannot be undone.')) return;
+    setLeads(prev => prev.filter(l => l.id !== leadId));
+    if (selectedId === leadId) closePanel();
   };
 
   const handleCreateLead = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || !newPhone) {
+    if (!form.name.trim() || !form.phone.trim()) {
       alert('Please fill in Name and Phone.');
       return;
     }
-
-    const emailVal = newEmail || 'N/A';
-    const apptDetailsObj = newStatus === 'Inspection Scheduled' && newApptDate
+    const booked = form.status === 'Inspection Scheduled' && form.apptDate;
+    const details = booked
       ? {
-          date: newApptDate,
-          time: newApptTime || '02:00 PM',
-          notes: newApptNotes || 'Scheduled during manual lead creation.'
+          date: form.apptDate,
+          time: form.apptTime || '02:00 PM',
+          notes: form.apptNotes || 'Scheduled during manual lead creation.',
         }
       : undefined;
 
-    const schedDateStr = apptDetailsObj 
-      ? `${apptDetailsObj.date} ${apptDetailsObj.time}`
-      : undefined;
-
     addLead({
-      name: newName,
-      phone: newPhone,
-      email: emailVal,
-      propertyOwnership: newOwnership,
-      status: newStatus,
-      agentType: newAgentType,
-      zipCode: newZipCode || '75201',
-      roofIssue: newRoofIssue || 'Storm damage assessment',
-      chatLog: [
-        { sender: 'System', text: `Lead manually added to CRM Board. Source: ${newAgentType}`, timestamp: new Date().toLocaleString() }
-      ],
-      appointmentDetails: apptDetailsObj,
-      scheduledDate: schedDateStr
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim() || 'N/A',
+      propertyOwnership: form.ownership,
+      status: form.status,
+      agentType: form.source,
+      zipCode: form.zip.trim() || '75201',
+      roofIssue: form.issue.trim() || 'Storm damage assessment',
+      chatLog: [{ sender: 'System', text: 'Lead added manually.', timestamp: nowStamp() }],
+      appointmentDetails: details,
+      scheduledDate: details ? `${details.date} ${details.time}` : undefined,
     });
 
-    // Reset Form
-    setNewName('');
-    setNewPhone('');
-    setNewEmail('');
-    setNewOwnership('Owner');
-    setNewStatus('New Lead');
-    setNewAgentType('Chatbot');
-    setNewZipCode('75201');
-    setNewRoofIssue('Storm damage assessment');
-    setNewApptDate('');
-    setNewApptTime('');
-    setNewApptNotes('');
+    setForm(BLANK_FORM);
     setIsAddOpen(false);
   };
 
-  // Open scheduling editor in slide-over
   const startScheduling = (lead: Lead) => {
-    setEditApptDate(lead.appointmentDetails?.date || new Date(Date.now() + 2*24*60*60*1000).toISOString().split('T')[0]);
-    setEditApptTime(lead.appointmentDetails?.time || '10:00 AM');
-    setEditApptNotes(lead.appointmentDetails?.notes || '');
+    const current = inspectionOf(lead);
+    setApptDate(current?.date || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    setApptTime(current?.time || '10:00 AM');
+    setApptNotes(lead.appointmentDetails?.notes || '');
     setIsSchedulingOpen(true);
   };
 
-  // Save rescheduled or new appointment details inside the slide-over panel
   const handleSaveAppointment = (leadId: string) => {
-    if (!editApptDate || !editApptTime) {
-      alert('Date and Time are required to schedule an inspection.');
+    if (!apptDate || !apptTime) {
+      alert('Date and time are required to schedule an inspection.');
       return;
     }
-
-    setLeads(prev => prev.map(lead => {
-      if (lead.id === leadId) {
-        const updatedChat = [...lead.chatLog];
-        updatedChat.push({
-          sender: 'System',
-          text: `Inspection scheduled/rescheduled manually to ${editApptDate} at ${editApptTime}. Notes: ${editApptNotes || 'None'}`,
-          timestamp: new Date().toLocaleString()
-        });
-
-        const updatedLead: Lead = {
-          ...lead,
-          status: 'Inspection Scheduled',
-          scheduledDate: `${editApptDate} ${editApptTime}`,
-          appointmentDetails: {
-            date: editApptDate,
-            time: editApptTime,
-            notes: editApptNotes
-          },
-          chatLog: updatedChat
-        };
-
-        // Update active slide-over view immediately
-        setSelectedLeadForChat(updatedLead);
-        return updatedLead;
-      }
-      return lead;
-    }));
-
+    setLeads(prev =>
+      prev.map(lead =>
+        lead.id !== leadId
+          ? lead
+          : {
+              ...lead,
+              status: 'Inspection Scheduled',
+              scheduledDate: `${apptDate} ${apptTime}`,
+              appointmentDetails: { ...lead.appointmentDetails, date: apptDate, time: apptTime, notes: apptNotes },
+              chatLog: [
+                ...lead.chatLog,
+                {
+                  sender: 'System',
+                  text: `Inspection set for ${apptDate} at ${apptTime}.${apptNotes ? ` Notes: ${apptNotes}` : ''}`,
+                  timestamp: nowStamp(),
+                },
+              ],
+            },
+      ),
+    );
     setIsSchedulingOpen(false);
   };
 
+  const selectedInspection = selected ? inspectionOf(selected) : null;
+
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-5 animate-fadeIn">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-white">CRM Leads Board</h2>
-          <p className="text-xs text-slate-400 mt-1">Manage and track all captured roofing lead interactions, inspection bookings, and conversations.</p>
+          <p className="text-xs text-slate-400 mt-1">Every lead your agents capture, with its full conversation.</p>
         </div>
-
         <button
-          onClick={() => setIsAddOpen(!isAddOpen)}
-          className="btn-accent px-4 py-2.5 text-sm flex items-center gap-2 self-start"
+          onClick={() => setIsAddOpen(o => !o)}
+          className="btn-accent px-4 py-2.5 text-sm flex items-center gap-2 shrink-0"
         >
-          <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
-          Add Manual Lead
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          Add lead
         </button>
       </div>
 
-      {/* Manual Add Form (Collapsible Card) */}
-            {isAddOpen && (
-        <form onSubmit={handleCreateLead} className="glass rounded-2xl p-6 shadow-xl max-w-3xl animate-slideDown">
-          <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Plus className="h-4 w-4 text-orange-500" /> Create New Lead Profile
-            </h3>
-            <button type="button" onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-white">
+      {/* Add lead */}
+      {isAddOpen && (
+        <form onSubmit={handleCreateLead} className="glass rounded-2xl p-5 max-w-3xl animate-slideDown space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">New lead</h3>
+            <button type="button" onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-white" aria-label="Close">
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Full Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="Sarah Connor"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                className="input-premium"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Phone Number *</label>
-              <input
-                type="tel"
-                required
-                placeholder="(214) 555-0100"
-                value={newPhone}
-                onChange={e => setNewPhone(e.target.value)}
-                className="input-premium"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Email Address</label>
-              <input
-                type="email"
-                placeholder="s.connor@sky.net (or leave empty)"
-                value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                className="input-premium"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input required className="input-premium" placeholder="Full name *" value={form.name} onChange={e => setField('name', e.target.value)} />
+            <input required type="tel" className="input-premium" placeholder="Phone *" value={form.phone} onChange={e => setField('phone', e.target.value)} />
+            <input type="email" className="input-premium" placeholder="Email" value={form.email} onChange={e => setField('email', e.target.value)} />
+            <input className="input-premium" placeholder="Zip code" value={form.zip} onChange={e => setField('zip', e.target.value)} />
+            <input className="input-premium sm:col-span-2" placeholder="Roof issue (e.g. storm damage, leak)" value={form.issue} onChange={e => setField('issue', e.target.value)} />
+            <select className="input-premium" value={form.status} onChange={e => setField('status', e.target.value as Status)} aria-label="Status">
+              {STATUSES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Property Ownership</label>
-              <select
-                value={newOwnership}
-                onChange={e => setNewOwnership(e.target.value as 'Owner' | 'Renter')}
-                className="input-premium"
-              >
-                <option value="Owner">Property Owner</option>
-                <option value="Renter">Renter / Tenant</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Initial Status</label>
-              <select
-                value={newStatus}
-                onChange={e => setNewStatus(e.target.value as Lead['status'])}
-                className="input-premium"
-              >
-                <option value="New Lead">New Lead</option>
-                <option value="Contacted">Contacted</option>
-                <option value="In Contact">In Contact</option>
-                <option value="Inspection Scheduled">Inspection Scheduled</option>
-                <option value="Inspection Completed">Inspection Completed</option>
-                <option value="Estimate Sent">Estimate Sent</option>
-                <option value="Closed-Won">Closed-Won</option>
-                <option value="Closed-Lost">Closed-Lost</option>
-                <option value="Follow-up Nurture">Follow-up Nurture</option>
-                <option value="Closed">Closed</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Acquisition Source</label>
-              <select
-                value={newAgentType}
-                onChange={e => setNewAgentType(e.target.value as Lead['agentType'])}
-                className="input-premium"
-              >
-                <option value="Chatbot">Agent 1: Website Chatbot</option>
-                <option value="Phone Call">Agent 2: Phone Call Handler</option>
-                <option value="SMS Nurture">Agent 3: SMS/Email Nurture</option>
-                <option value="Estimate Follow-Up">Agent 4: Estimate Follow-Up</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-slate-800/60 pt-4">
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Zip Code</label>
-              <input
-                type="text"
-                placeholder="75201"
-                value={newZipCode}
-                onChange={e => setNewZipCode(e.target.value)}
-                className="input-premium"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-2 font-semibold">Roof Issue Description</label>
-              <input
-                type="text"
-                placeholder="Storm damage replacement estimate, leak assessment, etc."
-                value={newRoofIssue}
-                onChange={e => setNewRoofIssue(e.target.value)}
-                className="input-premium"
-              />
-            </div>
-          </div>
-
-          {/* Inline Scheduling options when status is Inspection Scheduled */}
-          {newStatus === 'Inspection Scheduled' && (
-            <div className="mt-4 p-4 rounded-xl bg-[#0f172a] border border-accent-500/20 space-y-4">
-              <h4 className="text-xs font-bold uppercase text-accent-400 flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" /> Schedule Initial Appointment Details
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={newApptDate}
-                    onChange={e => setNewApptDate(e.target.value)}
-                    className="w-full input-premium-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Time (e.g. 10:00 AM) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="10:00 AM"
-                    value={newApptTime}
-                    onChange={e => setNewApptTime(e.target.value)}
-                    className="w-full input-premium-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Scheduler Notes (Internal/Customer preferences)</label>
-                <textarea
-                  placeholder="E.g., visible water stains on second floor ceiling, prefers afternoon visit."
-                  value={newApptNotes}
-                  onChange={e => setNewApptNotes(e.target.value)}
-                  rows={2}
-                  className="w-full input-premium-sm"
-                />
-              </div>
+          {form.status === 'Inspection Scheduled' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+              <input type="date" required className="input-premium-sm" value={form.apptDate} onChange={e => setField('apptDate', e.target.value)} />
+              <input required className="input-premium-sm" placeholder="Time, e.g. 10:00 AM" value={form.apptTime} onChange={e => setField('apptTime', e.target.value)} />
+              <textarea rows={2} className="input-premium-sm sm:col-span-2" placeholder="Notes (optional)" value={form.apptNotes} onChange={e => setField('apptNotes', e.target.value)} />
             </div>
           )}
 
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setIsAddOpen(false)}
-              className="btn-ghost px-4 py-2 text-sm"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-accent px-5 py-2 text-sm"
-            >
-              Save Lead to Database
-            </button>
+          <details className="text-xs text-slate-400">
+            <summary className="cursor-pointer hover:text-slate-200 select-none">More details</summary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+              <select className="input-premium" value={form.ownership} onChange={e => setField('ownership', e.target.value as Lead['propertyOwnership'])} aria-label="Ownership">
+                <option value="Owner">Property owner</option>
+                <option value="Renter">Renter / tenant</option>
+              </select>
+              <select className="input-premium" value={form.source} onChange={e => setField('source', e.target.value as Lead['agentType'])} aria-label="Source">
+                <option value="Chatbot">Source: Website chatbot</option>
+                <option value="Phone Call">Source: Phone call</option>
+                <option value="SMS Nurture">Source: SMS / email</option>
+                <option value="Estimate Follow-Up">Source: Estimate follow-up</option>
+              </select>
+            </div>
+          </details>
+
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setIsAddOpen(false)} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
+            <button type="submit" className="btn-accent px-5 py-2 text-sm">Save lead</button>
           </div>
         </form>
       )}
 
-      {/* Filter and Search Dashboard Card */}
-      <div className="glass card-hover rounded-2xl p-5 md:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Search Box */}
+      {/* Toolbar + table */}
+      <div className="glass rounded-2xl p-4 md:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-3 h-5 w-5 text-slate-500" />
             <input
               type="text"
-              placeholder="Search by name, phone, email, zip or issue..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search name, phone, zip or issue"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
               className="input-premium pl-11"
             />
           </div>
-
-          {/* Quick Filter tabs */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1.5 lg:pb-0 scrollbar-none">
-            <Filter className="h-4 w-4 text-slate-400 mr-1 shrink-0" />
-            {['All', 'New Lead', 'Contacted', 'In Contact', 'Inspection Scheduled', 'Inspection Completed', 'Estimate Sent', 'Closed-Won', 'Closed-Lost', 'Follow-up Nurture', 'Closed'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
-                  statusFilter === status
-                    ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
-                    : 'bg-slate-900 border border-slate-800/80 text-slate-400 hover:text-slate-100'
-                }`}
-              >
-                {status}
-              </button>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as 'All' | Status)}
+            className="input-premium sm:w-56"
+            aria-label="Filter by status"
+          >
+            <option value="All">All statuses ({leads.length})</option>
+            {STATUSES.filter(s => counts[s] > 0 || s === statusFilter).map(s => (
+              <option key={s} value={s}>{s} ({counts[s]})</option>
             ))}
-          </div>
+          </select>
+          {leads.length > 0 && (
+            <span className="text-xs text-slate-500 sm:ml-auto whitespace-nowrap">
+              {filteredLeads.length} of {leads.length}
+            </span>
+          )}
         </div>
 
-        {/* Leads Table Container */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-bold text-white">Your leads</h3>
-            <span className="text-xs text-slate-500">
-              — captured by your chatbot and saved to your account.
-            </span>
-          </div>
-        </div>
-        <div className="mt-2 overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-900/20 premium-scroll table-sticky-header">
+        <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-900/20 premium-scroll table-sticky-header">
           <table className="w-full border-collapse text-left text-sm text-slate-300">
             <thead>
               <tr className="border-b border-slate-800/80 bg-slate-950/85 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <th className="px-6 py-4">Homeowner Name</th>
-                <th className="px-6 py-4">Roof Issue / Zip</th>
-                <th className="px-6 py-4">Acquisition Source</th>
-                <th className="px-6 py-4">Workflow Status</th>
-                <th className="px-6 py-4">Scheduled Inspection</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-5 py-3.5">Lead</th>
+                <th className="px-5 py-3.5">Issue</th>
+                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5">Inspection</th>
+                <th className="px-5 py-3.5 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/70 row-stripe bg-slate-900/10">
-              {filteredLeads.length > 0 ? (
-                filteredLeads.map((lead) => (
-                  <tr 
-                    key={lead.id} 
+              {filteredLeads.map(lead => {
+                const slot = inspectionOf(lead);
+                return (
+                  <tr
+                    key={lead.id}
                     className="hover:bg-slate-800/40 transition cursor-pointer"
-                    onClick={() => setSelectedLeadForChat(lead)}
+                    onClick={() => setSelectedId(lead.id)}
                   >
-                    {/* Homeowner Name & Contact info */}
-                    <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center space-x-3">
-                        <div 
-                          className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/60 flex items-center justify-center font-bold text-accent-300 shadow-lg cursor-pointer"
-                          onClick={() => setSelectedLeadForChat(lead)}
-                        >
-                          {lead.name.split(' ').map(n => n[0]).join('')}
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-accent-300 shrink-0">
+                          {initials(lead.name)}
                         </div>
-                        <div className="cursor-pointer" onClick={() => setSelectedLeadForChat(lead)}>
-                          <p className="font-bold text-white">{lead.name}</p>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
-                                                        <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {lead.phone}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {lead.email}</span>
-                          </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-white truncate">{lead.name}</p>
+                          <p className="text-xs text-slate-500">{lead.phone}</p>
                         </div>
                       </div>
                     </td>
 
-                    {/* Roof Issue and Zip Code */}
-                    <td className="px-6 py-4">
-                      <div className="space-y-0.5">
-                        <p className="text-xs text-slate-200 font-medium line-clamp-1 max-w-xs">{lead.roofIssue}</p>
-                        <p className="text-[10px] text-slate-500 flex items-center gap-1"><MapPin className="h-2.5 w-2.5" /> Zip: {lead.zipCode}</p>
-                      </div>
+                    <td className="px-5 py-3.5">
+                      <p className="text-xs text-slate-200 line-clamp-1 max-w-[16rem]">{lead.roofIssue}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{lead.zipCode}</p>
                     </td>
 
-                    {/* Agent source */}
-                    <td className="px-6 py-4">
-                      <span className="text-xs text-slate-300 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 font-medium">
-                        {lead.agentType}
-                      </span>
-                    </td>
-
-                    {/* Status dropdown selector */}
-                    <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                    <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                       <select
                         value={lead.status}
-                        onChange={e => handleStatusChange(lead.id, e.target.value as Lead['status'])}
-                        className={`status-pill cursor-pointer ${getStatusStyles(lead.status)}`}
+                        onChange={e => handleStatusChange(lead.id, e.target.value as Status)}
+                        className={`status-pill cursor-pointer ${STATUS_STYLE[lead.status]}`}
+                        aria-label={`Status for ${lead.name}`}
                       >
-                        <option value="New Lead">New Lead</option>
-                        <option value="Contacted">Contacted</option>
-                        <option value="In Contact">In Contact</option>
-                        <option value="Inspection Scheduled">Inspection Scheduled</option>
-                        <option value="Inspection Completed">Inspection Completed</option>
-                        <option value="Estimate Sent">Estimate Sent</option>
-                        <option value="Closed-Won">Closed-Won</option>
-                        <option value="Closed-Lost">Closed-Lost</option>
-                        <option value="Follow-up Nurture">Follow-up Nurture</option>
-                        <option value="Closed">Closed</option>
+                        {STATUSES.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
                       </select>
                     </td>
 
-                    {/* Scheduled inspection date */}
-                    <td className="px-6 py-4">
-                      {lead.status === 'Inspection Scheduled' && (lead.appointmentDetails || lead.scheduledDate) ? (
-                        <div className="flex items-center space-x-1.5 text-xs text-accent-400 font-mono">
+                    <td className="px-5 py-3.5 text-xs">
+                      {slot ? (
+                        <span className="inline-flex items-center gap-1.5 text-accent-400 font-mono">
                           <Calendar className="h-3.5 w-3.5 shrink-0" />
-                          <span>{lead.appointmentDetails?.date || lead.scheduledDate?.split(' ')[0]} {lead.appointmentDetails?.time || lead.scheduledDate?.split(' ').slice(1).join(' ')}</span>
-                        </div>
-                      ) : lead.status === 'Inspection Completed' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 px-2 py-0.5 rounded bg-cyan-400/5 border border-cyan-400/10">
-                          <CheckCircle2 className="h-3 w-3" /> Completed
+                          {slot.date} {slot.time}
                         </span>
+                      ) : lead.status === 'Inspection Completed' ? (
+                        <span className="text-slate-300">Completed</span>
                       ) : (
-                        <span className="text-xs text-slate-500 font-mono italic">Not Scheduled</span>
+                        <span className="text-slate-600">—</span>
                       )}
                     </td>
 
-                    {/* Quick view button actions */}
-                    <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="px-5 py-3.5 text-right" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => setSelectedLeadForChat(lead)}
-                          className="bg-accent-500/10 hover:bg-accent-500 hover:text-slate-950 text-accent-400 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1 min-h-0"
+                          onClick={() => setSelectedId(lead.id)}
+                          className="text-accent-400 hover:bg-accent-500/10 font-semibold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 min-h-0"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
-                          View Log ({lead.chatLog.length})
+                          Open
                         </button>
                         <button
                           onClick={() => handleDeleteLead(lead.id)}
                           className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
-                          title="Delete Lead"
+                          title="Delete lead"
+                          aria-label={`Delete ${lead.name}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : leads.length === 0 ? (
+                );
+              })}
+
+              {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-14 text-center">
-                    <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-slate-500" />
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    {leads.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
+                        <div className="h-11 w-11 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-slate-500" />
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-300">No leads yet</h4>
+                        <p className="text-xs text-slate-500">
+                          Leads your chatbot captures appear here. Try Agent 1 from the menu.
+                        </p>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-300">Your CRM is ready</h4>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        No leads yet. Every lead your chatbot captures lands here with its full conversation transcript.
-                      </p>
-                      <p className="text-[11px] text-slate-400 font-semibold">
-                        Open Agent 1: Chatbot from the menu and try a conversation.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">
-                    No leads matching your search criteria were found.
+                    ) : (
+                      <p className="text-xs text-slate-500">No leads match your search.</p>
+                    )}
                   </td>
                 </tr>
               )}
@@ -607,183 +429,111 @@ export const CRMLeadsBoard: React.FC = () => {
         </div>
       </div>
 
-      {/* Slide-over Conversation Audit Panel */}
-      {selectedLeadForChat && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
-          <div className="w-full max-w-2xl glass-strong border-l border-slate-800/80 h-full flex flex-col justify-between shadow-2xl animate-slideLeft">
-
-            {/* Panel Header */}
-            <div className="p-6 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="h-11 w-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-orange-500 text-lg">
-                  {selectedLeadForChat.name.split(' ').map(n => n[0]).join('')}
+      {/* Lead panel */}
+      {selected && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end animate-fadeIn" onClick={closePanel}>
+          <div
+            className="w-full max-w-xl glass-strong border-l border-slate-800/80 h-full flex flex-col shadow-2xl animate-slideLeft"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-11 w-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-orange-500 shrink-0">
+                  {initials(selected.name)}
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-white text-base">{selectedLeadForChat.name}</h3>
-                  <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <span>Acquired via: <span className="text-orange-400 font-bold">{selectedLeadForChat.agentType}</span></span>
-                  </p>
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-white truncate">{selected.name}</h3>
+                  <p className="text-xs text-slate-400">via {selected.agentType}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => { setSelectedLeadForChat(null); setIsSchedulingOpen(false); }}
+              <button
+                onClick={closePanel}
                 className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800 border border-slate-700"
+                aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Homeowner Audit Profile Card */}
-            <div className="p-4 bg-slate-900/60 border-b border-slate-800 grid grid-cols-2 gap-4 text-xs text-slate-300">
-              <div className="col-span-2">
-                <span className="text-[11px] text-slate-500">Captured by your chatbot.</span>
-              </div>
-              <div className="space-y-1.5">
-                <p className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Full Name:</span> {selectedLeadForChat.name}</p>
-                <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Phone:</span> {selectedLeadForChat.phone}</p>
-                <p className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Email:</span> {selectedLeadForChat.email}</p>
-                <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Zip Code:</span> {selectedLeadForChat.zipCode}</p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Ownership:</span> {selectedLeadForChat.propertyOwnership}</p>
-                <p className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-slate-500" /> <span className="font-semibold text-white">Status:</span> 
-                  <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusStyles(selectedLeadForChat.status)}`}>
-                    {selectedLeadForChat.status}
-                  </span>
-                </p>
-                <p className="flex items-start gap-1.5"><FileText className="h-3.5 w-3.5 text-slate-500 shrink-0 mt-0.5" /> <span><span className="font-semibold text-white">Roof Issue:</span> {selectedLeadForChat.roofIssue}</span></p>
-              </div>
+            {/* Details */}
+            <div className="p-5 border-b border-slate-800 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs text-slate-300">
+              <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-slate-500" />{selected.phone}</p>
+              <p className="flex items-center gap-2 min-w-0"><Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" /><span className="truncate">{selected.email}</span></p>
+              <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-slate-500" />{selected.zipCode}</p>
+              <p className="flex items-center gap-2"><Home className="h-3.5 w-3.5 text-slate-500" />{selected.propertyOwnership}</p>
+              <p className="flex items-start gap-2 col-span-2"><FileText className="h-3.5 w-3.5 text-slate-500 shrink-0 mt-0.5" />{selected.roofIssue}</p>
             </div>
 
-            {/* Scheduled Inspection Booking details with edit state */}
-            <div className="p-4 bg-slate-900/40 border-b border-slate-800/80 space-y-3">
+            {/* Inspection */}
+            <div className="p-5 border-b border-slate-800/80 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-accent-400" /> Inspection Appointment Panel
-                </h4>
-
-                {!isSchedulingOpen ? (
-                  <button
-                    onClick={() => startScheduling(selectedLeadForChat)}
-                    className="text-[11px] font-black bg-accent-500 text-slate-950 px-3 py-1 rounded-md hover:bg-accent-400 transition"
-                  >
-                    {selectedLeadForChat.status === 'Inspection Scheduled' ? 'Reschedule / Edit' : 'Schedule Inspection'}
-                  </button>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Inspection</h4>
+                {isSchedulingOpen ? (
+                  <button onClick={() => setIsSchedulingOpen(false)} className="text-xs text-slate-400 hover:text-white">Cancel</button>
                 ) : (
                   <button
-                    onClick={() => setIsSchedulingOpen(false)}
-                    className="text-[11px] text-slate-400 hover:text-white"
+                    onClick={() => startScheduling(selected)}
+                    className="text-xs font-bold text-accent-400 hover:text-accent-300"
                   >
-                    Cancel
+                    {selectedInspection ? 'Reschedule' : 'Schedule'}
                   </button>
                 )}
               </div>
 
-              {!isSchedulingOpen ? (
-                selectedLeadForChat.status === 'Inspection Scheduled' && (selectedLeadForChat.appointmentDetails || selectedLeadForChat.scheduledDate) ? (
-                  <div className="bg-accent-500/10 border border-accent-500/20 p-3 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center gap-4 text-accent-400 font-mono font-bold">
-                      <p>Date: <span className="text-white">{selectedLeadForChat.appointmentDetails?.date || selectedLeadForChat.scheduledDate?.split(' ')[0]}</span></p>
-                      <p>Time: <span className="text-white">{selectedLeadForChat.appointmentDetails?.time || selectedLeadForChat.scheduledDate?.split(' ').slice(1).join(' ')}</span></p>
-                    </div>
-                    {selectedLeadForChat.appointmentDetails?.notes && (
-                      <p className="text-slate-300 text-[11px] italic bg-slate-900/40 p-2 rounded-lg border border-slate-800/50">
-                        <span className="font-bold text-slate-400 not-italic uppercase text-[9px] block mb-0.5">Appointment Notes:</span>
-                        "{selectedLeadForChat.appointmentDetails.notes}"
-                      </p>
-                    )}
+              {isSchedulingOpen ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="input-premium-sm" />
+                    <input value={apptTime} onChange={e => setApptTime(e.target.value)} placeholder="10:00 AM" className="input-premium-sm" />
                   </div>
-                ) : (
-                  <div className="bg-slate-950/30 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between text-xs text-slate-400">
-                    <span className="italic">No active inspection scheduled.</span>
+                  <textarea
+                    rows={2}
+                    value={apptNotes}
+                    onChange={e => setApptNotes(e.target.value)}
+                    placeholder="Notes (optional)"
+                    className="input-premium-sm"
+                  />
+                  <div className="flex justify-end">
                     <button
-                      onClick={() => startScheduling(selectedLeadForChat)}
-                      className="text-orange-400 hover:text-orange-300 font-bold flex items-center gap-1"
+                      onClick={() => handleSaveAppointment(selected.id)}
+                      className="bg-accent-500 hover:bg-accent-400 text-slate-950 text-xs font-black px-4 py-2 rounded-lg transition"
                     >
-                      Schedule Free Inspection Now &rarr;
-                    </button>
-                  </div>
-                )
-              ) : (
-                <div className="bg-slate-900 p-4 rounded-xl border border-accent-500/20 space-y-3.5 animate-slideDown">
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Date</label>
-                      <input
-                        type="date"
-                        value={editApptDate}
-                        onChange={e => setEditApptDate(e.target.value)}
-                        className="w-full input-premium-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Appointment Time (e.g. 10:00 AM)</label>
-                      <input
-                        type="text"
-                        value={editApptTime}
-                        onChange={e => setEditApptTime(e.target.value)}
-                        className="w-full input-premium-sm"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Scheduler Notes</label>
-                    <textarea
-                      value={editApptNotes}
-                      onChange={e => setEditApptNotes(e.target.value)}
-                      rows={2}
-                      placeholder="Enter details, customer preferences, shingle issues, or claims information."
-                      className="w-full input-premium-sm"
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => setIsSchedulingOpen(false)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => handleSaveAppointment(selectedLeadForChat.id)}
-                      className="bg-accent-500 hover:bg-accent-400 text-slate-950 text-[11px] font-black px-4 py-1.5 rounded-lg transition"
-                    >
-                      Save & Book Inspection
+                      Save inspection
                     </button>
                   </div>
                 </div>
+              ) : selectedInspection ? (
+                <div className="text-xs space-y-1.5">
+                  <p className="font-mono text-white">{selectedInspection.date} · {selectedInspection.time}</p>
+                  {selected.appointmentDetails?.notes && (
+                    <p className="text-slate-400 italic">{selected.appointmentDetails.notes}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">No inspection booked.</p>
               )}
             </div>
 
-            {/* Conversations Transcripts Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/50 premium-scroll">
-              {selectedLeadForChat.chatLog.map((log, index) => {
-                const isAI = log.sender === 'AI';
-                const isSystem = log.sender === 'System';
-
-                if (isSystem) {
+            {/* Conversation */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-950/50 premium-scroll">
+              {selected.chatLog.map((log, index) => {
+                if (log.sender === 'System') {
                   return (
                     <div key={index} className="flex justify-center">
-                      <span className="bg-slate-800/80 text-[10px] font-semibold text-slate-400 px-3 py-1 rounded-md border border-slate-800/80 font-mono tracking-wide max-w-md text-center">
-                        {log.timestamp} • {log.text}
+                      <span className="text-[10px] text-slate-500 text-center max-w-md">
+                        {log.timestamp} · {log.text}
                       </span>
                     </div>
                   );
                 }
-
+                const isAI = log.sender === 'AI';
                 return (
                   <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'}`}>
-                    <div className={`max-w-md rounded-2xl px-4 py-3 text-xs leading-relaxed ${
-                      isAI 
-                        ? 'chat-bubble-ai rounded-tl-none' 
-                        : 'chat-bubble-user rounded-tr-none'
-                    }`}>
-                      <div className="flex justify-between items-center gap-4 mb-1 border-b border-slate-700/30 pb-0.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-60">
-                          {isAI ? 'RoofFlow AI Agent' : 'Homeowner User'}
-                        </span>
-                        <span className="text-[9px] opacity-50 font-mono">
-                          {log.timestamp}
-                        </span>
+                    <div className={`max-w-md rounded-2xl px-4 py-3 text-xs leading-relaxed ${isAI ? 'chat-bubble-ai rounded-tl-none' : 'chat-bubble-user rounded-tr-none'}`}>
+                      <div className="flex justify-between items-center gap-4 mb-1 opacity-60">
+                        <span className="text-[10px] font-black uppercase tracking-wider">{isAI ? 'AI agent' : 'Homeowner'}</span>
+                        <span className="text-[9px] font-mono">{log.timestamp}</span>
                       </div>
                       <p className="whitespace-pre-line">{log.text}</p>
                     </div>
@@ -791,20 +541,6 @@ export const CRMLeadsBoard: React.FC = () => {
                 );
               })}
             </div>
-
-            {/* Conversation footer details */}
-            <div className="p-4 border-t border-slate-800/80 bg-slate-950/60 text-xs text-slate-500 flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4 text-accent-400" /> Lead Audit Trail verified
-              </span>
-              <button 
-                onClick={() => { setSelectedLeadForChat(null); setIsSchedulingOpen(false); }}
-                className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl border border-slate-700"
-              >
-                Close Audit Log
-              </button>
-            </div>
-
           </div>
         </div>
       )}
