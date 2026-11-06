@@ -5,12 +5,15 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { adminClient, userFromRequest, type AuthedUser } from './supabaseAdmin.js';
 import { effectivePlan, getProfile } from './billing.js';
 import { limitForPlan, type PlanId } from './plans.js';
+import { lookupTenant } from './tenant.js';
 
 export const CONVERSATION_ID_RE = /^[A-Za-z0-9_-]{8,80}$/;
 export const MAX_MESSAGES_PER_CONVERSATION = 60;
 
 export interface GuardResult {
   user: AuthedUser;
+  /** The user's company, resolved server-side. Only set when `requireTenant` was asked for. */
+  tenantId: string | null;
   plan: PlanId;
   used: number;
   limit: number;
@@ -19,7 +22,7 @@ export interface GuardResult {
 export async function guardChat(
   req: VercelRequest,
   res: VercelResponse,
-  opts: { agentType: string; conversationId: unknown },
+  opts: { agentType: string; conversationId: unknown; requireTenant?: boolean },
 ): Promise<GuardResult | null> {
   const admin = adminClient();
   if (!admin) {
@@ -34,6 +37,18 @@ export async function guardChat(
   if (!user) {
     res.status(401).json({ error: 'Please log in again', code: 'unauthenticated' });
     return null;
+  }
+
+  // Endpoints that STORE data (agent tools) must know whose data it is. The
+  // tenant comes from the verified user's profile, never from the request body.
+  let tenantId: string | null = null;
+  if (opts.requireTenant) {
+    const t = await lookupTenant(admin, user.id);
+    if (!t.ok) {
+      res.status(t.status).json({ error: t.error, code: t.code });
+      return null;
+    }
+    tenantId = t.tenantId;
   }
 
   const plan = effectivePlan(await getProfile(admin, user.id));
@@ -93,5 +108,5 @@ export async function guardChat(
     return null;
   }
 
-  return { user, plan, used: row.used, limit };
+  return { user, tenantId, plan, used: row.used, limit };
 }
