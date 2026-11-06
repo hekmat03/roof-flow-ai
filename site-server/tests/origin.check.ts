@@ -30,7 +30,15 @@ const req = (headers: Record<string, string>) =>
 const PUBLIC = "https://576127cef4e964ad11707bbdd13ace2d.ctonew.app";
 
 console.log("\nsame-origin gate");
-check("no Origin (curl / SSR fetch) is allowed", isSameOrigin(req({})) === true);
+// C1: a request with no Origin at all is what `curl` and a cross-site
+// navigation send, so it is NOT same-origin by default any more. Routes that a
+// browser reaches with a GET opt in explicitly (browsers omit Origin on
+// same-origin GETs) — and only because they authenticate some other way.
+check("no Origin (curl / SSR fetch) is rejected by default", isSameOrigin(req({})) === false);
+check(
+  "no Origin is allowed only when the caller opts in",
+  isSameOrigin(req({}), { allowMissingOrigin: true }) === true
+);
 check(
   "browser POST to the public site is allowed (public host in x-forwarded-host)",
   isSameOrigin(req({ origin: PUBLIC, host: "127.0.0.1:3000", "x-forwarded-host": "576127cef4e964ad11707bbdd13ace2d.ctonew.app" })) === true

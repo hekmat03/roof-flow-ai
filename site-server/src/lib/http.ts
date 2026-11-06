@@ -60,25 +60,48 @@ const hostCandidates = (request: Request): Set<string> => {
   return hosts;
 };
 
+export interface SameOriginOptions {
+  /**
+   * Treat a request that carries NO Origin header as same-origin.
+   *
+   * Defaults to **false** (C1). A missing Origin is exactly what `curl`, a
+   * server-side script and a cross-site navigation send, so it is not evidence
+   * of anything and must never be read as "this caller is ours".
+   *
+   * Only two kinds of caller may opt in, and both must already be safe without
+   * the header:
+   *  - a route a browser reaches with a **GET** — browsers omit Origin on
+   *    same-origin GETs, so demanding one would 403 every legitimate read; and
+   *  - a state-changing route whose real gate is the HttpOnly, SameSite=Lax
+   *    session cookie (a cross-site POST cannot attach it), where this check is
+   *    a CSRF speed bump rather than the control.
+   *
+   * A data-returning route must NEVER rely on this gate at all: it authenticates
+   * the request (see `/api/leads`) and then uses this only to reject a request
+   * that names a foreign Origin.
+   */
+  allowMissingOrigin?: boolean;
+}
+
 /**
  * Same-origin gate for endpoints that are for our own app, not the public web.
+ *
+ * **CSRF defence, never authentication.** An absent Origin used to be treated
+ * as "ours" (`return true`), which is how `curl /api/leads` received the whole
+ * leads table (audit C1). It is now rejected unless the caller explicitly asks
+ * for the relaxed behaviour — see {@link SameOriginOptions}.
  *
  * The Origin header is checked against every host this request could have been
  * addressed as — not just `host`. Behind the platform proxy the app sees the
  * internal host (e.g. `localhost:3000`) while the browser sends the public
  * hostname, so comparing those two directly rejected every browser POST
  * (sign-up, sign-in, sign-out, checkout) with `forbidden_origin` while looking
- * perfectly healthy from curl, which sends no Origin at all. `x-forwarded-host`
- * carries the public hostname the proxy received.
- *
- * Requests without an Origin (curl, SSR fetch, direct navigation) are allowed.
- * Cross-site posts cannot abuse the relaxed check: they carry the attacker's
- * Origin, and the session cookie is HttpOnly + SameSite=Lax so it is never
- * attached to them anyway.
+ * perfectly healthy from curl. `x-forwarded-host` carries the public hostname
+ * the proxy received.
  */
-export const isSameOrigin = (request: Request): boolean => {
+export const isSameOrigin = (request: Request, options: SameOriginOptions = {}): boolean => {
   const origin = request.headers.get("origin");
-  if (!origin) return true;
+  if (!origin) return options.allowMissingOrigin === true;
   if (origin === "null") return false; // sandboxed iframe / file:// — never ours
   try {
     return hostCandidates(request).has(new URL(origin).host.toLowerCase());

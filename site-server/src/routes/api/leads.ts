@@ -1,8 +1,10 @@
 /**
- * /api/leads — public lead-capture endpoint for the embeddable widget.
+ * /api/leads — lead-capture endpoint for the embeddable widget.
  * ---------------------------------------------------------------------------
  * POST : visitor submissions from widget.html (arbitrary contractor origin).
- * GET  : the latest real leads, for our OWN app's CRM board (same-origin only).
+ * GET  : the latest real leads, for our OWN app's CRM board. Requires a valid
+ *        session and returns an explicit column allowlist (audit C1) — see
+ *        `lib/leads-list.ts`, where the handler lives so it can be tested.
  * OPTIONS: CORS preflight for the cross-origin POST.
  *
  * The service-role key lives only in this server module's environment — the
@@ -17,19 +19,14 @@ import {
   dbConfigured,
   insertLead,
   json,
-  listLeads,
   notConfigured,
   rateLimit,
   recordSuccess,
   scoreLead,
   validateLead,
   type LeadInput,
-  type LeadRow,
 } from "../../lib/leads-core";
-import { isSameOrigin } from "../../lib/http";
-
-/** GET is same-origin only: the CRM board is part of our own app. */
-const LIST_LIMIT = 200;
+import { handleListLeads } from "../../lib/leads-list";
 
 export const Route = createFileRoute("/api/leads")({
   server: {
@@ -87,17 +84,9 @@ export const Route = createFileRoute("/api/leads")({
         }
       },
 
-      GET: async ({ request }) => {
-        if (!isSameOrigin(request)) return json({ ok: false, error: "forbidden_origin" }, 403);
-        if (!dbConfigured()) return notConfigured();
-        try {
-          const rows: LeadRow[] = await listLeads(LIST_LIMIT);
-          return json({ ok: true, leads: rows, count: rows.length });
-        } catch {
-          console.error("[leads] list failed");
-          return json({ ok: false, error: "storage_error" }, 500);
-        }
-      },
+      // Authenticated, column-allowlisted read. All the logic lives in
+      // lib/leads-list.ts so a plain Node test can exercise it (C1).
+      GET: async ({ request }) => handleListLeads(request),
     },
   },
 });

@@ -14,7 +14,10 @@ export const Route = createFileRoute("/api/auth/session")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!isSameOrigin(request)) return json({ ok: false, error: "forbidden_origin" }, 403);
+        // A browser omits Origin on a same-origin GET, so this read opts into the
+        // relaxed check; the session cookie below is what actually gates the data.
+        if (!isSameOrigin(request, { allowMissingOrigin: true }))
+          return json({ ok: false, error: "forbidden_origin" }, 403);
         const session = sessionFromRequest(request);
         if (!session) return json({ ok: true, authenticated: false, user: null });
         const plan = await planForUser(session.userId);
