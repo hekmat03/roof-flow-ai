@@ -1,9 +1,12 @@
+import { authHeaders } from './authFetch';
+
 /**
  * realLeads.ts — client for OUR OWN /api/leads endpoint.
  * ---------------------------------------------------------------------------
  * Real leads are captured by the embeddable widget and stored server-side
  * (Supabase). This module fetches them for the CRM board. It never touches a
- * key: the browser calls our same-origin API, which holds the secret.
+ * service key: the browser sends the signed-in user's own access token and the
+ * server returns ONLY that user's company's leads (401 when nobody is signed in).
  *
  * Failure is ALWAYS explicit here — a missing database, a network error and an
  * empty result are three different, distinguishable states, because "we could
@@ -33,18 +36,26 @@ export interface RealLead {
   created_at: string;
 }
 
-export type RealLeadsState = 'loading' | 'ok' | 'not-configured' | 'error';
+export type RealLeadsState = 'loading' | 'ok' | 'not-configured' | 'signed-out' | 'error';
 
 export interface RealLeadsResult {
   state: RealLeadsState;
   leads: RealLead[];
   /** Human-readable explanation for the non-'ok' states. */
   message?: string;
+  /** This company's public widget key, for the embed snippet (state 'ok' only). */
+  widgetKey?: string;
 }
 
 export const fetchRealLeads = async (): Promise<RealLeadsResult> => {
   try {
-    const res = await fetch('/api/leads', { headers: { Accept: 'application/json' } });
+    const res = await fetch('/api/leads', {
+      headers: { Accept: 'application/json', ...(await authHeaders()) },
+      credentials: 'same-origin',
+    });
+    if (res.status === 401) {
+      return { state: 'signed-out', leads: [], message: 'Sign in to see your website leads.' };
+    }
     if (res.status === 503) {
       return {
         state: 'not-configured',
@@ -57,11 +68,15 @@ export const fetchRealLeads = async (): Promise<RealLeadsResult> => {
     if (!res.ok) {
       return { state: 'error', leads: [], message: `Lead storage returned ${String(res.status)}.` };
     }
-    const body = (await res.json()) as { ok?: boolean; leads?: RealLead[] };
+    const body = (await res.json()) as { ok?: boolean; leads?: RealLead[]; widget_key?: string | null };
     if (!body.ok) {
       return { state: 'error', leads: [], message: 'Lead storage responded with an error.' };
     }
-    return { state: 'ok', leads: Array.isArray(body.leads) ? body.leads : [] };
+    return {
+      state: 'ok',
+      leads: Array.isArray(body.leads) ? body.leads : [],
+      widgetKey: typeof body.widget_key === 'string' ? body.widget_key : undefined,
+    };
   } catch {
     return {
       state: 'error',
