@@ -15,7 +15,14 @@
  *    RESTARTS (every publish). It is a speed bump against casual abuse, not a
  *    durable quota; a real one needs shared storage.
  *  - Nothing here sends email or SMS. Capture is store-only by design.
+ *
+ * TENANT ISOLATION: the service-role key bypasses Row Level Security, so this
+ * file is the isolation boundary. `insertLead` REQUIRES a tenant id and
+ * `listLeads` REQUIRES one and filters on it; there is deliberately no
+ * function here that reads or writes leads without a tenant.
  */
+
+import { isUuid } from "./tenant";
 
 export const LEADS_TABLE = "leads";
 
@@ -27,10 +34,11 @@ export const LEADS_TABLE = "leads";
  * The widget is embedded on third-party contractor sites, so the lead POST has
  * to be readable cross-origin. `*` is deliberate: the endpoint is public and
  * writes nothing privileged; the visitor's own browser sends the payload.
+ * Reads (GET) are NOT cross-origin: they are private and never carry these.
  */
 export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Max-Age": "86400",
 };
@@ -90,6 +98,8 @@ export interface LeadInput {
   consent?: unknown;
   consent_text?: unknown;
   conversation?: unknown;
+  /** Public key of the contractor whose widget this is (tenants.widget_key). */
+  widget_key?: unknown;
   /** Honeypot: a field real visitors never see. Must be empty/absent. */
   company_website?: unknown;
 }
@@ -387,11 +397,16 @@ export interface LeadRow {
   created_at: string;
 }
 
-/** Inserts a scored lead and returns the stored row (with id, created_at). */
+/**
+ * Inserts a scored lead for ONE tenant and returns the stored row.
+ * `tenantId` must come from the server (tenantIdForWidgetKey), never from the
+ * request body. An invalid id throws before anything is written.
+ */
 export const insertLead = async (
   lead: ValidatedLead,
-  opts: { userAgent: string | null; score: number }
+  opts: { tenantId: string; userAgent: string | null; score: number }
 ): Promise<LeadRow> => {
+  if (!isUuid(opts.tenantId)) throw new Error("insert_requires_tenant");
   const { url } = supabaseEnv();
   const postRow = (payload: Record<string, unknown>): Promise<Response> =>
     fetch(`${url}/rest/v1/${LEADS_TABLE}`, {
@@ -401,6 +416,7 @@ export const insertLead = async (
     });
 
   const payload: Record<string, unknown> = {
+    tenant_id: opts.tenantId,
     name: lead.name,
     phone: lead.phone,
     email: lead.email,
@@ -440,19 +456,43 @@ export const insertLead = async (
     res = await postRow(payload);
   }
   if (!res.ok) throw new Error(`supabase_insert_failed_${String(res.status)}`);
-  const rows = (await res.json()) as LeadRow[];
+  const rows = (await res.json()) as Array<LeadRow & { tenant_id?: string }>;
   const row = rows[0];
   if (!row) throw new Error("supabase_insert_empty");
-  return row;
+  const { tenant_id: _tenant, ...publicRow } = row;
+  void _tenant;
+  return publicRow;
 };
 
-/** Latest N real leads, newest first. Server-side only. */
-export const listLeads = async (limit = 200): Promise<LeadRow[]> => {
+/** Columns the CRM may see. Explicit on purpose: no `select=*`, so a legacy or
+ *  future internal column (session_id, contact_key, …) can never leak. */
+const LEAD_COLUMNS =
+  "id,tenant_id,name,phone,email,zip_code,roofing_need,consent,consent_text," +
+  "conversation,lead_score,status,source,user_agent,created_at";
+
+/**
+ * Latest N leads of ONE tenant, newest first. Server-side only.
+ *
+ * Isolation is enforced twice: the query filters `tenant_id=eq.<id>` (which also
+ * excludes legacy rows whose tenant_id is NULL), and every returned row is
+ * checked against that id before it leaves this function. If the filter were
+ * ever dropped by a future edit, this throws instead of leaking.
+ */
+export const listLeads = async (tenantId: string, limit = 200): Promise<LeadRow[]> => {
+  if (!isUuid(tenantId)) throw new Error("list_requires_tenant");
   const { url } = supabaseEnv();
+  const n = Math.max(1, Math.min(500, Math.trunc(limit) || 200));
   const res = await fetch(
-    `${url}/rest/v1/${LEADS_TABLE}?select=*&order=created_at.desc&limit=${String(limit)}`,
+    `${url}/rest/v1/${LEADS_TABLE}?select=${LEAD_COLUMNS}` +
+      `&tenant_id=eq.${encodeURIComponent(tenantId)}&order=created_at.desc&limit=${String(n)}`,
     { headers: authHeaders() }
   );
   if (!res.ok) throw new Error(`supabase_select_failed_${String(res.status)}`);
-  return (await res.json()) as LeadRow[];
+  const rows = (await res.json()) as Array<LeadRow & { tenant_id?: string | null }>;
+  return rows.map((r) => {
+    if (r.tenant_id !== tenantId) throw new Error("tenant_mismatch");
+    const { tenant_id: _tenant, ...publicRow } = r;
+    void _tenant;
+    return publicRow;
+  });
 };
