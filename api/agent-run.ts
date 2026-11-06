@@ -21,13 +21,13 @@ import {
   collectAllowedContacts,
   createSupabase,
   runToolLoop,
+  scopedSessionId,
   type ChatFn,
 } from './_lib/tools.js';
 import { guardChat } from './_lib/guard.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
-const optOuts = new Set<string>();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.MISTRAL_API_KEY;
@@ -87,12 +87,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : 'anon';
 
   // Auth + plan + monthly limit.
+  // requireTenant: every row the tools write is stamped with the caller's company.
   const guard = await guardChat(req, res, {
     agentType,
     conversationId: body.conversationId,
+    requireTenant: true,
   });
 
   if (!guard) return;
+  if (!guard.tenantId) {
+    return res.status(403).json({ error: 'Your workspace has not been created yet', code: 'no_workspace' });
+  }
 
   const systemPrompt = buildSystemPrompt(agentType, ctx) + '\n' + TOOL_POLICY;
 
@@ -139,9 +144,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       chat,
       env: {
         db,
-        sessionId,
+        tenantId: guard.tenantId,
+        // Namespaced by company: a guessed/foreign session id can never touch another company's rows.
+        sessionId: scopedSessionId(guard.tenantId, sessionId),
         allowedContacts,
-        optOuts,
+        // Per-request only. Durable opt-outs live in the database (per company).
+        optOuts: new Set<string>(),
         companyName: ctx.companyName,
       },
     });
