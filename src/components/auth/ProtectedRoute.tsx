@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { FullScreenSpinner } from '../Spinner';
+import { AppShellSkeleton } from '../Skeleton';
 import { Redirect } from '../Redirect';
 import { VerifyEmail } from './VerifyEmail';
 
@@ -12,7 +12,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   // fall through to the local-only app instead of a dead end. All state lives in
   // localStorage, so the simulators/CRM still work end to end for demos.
   if (!configured) return <>{children}</>;
-  if (loading) return <FullScreenSpinner label="Checking your session…" />;
+  if (loading) return <AppShellSkeleton />;
   if (!user) {
     const next = encodeURIComponent(window.location.pathname + window.location.search);
     return <Redirect to={`/login?next=${next}`} />;
