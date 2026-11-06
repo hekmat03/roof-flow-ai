@@ -17,9 +17,12 @@ const mockDb: Supabase = {
   async insert(table, row) { rows.push({ table, row }); return { id: `id-${rows.length}` }; },
   async upsert(table, row) { rows.push({ table, row }); return { id: `id-${rows.length}` }; },
   async exists(table, _c, v) { return rows.some((r) => r.table === table && Object.values(r.row).includes(v)); },
+  async optedOut(tenantId, contact) {
+    return rows.some((r) => r.table === 'contact_optouts' && r.row.contact === contact && (r.row.tenant_id === tenantId || r.row.tenant_id == null));
+  },
 };
 const mkEnv = (over: Partial<ToolEnv> = {}): ToolEnv => ({
-  db: null, sessionId: 'sess-12345678', optOuts: new Set(), allowedContacts: new Set(['5551234567', 'sam@gmail.com']), ...over,
+  db: null, tenantId: '11111111-1111-4111-8111-111111111111', sessionId: 'sess-12345678', optOuts: new Set(), allowedContacts: new Set(['5551234567', 'sam@gmail.com']), ...over,
 });
 const goodBook = { name: 'Sam Lee', phone: '(555) 123-4567', preferred_time: 'Tuesday morning', address_or_zip: '12 Palm St', issue: 'hail damage' };
 
