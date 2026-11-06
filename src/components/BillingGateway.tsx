@@ -1,26 +1,21 @@
-
 import React from 'react';
-import { Loader2, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { useBilling } from '../context/BillingContext';
 import { PricingPlans } from './PricingPlans';
 import { BillingAccount } from './BillingAccount';
+import { CardSkeleton } from './Skeleton';
 
 /**
  * BillingGateway — one loader for both billing tabs. Both render from the same
  * server payload, so plan, quota and payment state can never disagree. While
- * loading we show a spinner; if the request fails we say so plainly instead of
+ * loading we show a skeleton; if the request fails we say so plainly instead of
  * showing placeholder prices.
  */
 export const BillingGateway: React.FC<{ view: string }> = ({ view }) => {
   const { status, loading, error, reload } = useBilling();
 
   if (loading && !status) {
-    return (
-      <div className="glass rounded-2xl p-8 flex items-center gap-3 text-ink-soft">
-        <Loader2 className="h-5 w-5 animate-spin text-accent-400" aria-hidden />
-        <span>Loading plan and usage details…</span>
-      </div>
-    );
+    return <CardSkeleton lines={3} label="Loading plan and usage details…" />;
   }
 
   if (!status) {
