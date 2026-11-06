@@ -7,6 +7,7 @@ import {
   type RealLead,
   type RealLeadsResult,
 } from '../lib/realLeads';
+import { LeadRowsSkeleton } from './Skeleton';
 
 /**
  * RealLeadsBoard — the LIVE half of the CRM.
@@ -36,7 +37,7 @@ export const RealLeadsBoard: React.FC = () => {
     void load();
   }, [load]);
 
-  const { state, leads, message } = result;
+  const { state, leads, message, widgetKey } = result;
 
   return (
     <div className="glass rounded-2xl p-5 md:p-6">
@@ -65,7 +66,7 @@ export const RealLeadsBoard: React.FC = () => {
         </button>
       </div>
 
-      {state === 'loading' && <p className="text-sm text-slate-400 py-6 text-center">Checking for live leads…</p>}
+      {state === 'loading' && <LeadRowsSkeleton />}
 
       {state === 'not-configured' && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
@@ -75,6 +76,18 @@ export const RealLeadsBoard: React.FC = () => {
             <p className="text-xs text-amber-200/70 mt-1 leading-relaxed">
               {message ??
                 'The owner still needs to connect the database. Until then the widget tells visitors to try again later.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {state === 'signed-out' && (
+        <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 flex gap-3">
+          <ShieldCheck className="h-5 w-5 text-slate-300 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-slate-200">Sign in to see your leads</p>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Website leads are private to your company. Sign in and they will appear here.
             </p>
           </div>
         </div>
@@ -92,6 +105,20 @@ export const RealLeadsBoard: React.FC = () => {
         </div>
       )}
 
+      {state === 'ok' && widgetKey && (
+        <div className="mb-4 rounded-xl border border-slate-700/70 bg-slate-900/40 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+            Your website embed code
+          </p>
+          <code className="block text-[11px] text-slate-300 break-all select-all">
+            {`<script src="${window.location.origin}/widget.js" data-key="${widgetKey}" async></script>`}
+          </code>
+          <p className="text-[11px] text-slate-500 mt-1.5">
+            Leads from a page using this code are saved to your account only.
+          </p>
+        </div>
+      )}
+
       {state === 'ok' && leads.length === 0 && (
         <div className="py-8 text-center">
           <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-800/70 border border-slate-700/70 flex items-center justify-center mb-3">
@@ -100,7 +127,10 @@ export const RealLeadsBoard: React.FC = () => {
           <p className="text-sm font-semibold text-slate-300">No live widget leads yet</p>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
             Visitors who complete the widget on an embedded page land here. Try it on the demo page at{' '}
-            <span className="font-mono text-slate-400">/widget-demo.html</span>.
+            <span className="font-mono text-slate-400">
+              /widget-demo.html{widgetKey ? `?key=${widgetKey}` : ''}
+            </span>
+            .
           </p>
         </div>
       )}
