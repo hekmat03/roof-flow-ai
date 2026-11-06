@@ -3,7 +3,11 @@
  * ---------------------------------------------------------------------------
  * Zero dependencies, no secrets, no third-party scripts. The contractor pastes:
  *
- *   <script src="https://<our-site>/widget.js" data-color="#f59e0b" async></script>
+ *   <script src="https://<our-site>/widget.js" data-key="wk_…" data-color="#f59e0b" async></script>
+ *
+ * data-key is the contractor's PUBLIC widget key (shown in their CRM). It tells
+ * the server which company a lead belongs to. It is an identifier, not a
+ * secret: it can only add leads to that company, never read anything.
  *
  * It injects a floating bubble (bottom-right) that opens widget.html in an
  * iframe (same origin as this script, so it is style-isolated from the host
@@ -30,6 +34,7 @@
   } catch (e) {
     base = window.location.origin;
   }
+  var key = script.getAttribute("data-key") || "";
   var color = script.getAttribute("data-color") || "#f59e0b";
   var label = script.getAttribute("data-label") || "Chat with us";
 
@@ -44,7 +49,8 @@
 
   var frame = document.createElement("iframe");
   frame.title = "Roof inspection chat";
-  frame.src = base + "/widget.html?color=" + encodeURIComponent(color) + "&embed=1";
+  frame.src =
+    base + "/widget.html?color=" + encodeURIComponent(color) + "&key=" + encodeURIComponent(key) + "&embed=1";
   frame.style.cssText =
     "display:none;border:0;width:" +
     OPEN_W +
