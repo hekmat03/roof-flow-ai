@@ -43,7 +43,7 @@
       <div class="card">
         <h2>For the contractor · how to install</h2>
         <p class="hint">Paste one line before <code>&lt;/body&gt;</code> on any page:</p>
-        <pre>&lt;script src="https://576127cef4e964ad11707bbdd13ace2d.ctonew.app/widget.js" data-color="#f59e0b" async&gt;&lt;/script&gt;</pre>
+        <pre>&lt;script src="https://576127cef4e964ad11707bbdd13ace2d.ctonew.app/widget.js" data-key="YOUR_WIDGET_KEY" data-color="#f59e0b" async&gt;&lt;/script&gt;</pre>
         <p class="hint">
           That's the whole install. The bubble appears bottom-right; visitor answers are
           posted to RoofFlow and appear in the CRM as <strong>LIVE · Website Widget</strong>.
@@ -61,11 +61,20 @@
 
     <footer>Lone Star Roofing Co. is a fictional contractor used to demonstrate the RoofFlow AI widget.</footer>
 
-    <script
-      src="/widget.js"
-      data-color="#f59e0b"
-      data-label="Get a free inspection"
-      async
-    ></script>
+    <script>
+      // Open this page as /widget-demo.html?key=<your widget key> to test capture
+      // end-to-end: leads then land in YOUR CRM. Without a key the widget loads
+      // but the server (correctly) refuses to save, because it cannot tell which
+      // company the lead belongs to.
+      (function () {
+        var s = document.createElement("script");
+        s.src = "/widget.js";
+        s.async = true;
+        s.setAttribute("data-color", "#f59e0b");
+        s.setAttribute("data-label", "Get a free inspection");
+        s.setAttribute("data-key", new URLSearchParams(location.search).get("key") || "");
+        document.body.appendChild(s);
+      })();
+    </script>
   </body>
 </html>
