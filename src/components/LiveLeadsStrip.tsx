@@ -70,6 +70,12 @@ export const LiveLeadsStrip: React.FC = () => {
           {message ?? 'Connect the database to switch live capture on.'}
         </p>
       )}
+      {state === 'signed-out' && (
+        <p className="text-xs text-slate-400 mt-4 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+          {message ?? 'Sign in to see your website leads.'}
+        </p>
+      )}
       {state === 'error' && (
         <p className="text-xs text-rose-200/80 mt-4 flex items-start gap-2">
           <AlertTriangle className="h-3.5 w-3.5 text-rose-400 shrink-0 mt-0.5" />
