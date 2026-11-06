@@ -109,6 +109,10 @@
 
         var apiBase = window.location.origin;
 
+        // Which contractor this widget belongs to (public identifier). The server
+        // maps it to a company; a tenant id is never sent or trusted from here.
+        var WIDGET_KEY = params.get("key") || "";
+
         // ---- Conversation state (in memory: a failed submit can be retried) --
         var state = {
           need: "",
@@ -333,6 +337,7 @@
               consent: state.consent === true,
               consent_text: CONSENT_TEXT,
               conversation: state.conversation,
+              widget_key: WIDGET_KEY,
               company_website: document.getElementById("company_website").value || "",
             }),
           })
@@ -365,6 +370,7 @@
 
         function retryMessage(res) {
           if (res.status === 503) return "Lead capture is temporarily unavailable \u2014 please try again later.";
+          if (res.body && res.body.error === "invalid_widget" && res.body.message) return res.body.message;
           if (res.status === 429) return "That's a lot of requests \u2014 please try again in a few minutes.";
           if (res.status === 400 && res.body && res.body.message) return res.body.message;
           return "Something went wrong on our side \u2014 please try again.";
