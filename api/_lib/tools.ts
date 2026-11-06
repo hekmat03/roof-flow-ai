@@ -5,6 +5,7 @@
 
 import type { AgentType } from './agent.js';
 import { validateEmail, validatePhone } from './validators.js';
+import { isUuid } from './tenant.js';
 
 export type ToolName = 'book_inspection' | 'send_message' | 'update_crm' | 'schedule_followup';
 
@@ -38,6 +39,13 @@ export interface Supabase {
   insert(table: string, row: Record<string, unknown>): Promise<{ id?: string }>;
   upsert(table: string, row: Record<string, unknown>, onConflict: string): Promise<{ id?: string }>;
   exists(table: string, column: string, value: string): Promise<boolean>;
+  /**
+   * Is `contact` opted out for THIS company? Also honours legacy opt-outs that
+   * were recorded before per-company scoping (tenant_id NULL): those block
+   * everyone, which errs on the safe side. THROWS on a storage error so callers
+   * fail CLOSED instead of contacting someone who may have opted out.
+   */
+  optedOut(tenantId: string, contact: string): Promise<boolean>;
 }
 
 export function createSupabase(url?: string, key?: string, fetchFn: Fetch = fetch): Supabase | null {
@@ -73,7 +81,25 @@ export function createSupabase(url?: string, key?: string, fetchFn: Fetch = fetc
       });
       return Array.isArray(d) && d.length > 0;
     },
+    async optedOut(tenantId, contact) {
+      if (!isUuid(tenantId)) throw new Error('storage invalid tenant');
+      const d = await send(
+        `/contact_optouts?contact=eq.${encodeURIComponent(contact)}` +
+          `&or=(tenant_id.eq.${tenantId},tenant_id.is.null)&select=contact&limit=1`,
+        { method: 'GET', headers },
+      );
+      return Array.isArray(d) && d.length > 0;
+    },
   };
+}
+
+/**
+ * The session id we STORE. It is namespaced by the company, so two companies can
+ * never collide on (or overwrite) the same session row, even if a client guesses
+ * another company's session id.
+ */
+export function scopedSessionId(tenantId: string, clientSessionId: string): string {
+  return `${tenantId}:${clientSessionId}`;
 }
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
@@ -163,8 +189,12 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
 
 export interface ToolEnv {
   db: Supabase | null;
+  /** The company every row is stamped with. Resolved server-side, never from the client. */
+  tenantId: string;
+  /** Already namespaced by tenant — see scopedSessionId(). */
   sessionId: string;
   allowedContacts: Set<string>;
+  /** Opt-outs seen during THIS request only (the database is the source of truth). */
   optOuts: Set<string>;
   companyName?: string;
   fetchFn?: Fetch;
@@ -172,13 +202,25 @@ export interface ToolEnv {
 
 const fail = (error: string): ToolResult => ({ ok: false, status: 'failed', simulated: false, persisted: false, error });
 
-async function optedOut(contact: string, env: ToolEnv): Promise<boolean> {
-  if (env.optOuts.has(contact)) return true;
+/**
+ * True if ANY of the contact's identifiers (phone and/or email) is opted out.
+ * Storage errors propagate (they are caught in executeTool and reported as
+ * `storage_error`), so an unverifiable opt-out status blocks the action:
+ * fail CLOSED.
+ */
+async function optedOut(contacts: Array<string | undefined | null>, env: ToolEnv): Promise<boolean> {
+  const list = contacts.filter((c): c is string => Boolean(c));
+  if (list.some((c) => env.optOuts.has(c))) return true;
   if (!env.db) return false;
-  try { return await env.db.exists('contact_optouts', 'contact', contact); } catch { return false; }
+  for (const c of list) {
+    if (await env.db.optedOut(env.tenantId, c)) return true;
+  }
+  return false;
 }
 
 export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv): Promise<ToolResult> {
+  // No company, no action — even in simulated (no-database) mode.
+  if (!isUuid(env.tenantId)) return fail('tenant_unresolved');
   const v = validateToolArgs(name, rawArgs);
   if ('error' in v) return fail(v.error);
   const a = v.value as Record<string, any>;
@@ -189,19 +231,19 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
   try {
     switch (name) {
       case 'book_inspection': {
-        if (await optedOut(a.phone, env)) return fail('contact opted out');
-        const row = { session_id: env.sessionId, name: a.name, phone: a.phone, email: a.email ?? null, address_or_zip: a.address_or_zip, preferred_time: a.preferred_time, issue: a.issue, status: 'requested' };
+        if (await optedOut([a.phone, a.email], env)) return fail('contact opted out');
+        const row = { tenant_id: env.tenantId, session_id: env.sessionId, name: a.name, phone: a.phone, email: a.email ?? null, address_or_zip: a.address_or_zip, preferred_time: a.preferred_time, issue: a.issue, status: 'requested' };
         const saved = env.db ? await env.db.insert('inspection_requests', row) : null;
         return { ok: true, status: 'requested', simulated: !env.db, persisted: !!env.db, id: saved?.id,
           detail: 'Request recorded. A team member must confirm the time; do not tell the customer it is confirmed.' };
       }
       case 'send_message': {
-        if (await optedOut(a.to, env)) return fail('contact opted out');
+        if (await optedOut([a.to], env)) return fail('contact opted out');
         const status = 'simulated_sent';
         const simulated = true;
         let persisted = false, id: string | undefined;
         if (env.db) {
-          const saved = await env.db.insert('messages', { session_id: env.sessionId, channel: a.channel, recipient: a.to, subject: a.subject, body: a.body, status });
+          const saved = await env.db.insert('messages', { tenant_id: env.tenantId, session_id: env.sessionId, channel: a.channel, recipient: a.to, subject: a.subject, body: a.body, status });
           persisted = true; id = saved.id;
         }
         return { ok: true, status, simulated, persisted, id,
@@ -210,22 +252,26 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
       case 'update_crm': {
         const key = a.phone || a.email;
         if (a.status === 'Do Not Contact') {
-          env.optOuts.add(key);
-          if (a.phone) env.optOuts.add(a.phone);
-          if (a.email) env.optOuts.add(a.email);
-          if (env.db) await env.db.upsert('contact_optouts', { contact: key }, 'contact');
+          // Remember BOTH identifiers, in this request and durably, for THIS company.
+          const contacts = [a.phone, a.email].filter(Boolean) as string[];
+          contacts.forEach((c) => env.optOuts.add(c));
+          if (env.db) {
+            for (const c of contacts) {
+              await env.db.upsert('contact_optouts', { tenant_id: env.tenantId, contact: c }, 'tenant_id,contact');
+            }
+          }
         }
         let id: string | undefined;
         if (env.db) {
-          const saved = await env.db.upsert('leads', { session_id: env.sessionId, contact_key: key, phone: a.phone ?? null, email: a.email ?? null, name: a.name ?? null, zip: a.zip ?? null, roof_issue: a.roof_issue ?? null, status: a.status ?? null, note: a.note ?? null }, 'session_id,contact_key');
+          const saved = await env.db.upsert('leads', { tenant_id: env.tenantId, session_id: env.sessionId, contact_key: key, phone: a.phone ?? null, email: a.email ?? null, name: a.name ?? null, zip: a.zip ?? null, roof_issue: a.roof_issue ?? null, status: a.status ?? null, note: a.note ?? null }, 'session_id,contact_key');
           id = saved.id;
         }
         return { ok: true, status: 'updated', simulated: !env.db, persisted: !!env.db, id };
       }
       case 'schedule_followup': {
-        if (await optedOut(a.contact, env)) return fail('contact opted out');
+        if (await optedOut([a.contact], env)) return fail('contact opted out');
         const due = new Date(Date.now() + a.when_hours * 3_600_000).toISOString();
-        const saved = env.db ? await env.db.insert('followups', { session_id: env.sessionId, channel: a.channel, contact: a.contact, due_at: due, hint: a.hint, status: 'scheduled' }) : null;
+        const saved = env.db ? await env.db.insert('followups', { tenant_id: env.tenantId, session_id: env.sessionId, channel: a.channel, contact: a.contact, due_at: due, hint: a.hint, status: 'scheduled' }) : null;
         return { ok: true, status: 'scheduled', simulated: !env.db, persisted: !!env.db, id: saved?.id,
           detail: 'Recorded as scheduled. Delivery happens later via a worker, not now.' };
       }
@@ -299,4 +345,4 @@ export async function runToolLoop(o: {
   let reply = (final.content || '').trim();
   if (!reply && actions.length) reply = 'Thanks. I have noted your request and a team member will follow up to confirm.';
   return { reply, actions };
-}
+             }
