@@ -3,7 +3,7 @@
  * ratelimit.check.ts — 10 requests / minute / IP and the plan-access rules.
  * Run: node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts
  */
-import { enforceRateLimit, clientIp, RATE_LIMIT_PER_MINUTE } from '../api/_lib/rateLimit.ts';
+import { enforceRateLimit, clientIp, RATE_LIMIT_PER_MINUTE, rateLimitRpcAllowed } from '../api/_lib/rateLimit.ts';
 import { canAccess, requiredPlan, isHidden, fallbackTab } from '../src/lib/planAccess.ts';
 
 let passed = 0, failed = 0;
@@ -21,6 +21,10 @@ const fakeRes = () => {
 
 console.log('Rate limit');
 check('limit is 10 per minute', RATE_LIMIT_PER_MINUTE === 10);
+check('decodes an allowed RPC row', rateLimitRpcAllowed([{ allowed: true, remaining: 9, reset_at: 'later' }], null) === true);
+check('decodes a blocked RPC row', rateLimitRpcAllowed([{ allowed: false, remaining: 0, reset_at: 'later' }], null) === false);
+check('falls back on a malformed RPC result', rateLimitRpcAllowed([{ allowed: 'yes' }], null) === null);
+check('falls back on an RPC error response', rateLimitRpcAllowed(null, { message: 'permission denied' }) === null);
 check('reads client ip', clientIp(fakeReq('1.2.3.4')) === '1.2.3.4');
 let lastAllowed = true, res = fakeRes();
 for (let i = 0; i < 10; i++) { res = fakeRes(); lastAllowed = await enforceRateLimit(fakeReq('9.9.9.9'), res as never, 'test'); }

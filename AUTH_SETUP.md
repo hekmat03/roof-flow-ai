@@ -20,6 +20,7 @@ The error means the **built site has no Supabase keys**. `VITE_*` variables are 
    6. `supabase/005_onboarding.sql`
    7. `supabase/006_lead_tenant_isolation.sql`
    8. `supabase/007_agent_tenant_isolation.sql`
+   9. `supabase/008_rate_limit_service_role.sql`
 
    The root Vite deployment's lead widget requires migration `006` for tenant
    widget keys and lead fields. Onboarding requires `005`; tenant-scoped agent
