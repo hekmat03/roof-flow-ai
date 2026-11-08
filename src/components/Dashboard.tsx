@@ -2,7 +2,8 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { useCountUp } from '../utils/useCountUp';
 import { AnalyticsCharts } from './AnalyticsCharts';
-import { isHidden } from '../lib/planAccess';
+import { canAccess } from '../lib/planAccess';
+import { usePlan } from '../lib/usePlan';
 import { 
   Users, 
   Calendar, 
@@ -35,6 +36,7 @@ export function statusPillClass(status: string): string {
 
 export const Dashboard: React.FC = () => {
   const { leads, setActiveTab, companySettings } = useApp();
+  const plan = usePlan();
 
   const totalLeads = leads.length;
   const scheduledInspections = leads.filter(l => l.status === 'Inspection Scheduled').length;
@@ -67,9 +69,9 @@ export const Dashboard: React.FC = () => {
       id: 'agent2',
       number: '2',
       title: 'Inbound Call Handler',
-      description: 'Interactive voice agent handling call flows, insurance queries, and booking inspections.',
-      status: 'Active',
-      metric: '<15s avg response',
+      description: 'Simulated inbound call conversation; no real calls are made.',
+      status: 'Preview',
+      metric: 'Simulation only',
       color: 'from-gold to-danger',
       glow: 'shadow-gold/25',
       icon: PhoneCall,
@@ -78,9 +80,9 @@ export const Dashboard: React.FC = () => {
       id: 'agent3',
       number: '3',
       title: 'SMS & Email Nurturer',
-      description: 'Automated 7-day multi-channel follow-up sequencers reacting to user replies instantly.',
-      status: 'Active',
-      metric: '18% reactivation',
+      description: 'Simulated nurture conversation; no SMS or email is sent.',
+      status: 'Preview',
+      metric: 'Simulation only',
       color: 'from-gold to-gold-deep',
       glow: 'shadow-gold/25',
       icon: MessageSquarePlus,
@@ -89,9 +91,9 @@ export const Dashboard: React.FC = () => {
       id: 'agent4',
       number: '4',
       title: 'Estimate Follow-up',
-      description: 'Follow-up on repair estimates to handle financing, budget, and competitor objections.',
-      status: 'Active',
-      metric: '+25% closing boost',
+      description: 'Simulated estimate follow-up and CRM updates; no outbound messages are sent.',
+      status: 'Preview',
+      metric: 'Simulation only',
       color: 'from-gold to-danger',
       glow: 'shadow-gold/25',
       icon: FileText,
@@ -193,7 +195,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Live Analytics: Revenue Attribution + Conversion Funnel */}
       <AnalyticsCharts />
-      {/* Agents 2-4 are hidden (not deleted): see HIDDEN_TABS in lib/planAccess.ts */}
+      {/* Plan access controls which agent previews are shown on the dashboard. */}
       <div>
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
@@ -203,7 +205,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-          {agents.filter((agent) => !isHidden(agent.id)).map((agent) => {
+          {agents.filter((agent) => canAccess(plan, agent.id)).map((agent) => {
             const Icon = agent.icon;
             return (
               <div 
@@ -222,6 +224,11 @@ export const Dashboard: React.FC = () => {
                   <h4 className="text-base font-bold text-ink group-hover:text-accent-300 transition-colors duration-200">
                     {agent.title}
                   </h4>
+                  {agent.id !== 'agent1' && (
+                    <span className="inline-flex mt-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                      Simulation preview
+                    </span>
+                  )}
                   <p className="text-xs text-ink-mute mt-2 leading-relaxed">
                     {agent.description}
                   </p>

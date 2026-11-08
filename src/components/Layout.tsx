@@ -56,7 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'prompts', label: 'Prompt Playground', icon: Terminal },
   ];
 
-  // Agents 2-4 are hidden (not deleted): see HIDDEN_TABS in lib/planAccess.ts
+  // Plan access locks Agents 2-4 for Free and Starter accounts.
   const visibleItems = menuItems.filter((item) => !isHidden(item.id));
 
   const totalLeads = leads.length;

@@ -4,7 +4,7 @@
  * Run: node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts
  */
 import { enforceRateLimit, clientIp, RATE_LIMIT_PER_MINUTE, rateLimitRpcAllowed } from '../api/_lib/rateLimit.ts';
-import { canAccess, requiredPlan, isHidden, fallbackTab } from '../src/lib/planAccess.ts';
+import { canAccess, requiredPlan, fallbackTab } from '../src/lib/planAccess.ts';
 
 let passed = 0, failed = 0;
 const check = (n: string, ok: boolean) => { ok ? passed++ : failed++; console.log(`  ${ok ? '✅' : '❌'} ${n}`); };
@@ -45,7 +45,10 @@ check('free: prompts locked', !canAccess('free', 'prompts'));
 check('starter: chatbot + CRM', canAccess('starter', 'agent1') && canAccess('starter', 'crm'));
 check('starter: prompts locked', !canAccess('starter', 'prompts'));
 check('pro: crm + prompts', canAccess('pro', 'crm') && canAccess('pro', 'prompts'));
-check('agents 2-4 hidden for every plan', ['agent2', 'agent3', 'agent4'].every((t) => isHidden(t) && !canAccess('pro', t)));
+check('Agents 2-4 are accessible on Pro', ['agent2', 'agent3', 'agent4'].every((t) => canAccess('pro', t)));
+check('Agents 2-4 remain locked on Free and Starter', ['agent2', 'agent3', 'agent4'].every((t) =>
+  !canAccess('free', t) && !canAccess('starter', t)));
+check('Agents 2-4 require Pro', ['agent2', 'agent3', 'agent4'].every((t) => requiredPlan(t) === 'pro'));
 check('CRM needs Starter', requiredPlan('crm') === 'starter');
 check('prompts need Pro', requiredPlan('prompts') === 'pro');
 check('fallback tab is the chatbot', fallbackTab() === 'agent1');

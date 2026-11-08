@@ -1,66 +1,81 @@
 # RoofFlow AI
 
+RoofFlow AI is a Vite application for roofing contractors. It includes a dashboard chatbot, a tenant-scoped CRM, onboarding and company configuration, an embeddable lead-capture widget, and an optional public product demo.
 
-AI sales agents for roofing contractors: a website chat agent, an inbound voice agent, an SMS/email follow-up agent, and a post-estimate closer, all feeding one CRM board.
+## How leads are stored
 
-Built for the **Create AI Agents Championship** (Best Business AI Agent).
+Authenticated contractor leads are stored in Supabase in `public.leads`, with a `tenant_id` on each row and row-level security separating one contractor's records from another's. Leads are not stored in the browser as the production source of truth. The `/api/leads` endpoint assigns tenant ownership from the authenticated user or the widget's public key; it does not accept a tenant ID supplied by the browser.
 
-## How it works
-
-```
-Browser (React + Vite)  ──POST──▶  /api/agent-response (Vercel serverless)  ──▶  Mistral AI
-        │                                  ▲ keeps MISTRAL_API_KEY server-side
-        └── if the API is unreachable ──▶ built-in offline engine (src/utils/aiResponseGenerator.ts)
-```
-
-- The browser never holds an AI key.
-- Every agent identifies itself as an AI and never claims a booking, message or payment happened unless it was really performed.
-- Leads are stored in the browser and can be pushed to a Google Sheets webhook.
-
-## Run locally
+## Local development
 
 ```bash
 npm install
-npm test          # 5 test suites
-npm run dev       # UI only (offline engine)
-npx vercel dev    # UI + /api (needs MISTRAL_API_KEY in .env.local)
+npm run dev
+npm test
+npm run build
 ```
+
+The root Vite application is built to `dist`. Use `npx vercel dev` to run the Vercel API routes locally as well as the frontend. Live AI requires `MISTRAL_API_KEY`; without it, the dashboard chatbot uses its offline reply generator and live-AI widget acknowledgements are unavailable.
+
+## Embeddable widget
+
+The contractor widget assets are `public/widget.js` and `public/widget.html`. Add the script to the contractor's website and use the public widget key shown in the CRM:
+
+```html
+<script src="https://YOUR-DOMAIN/widget.js" data-key="YOUR_WIDGET_KEY" async></script>
+```
+
+The widget guides a visitor through a roof concern, property ZIP, name, contact details and explicit follow-up consent, then submits the inquiry to `/api/leads`. A live-AI acknowledgement is optional; the guided flow remains available without it. The widget does not promise answers about a contractor's hours, prices or FAQs.
+
+## Supabase migrations
+
+Apply these SQL files in the listed order in the intended Supabase environment:
+
+1. `supabase/001_multitenant.sql` — tenant tables, user profiles and row-level security.
+2. `supabase/002_billing.sql` — subscription fields and chat usage limits.
+3. `supabase/003_ratelimit.sql` — shared API rate-limit storage and RPC.
+4. `supabase/004_calendar.sql` — tenant calendar connection storage.
+5. `supabase/005_onboarding.sql` — contractor onboarding profiles.
+6. `supabase/006_lead_tenant_isolation.sql` — tenant-scoped widget lead capture and widget keys.
+7. `supabase/007_agent_tenant_isolation.sql` — tenant ownership for agent-written data.
+8. `supabase/008_rate_limit_service_role.sql` — permission for the server service role to call the rate-limit RPC.
+
+Review each migration and back up the target database before applying changes. This README does not apply migrations automatically.
 
 ## Environment variables
 
-See `.env.example`. Set `MISTRAL_API_KEY` in Vercel → Project Settings → Environment Variables, then redeploy. Without it the app still works using the offline engine, and Configuration shows "BUILT-IN ENGINE".
+Copy `.env.example` to `.env.local` for local development. Never commit real credentials. The following names are defined there:
 
-## Project layout
+| Variable | Purpose / requirement |
+|---|---|
+| `MISTRAL_API_KEY` | Server-side API key; required for live AI responses. |
+| `MISTRAL_MODEL` | Optional model override; defaults to `mistral-small-latest`. |
+| `SUPABASE_URL` | Server-side Supabase URL. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase service-role key; required by privileged API operations. |
+| `VITE_SUPABASE_URL` | Supabase URL for the browser client. |
+| `VITE_SUPABASE_ANON_KEY` | Public anonymous key for the browser client; row-level security protects data. |
+| `LS_WEBHOOK_SECRET` | Lemon Squeezy webhook verification secret. |
+| `LS_VARIANT_STARTER` | Starter subscription variant ID. |
+| `LS_VARIANT_PRO` | Pro subscription variant ID. |
+| `LS_CHECKOUT_URL_STARTER` | Starter hosted checkout URL. |
+| `LS_CHECKOUT_URL_PRO` | Pro hosted checkout URL. |
+| `LS_API_KEY` | Optional Lemon Squeezy API key used to create billing portal links. |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID for Calendar connection. |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. |
+| `GOOGLE_REDIRECT_URI` | OAuth callback URL; set it to this deployment's `/api/google/callback` URL. |
+| `SESSION_SECRET` | Secret used to sign OAuth state. |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | Optional separate key for stored Google tokens; defaults to `SESSION_SECRET`. |
+| `APP_BASE_URL` | Public application URL used for post-connection redirects. |
+
+Supabase browser credentials are required for authenticated tenant storage. Billing and Google Calendar variables are needed only when those integrations are configured. Keep service-role, billing, OAuth and signing secrets server-side.
+
+## Main project paths
 
 | Path | Purpose |
 |---|---|
-| `api/agent-response.ts` | Serverless endpoint (POST = reply, GET = status) |
-| `api/agent-run.ts` | Tool-calling agent endpoint (POST = run, GET = capabilities) |
-| `api/_lib/agent.ts` | Prompts, input sanitising, rate limiter (unit-tested) |
-| `api/_lib/tools.ts` | Tools, guardrails, Supabase adapter, agent loop |
-| `supabase/schema.sql` | Database tables (RLS on, server-only access) |
-| `src/lib/agentRunner.ts` | Runs an agent turn with tools, offline fallback |
-| `src/lib/applyActions.ts` | Turns executed actions into CRM updates |
-| `src/lib/agentService.ts` | Live AI first, offline fallback second |
-| `src/utils/aiService.ts` | Browser client for the endpoint |
-| `src/context/AppContext.tsx` | Settings, leads, prompts (localStorage) |
-| `src/components/` | Dashboard, four agent simulators, CRM board, configuration |
-| `tests/` | Generator, integration and API checks |
-
-## Agent tools and safeguards
-
-| Tool | What it does | Honesty rule |
-|---|---|---|
-| `book_inspection` | Records an inspection REQUEST | Always "requested", never "confirmed" |
-| `send_message` | Records an outreach intent only — no email or SMS is ever delivered | Every send is labelled simulated |
-| `update_crm` | Updates the lead, handles Do Not Contact | Opt-outs block all later messages |
-| `schedule_followup` | Records a follow-up for later | Stored as "scheduled", not sent |
-
-Guards: contacts must have been given by the customer in the conversation, arguments are validated, each agent only sees its own tools, and every action appears in the Agent Actions log.
-
-## Roadmap
-
-1. Server-side AI, CI and AI disclosure (done)
-2. Tool-calling agent: book inspection request, send email/SMS, update CRM, schedule follow-up (done for Agent 1; Agents 2-4 next)
-3. Follow-up worker (cron) and Supabase auth
-4. Impact dashboard and Arabic support
+| `src/` | Vite frontend, dashboard, CRM, onboarding and chatbot. |
+| `public/widget.js` | Embeds the contractor lead-capture widget. |
+| `public/widget.html` | Guided widget conversation and consent flow. |
+| `api/` | Vercel serverless routes for chatbot, lead capture, billing and Calendar operations. |
+| `supabase/001_*.sql` – `supabase/008_*.sql` | Ordered database migrations. |
+| `tests/` | Offline checks for generators, API helpers, integrations and validation. |

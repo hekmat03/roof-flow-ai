@@ -1,8 +1,8 @@
 // Which sidebar tabs each plan can open. Nothing is deleted: locked and hidden tabs stay in the code.
 export type PlanId = 'free' | 'starter' | 'pro';
 
-/** Scope: only Agent 1 (chatbot) + CRM are shown. Agents 2-4 are hidden, not deleted. Set to [] to bring them back. */
-export const HIDDEN_TABS: readonly string[] = ['agent2', 'agent3', 'agent4'];
+/** Tabs are visible in navigation; ACCESS controls which plans may open them. */
+export const HIDDEN_TABS: readonly string[] = [];
 
 const ACCESS: Record<PlanId, string[]> = {
   free:    ['agent1', 'pricing', 'billing', 'config'],

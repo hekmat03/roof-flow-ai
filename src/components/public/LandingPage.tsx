@@ -167,8 +167,8 @@ export const LandingPage: React.FC = () => {
           <div className="lp-wrap lp-hero-grid">
             <div>
               <span className="lp-badge"><i></i> AI lead capture for roofing contractors</span>
-              <h1>Stop Losing Roofing Leads <span className="lp-grad">Forever</span></h1>
-              <p className="lp-lead">When a homeowner reaches out after a storm, the next few minutes decide who gets the job. RoofFlow AI answers their questions, checks their contact details, and requests the roof inspection, so every lead lands in your CRM.</p>
+              <h1>A Clearer Way to Manage <span className="lp-grad">Roofing Inquiries</span></h1>
+              <p className="lp-lead">RoofFlow AI includes an AI-powered dashboard chatbot and an embeddable website widget. The widget guides visitors through a roof concern, property ZIP, contact details and follow-up consent, then submits the inquiry to the contractor&apos;s CRM. An optional live-AI acknowledgement may be available in the widget.</p>
               <div className="lp-ctas">
                 <a className="lp-btn lp-btn--primary" href="/signup">Start Free - No Credit Card <ArrowRight size={18} aria-hidden /></a>
                 <a className="lp-btn lp-btn--ghost" href="#how-it-works">See how it works</a>
@@ -209,10 +209,10 @@ export const LandingPage: React.FC = () => {
               </div>
               <div className="lp-phone" aria-label="Example roofing chat conversation">
                 <div className="lp-phone-head"><span>Roofing chat</span><span>Now</span></div>
-                <div className="lp-bubble lp-bubble--ai">Seeing leaks or storm damage on your roof?</div>
-                <div className="lp-bubble lp-bubble--me">Hail damage on the north side.</div>
-                <div className="lp-bubble lp-bubble--ai">I can request a free inspection. Does Thursday at 10 am work?</div>
-                <div className="lp-phone-tag">Example conversation</div>
+                <div className="lp-bubble lp-bubble--ai">What&apos;s going on with your roof?</div>
+                <div className="lp-bubble lp-bubble--me">There&apos;s a leak in the ceiling.</div>
+                <div className="lp-bubble lp-bubble--ai">What&apos;s the property ZIP code?</div>
+                <div className="lp-phone-tag">Guided widget chat</div>
               </div>
             </div>
           </div>
@@ -221,19 +221,19 @@ export const LandingPage: React.FC = () => {
         <section className="lp-section" id="features">
           <div className="lp-wrap">
             <div className="lp-head lp-reveal">
-              <h2>Everything you need to turn roof inquiries <span className="lp-muted">into booked inspections.</span></h2>
-              <p className="lp-sub">Six tools, one goal: never lose a homeowner lead again.</p>
+              <h2>Tools to manage roof inquiries <span className="lp-muted">from first chat through follow-up.</span></h2>
+              <p className="lp-sub">Collect inquiries and keep contractor follow-up organized.</p>
             </div>
             <div className="lp-grid3">
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><Bot size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
-                <h3>AI website chatbot</h3>
-                <p>Answers homeowner questions about storm damage, insurance and inspections, day and night.</p>
+                <h3>Embeddable lead-capture widget</h3>
+                <p>Guides visitors through a roof concern, property ZIP, contact details and explicit follow-up consent before submitting the inquiry. An optional live-AI acknowledgement may be available.</p>
               </article>
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><ShieldCheck size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
                 <h3>Verified contact details</h3>
-                <p>Checks phone numbers and emails as they are typed, and blocks fake or placeholder addresses.</p>
+                <p>Checks phone and email formats before submission; it does not verify that contact details belong to a real person.</p>
               </article>
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><Users size={22} aria-hidden /></span><span className="lp-card-arrow"><ArrowRight size={18} aria-hidden /></span>
@@ -262,24 +262,24 @@ export const LandingPage: React.FC = () => {
         <section className="lp-section" id="how-it-works">
           <div className="lp-wrap">
             <div className="lp-head lp-reveal">
-              <h2>From first message to booked inspection <span className="lp-muted">in three steps.</span></h2>
-              <p className="lp-sub">No forms for the homeowner to fight with. Just a conversation.</p>
+              <h2>From first message to submitted inquiry <span className="lp-muted">in three steps.</span></h2>
+              <p className="lp-sub">The embeddable chat guides homeowners through the information and contact permission the contractor needs.</p>
             </div>
             <div className="lp-steps">
               <article className="lp-step lp-reveal">
                 <span className="lp-step-n">01</span>
-                <h3>A homeowner starts a chat</h3>
-                <p>They ask about a leak, hail damage or an insurance claim. The assistant answers in plain language.</p>
+                <h3>A visitor describes the roof concern</h3>
+                <p>The widget asks what is happening with the roof and collects the property ZIP code, which the visitor may choose not to provide.</p>
               </article>
               <article className="lp-step lp-reveal">
                 <span className="lp-step-n">02</span>
-                <h3>RoofFlow captures the lead</h3>
-                <p>It collects the name, phone and email, and only accepts details that look real.</p>
+                <h3>The visitor provides contact details and consent</h3>
+                <p>The visitor enters a name and phone number, email address, or both, then explicitly agrees to follow-up by phone, text or email.</p>
               </article>
               <article className="lp-step lp-reveal">
                 <span className="lp-step-n">03</span>
-                <h3>You get a lead and a booking</h3>
-                <p>The lead appears on your CRM board, and with Google Calendar connected, the inspection lands on your calendar.</p>
+                <h3>The inquiry is submitted to the CRM</h3>
+                <p>After consent, the widget submits the inquiry and conversation to the contractor&apos;s tenant CRM for follow-up.</p>
               </article>
             </div>
           </div>
@@ -315,7 +315,7 @@ export const LandingPage: React.FC = () => {
                 <div className="lp-amount">$0<small>/month</small></div>
                 <div className="lp-chats">20 chats / month</div>
                 <ul>
-                  <li><Check size={18} aria-hidden /> AI website chatbot</li>
+                  <li><Check size={18} aria-hidden /> Embeddable lead-capture widget</li>
                   <li><Check size={18} aria-hidden /> Phone and email validation</li>
                   <li><Check size={18} aria-hidden /> Lead capture</li>
                 </ul>
@@ -340,6 +340,7 @@ export const LandingPage: React.FC = () => {
                 <ul>
                   <li><Check size={18} aria-hidden /> Everything in Starter</li>
                   <li><Check size={18} aria-hidden /> All features unlocked</li>
+                  <li><Check size={18} aria-hidden /> Agents 2-4 (simulation preview)</li>
                   <li><Check size={18} aria-hidden /> Highest chat volume</li>
                 </ul>
                 <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Get Started <ArrowRight size={16} aria-hidden /></a>

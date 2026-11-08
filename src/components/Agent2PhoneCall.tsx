@@ -310,7 +310,12 @@ export const Agent2PhoneCall: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
+          <span role="status" className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold text-amber-300">
+            Preview / Simulation – no real calls, SMS or emails are sent
+          </span>
+        </div>
         <p className="text-xs text-slate-400 mt-1">
           Interactive voice call simulation. Every AI line is generated live from your company settings — experience how the AI Voice Handler answers incoming homeowner calls, overcomes insurance pushbacks, and books inspections.
         </p>

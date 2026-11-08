@@ -5,18 +5,17 @@
  * (AppContext), so they update the instant any simulator captures/moves a
  * lead:
  *
- *  1. Revenue Attribution (area chart) — estimated pipeline revenue over the
- *     last 14 days. Each lead contributes a status-weighted share of the
- *     $12,000 average roof job (the same average the KPI cards use):
- *       Closed-Won 100% · Estimate Sent 60% · Inspection Completed 35% ·
+ *  1. Revenue Estimate (area chart) — estimated pipeline value over the
+ *     last 14 days. This is not recorded revenue: it assumes a $12,000 average
+ *     roof job and attributes a status-weighted share to each lead:
+ *       Closed-Won/Closed 100% · Estimate Sent 60% · Inspection Completed 35% ·
  *       Inspection Scheduled 25% · everything else 8%.
  *     The lead's date is its scheduledDate (or the saved chatLog's last
  *     timestamp, else today) so history accumulates realistically.
  *
- *  2. Conversion Funnel (bar chart) — Impressions → Leads → Booked
- *     Inspections → Closed Deals. Impressions use a sensible default
- *     (site-visit ≈ 40× captured leads, floor 500); every later stage is
- *     derived from real leads data.
+ *  2. Conversion Funnel (bar chart) — Leads Captured → Inspections Booked →
+ *     Deals Closed. Every stage is derived from stored CRM lead statuses; no
+ *     site-visit or impression count is inferred.
  *
  * Styling is fully dark-amber (transparent chart bg over the glass card,
  * slate grid/ticks, amber & blue series) — no default white Chart.js chrome.
@@ -158,10 +157,9 @@ export const AnalyticsCharts: React.FC = () => {
       ['Inspection Scheduled', 'Inspection Completed', 'Estimate Sent', 'Closed-Won', 'Closed'].includes(l.status)
     ).length;
     const closed = leads.filter(l => l.status === 'Closed-Won' || l.status === 'Closed').length;
-    const impressions = Math.max(500, total * 40);
     return {
-      labels: ['Impressions', 'Leads Captured', 'Inspections Booked', 'Deals Closed'],
-      values: [impressions, total, booked, closed],
+      labels: ['Leads Captured', 'Inspections Booked', 'Deals Closed'],
+      values: [total, booked, closed],
     };
   }, [leads]);
 
@@ -174,7 +172,7 @@ export const AnalyticsCharts: React.FC = () => {
       tooltip: {
         ...darkTooltip,
         callbacks: {
-          label: ctx => `Pipeline: $${(ctx.parsed.y ?? 0).toLocaleString()}`,
+          label: ctx => `Estimate: $${(ctx.parsed.y ?? 0).toLocaleString()}`,
         },
       },
     },
@@ -228,14 +226,14 @@ export const AnalyticsCharts: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <TrendingUp className="h-4.5 w-4.5 text-accent-400" /> Revenue Attribution
+              <TrendingUp className="h-4.5 w-4.5 text-accent-400" /> Revenue Estimate
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Estimated pipeline value from captured leads — window adapts to your CRM history
+              Assumes a $12,000 average roof job; lead shares: Closed 100%, Estimate Sent 60%, Inspection Completed 35%, Scheduled 25%, other statuses 8%.
             </p>
           </div>
           <span className="text-xs font-mono font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-            ${revenueData.total.toLocaleString()}
+            Estimate: ${revenueData.total.toLocaleString()}
           </span>
         </div>
         <div className="h-52 sm:h-60">
@@ -244,7 +242,7 @@ export const AnalyticsCharts: React.FC = () => {
               labels: revenueData.labels,
               datasets: [
                 {
-                  label: 'Cumulative pipeline value',
+                  label: 'Cumulative revenue estimate (assumes $12,000 average job)',
                   data: revenueData.cumulative,
                   fill: true,
                   borderColor: '#f59e0b',
@@ -288,7 +286,7 @@ export const AnalyticsCharts: React.FC = () => {
                 {
                   label: 'Stage count',
                   data: funnelData.values,
-                  backgroundColor: ['#334155', '#3b82f6', '#f59e0b', '#10b981'],
+                  backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
                   borderRadius: 6,
                   borderSkipped: false,
                   barThickness: 22,
@@ -299,7 +297,7 @@ export const AnalyticsCharts: React.FC = () => {
           />
         </div>
         <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
-          Impressions use a 40× site-visit default; Leads, Inspections and Closed Deals are computed live from agent-captured leads.
+          Leads captured, inspections booked and deals closed are counted from stored CRM leads.
         </p>
       </div>
     </div>

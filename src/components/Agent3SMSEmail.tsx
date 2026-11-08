@@ -171,7 +171,12 @@ export const Agent3SMSEmail: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 3: Follow-Up & Nurture SMS/Email</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-black text-white">Agent 3: Follow-Up &amp; Nurture SMS/Email</h2>
+          <span role="status" className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold text-amber-300">
+            Preview / Simulation – no real calls, SMS or emails are sent
+          </span>
+        </div>
         <p className="text-xs text-slate-400 mt-1">
           A multi-day follow-up campaign that nurtures leads who did not schedule inspections immediately. The sequence reacts to replies dynamically.
         </p>
