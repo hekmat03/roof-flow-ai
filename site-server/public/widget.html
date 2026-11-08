@@ -272,7 +272,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             signal: ctrl.signal,
-            body: JSON.stringify({ messages: [{ role: "user", content: message }] }),
+            body: JSON.stringify({ messages: [{ role: "user", content: message }], widget_key: WIDGET_KEY }),
           })
             .then(function (r) { return r.ok ? r.json() : { fallback: true }; })
             .then(function (d) { done(d && d.fallback === false && d.reply ? d.reply : ""); })
