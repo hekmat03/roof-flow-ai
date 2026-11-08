@@ -1,0 +1,84 @@
+name: CI — site-server
+
+# Runs only when the site-server app (or this file) changes.
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "site-server/**"
+      - ".github/workflows/site-server-ci.yml"
+  pull_request:
+    branches: [master, main]
+    paths:
+      - "site-server/**"
+      - ".github/workflows/site-server-ci.yml"
+
+# Least privilege: CI only needs to read the code. It uses NO secrets at all —
+# every test brings its own fake Supabase/Groq, so a fork or a stranger's pull
+# request can never see or spend a real key.
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older, now-pointless run.
+concurrency:
+  group: site-server-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: site-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Guard — no secret files committed
+        working-directory: .
+        run: |
+          leaked=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.pem$|\.key$' | grep -vE '\.example$' || true)
+          if [ -n "$leaked" ]; then
+            echo "Secret-looking files are tracked by git:"
+            echo "$leaked"
+            exit 1
+          fi
+          echo "No secret files tracked."
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.x
+
+      - name: Cache Bun downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('site-server/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Install dependencies (lockfile must be up to date)
+        run: bun install --frozen-lockfile
+
+      # Runs EVERY tests/*.check.ts, so a new check can never be forgotten
+      # (the "test" script in package.json is a hand-kept list).
+      - name: Run checks
+        run: |
+          shopt -s nullglob
+          files=(tests/*.check.ts)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No tests found — refusing to pass an empty suite."
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            echo "::group::$f"
+            bun run "$f"
+            echo "::endgroup::"
+          done
+
+      - name: Type-check
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
