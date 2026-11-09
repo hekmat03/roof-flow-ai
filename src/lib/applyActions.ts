@@ -53,12 +53,14 @@ export function applyActionsToLeads(leads: Lead[], actions: AgentAction[], now: 
           name: str(args.name) || 'Unknown (AI chat)',
           phone: str(args.phone) || 'N/A',
           email: str(args.email) || 'N/A',
+          customerStatus: 'Lead',
           propertyOwnership: 'Owner',
           status: 'New Lead',
           zipCode: 'N/A',
           roofIssue: 'Storm damage assessment',
           agentType: 'Chatbot',
           chatLog: [{ sender: 'System', text: '🤖 Lead created by AI agent.', timestamp: stamp }],
+          purchaseHistory: [],
         };
         next = [lead, ...next];
         idx = 0;

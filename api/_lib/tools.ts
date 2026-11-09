@@ -276,7 +276,20 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
         }
         let id: string | undefined;
         if (env.db) {
-          const saved = await env.db.upsert('leads', { tenant_id: env.tenantId, session_id: env.sessionId, contact_key: key, phone: a.phone ?? null, email: a.email ?? null, name: a.name ?? null, zip: a.zip ?? null, roof_issue: a.roof_issue ?? null, status: a.status ?? null, note: a.note ?? null }, 'session_id,contact_key');
+          const saved = await env.db.upsert('leads', {
+            tenant_id: env.tenantId,
+            session_id: env.sessionId,
+            contact_key: key,
+            phone: a.phone ?? null,
+            email: a.email ?? null,
+            name: a.name ?? null,
+            zip: a.zip ?? null,
+            zip_code: a.zip ?? null,
+            roof_issue: a.roof_issue ?? null,
+            roofing_need: a.roof_issue ?? null,
+            status: a.status ?? null,
+            note: a.note ?? null,
+          }, 'session_id,contact_key');
           id = saved.id;
         }
         return { ok: true, status: 'updated', simulated: !env.db, persisted: !!env.db, id };

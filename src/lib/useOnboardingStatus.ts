@@ -53,7 +53,7 @@ export function useOnboardingStatus(userId: string | null, configured: boolean) 
   const markComplete = useCallback(() => {
     writeCache(key);
     setResult({ key, status: 'done' });
-  }, [key]);
+  }, [key, setResult]);
 
   return { status, markComplete };
 }

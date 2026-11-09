@@ -60,7 +60,7 @@ const getJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()), ...(init?.headers ?? {}) },
   });
   const text = await res.text();
-  let body: unknown = null;
+  let body: unknown;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {

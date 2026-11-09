@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { MessageSquare, Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
+import { Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
 import { detectLatestIntent, type AgentMessage } from '../lib/agentService';
 import { runAgentWithTools } from '../lib/agentRunner';
 import { applyActionsToLeads, type AgentAction } from '../lib/applyActions';

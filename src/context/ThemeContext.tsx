@@ -55,17 +55,13 @@ function applyTheme(theme: Theme) {
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Server + first client render both start from the brand default (dark).
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme() ?? 'dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = readStoredTheme();
-    const initial: Theme = stored ?? 'dark';
-    setThemeState(initial);
-    applyTheme(initial);
+    applyTheme(theme);
     setMounted(true);
-  }, []);
+  }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);

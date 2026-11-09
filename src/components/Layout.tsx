@@ -28,7 +28,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { companySettings, activeTab, setActiveTab } = useApp();
+  const { companySettings, activeTab, setActiveTab, activeCompany, availableCompanies, switchCompany } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const plan = usePlan();
   const { openUpgrade } = useBilling();
@@ -175,23 +175,34 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
 
           <div className="flex items-center space-x-6 text-sm overflow-x-auto no-scrollbar">
-            <div className="shrink-0">
-              <span className="text-ink-mute font-medium text-xs block uppercase tracking-wider">
-                Contractor Profile
-              </span>
-              <span className="text-ink font-bold text-base">
-                {companySettings.companyName}
-              </span>
+            <div className="shrink-0 flex items-center gap-2">
+              <div>
+                <span className="text-ink-mute font-medium text-[10px] block uppercase tracking-wider">
+                  Company Workspace
+                </span>
+                <select
+                  value={activeCompany?.id ?? ''}
+                  onChange={(e) => void switchCompany(e.target.value)}
+                  className="bg-transparent text-ink font-bold text-sm sm:text-base cursor-pointer outline-none border-b border-dashed border-accent-500/50 hover:border-accent-400 py-0.5"
+                  aria-label="Active Company"
+                >
+                  {availableCompanies.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="h-8 w-[1px] bg-line-strong/70 hidden sm:block shrink-0"></div>
 
             <div className="shrink-0 hidden sm:block">
-              <span className="text-ink-mute font-medium text-xs block uppercase tracking-wider">
+              <span className="text-ink-mute font-medium text-[10px] block uppercase tracking-wider">
                 Service Market
               </span>
-              <span className="text-ink font-semibold">
-                {companySettings.city}
+              <span className="text-ink font-semibold text-xs sm:text-sm">
+                {companySettings.city || 'Dallas-Fort Worth, TX'}
               </span>
             </div>
 

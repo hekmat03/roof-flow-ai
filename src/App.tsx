@@ -19,6 +19,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { FullScreenSpinner } from './components/Spinner';
 import { useOnboardingStatus } from './lib/useOnboardingStatus';
 import { AuthPage } from './components/auth/AuthPage';
+import { AuthCallback } from './components/auth/AuthCallback';
+import { VerifyEmail } from './components/auth/VerifyEmail';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Redirect } from './components/Redirect';
@@ -90,6 +92,10 @@ function Routes() {
       return <AuthPage mode="login" />;
     case '/signup':
       return <AuthPage mode="signup" />;
+    case '/auth/callback':
+      return <AuthCallback />;
+    case '/verify-email':
+      return <VerifyEmail />;
     case '/app':
       return (
         <ProtectedRoute>

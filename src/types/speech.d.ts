@@ -49,7 +49,7 @@ interface SpeechRecognitionLike extends EventTarget {
   onstart: (() => void) | null;
 }
 
-declare var SpeechRecognition: {
+declare const SpeechRecognition: {
   new (): SpeechRecognitionLike;
   prototype: SpeechRecognitionLike;
 };

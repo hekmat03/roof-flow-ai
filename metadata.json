@@ -1,0 +1,8 @@
+{
+  "name": "RoofFlow AI",
+  "description": "RoofFlow AI helps roofing contractors answer homeowner roof inquiries, capture verified leads, and manage inspection bookings.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

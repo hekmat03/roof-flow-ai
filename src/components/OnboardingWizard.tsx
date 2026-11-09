@@ -69,7 +69,7 @@ export default function OnboardingWizard({
     licenseNumber: "",
   });
 
-  const update = (field: string, value: any) =>
+  const update = (field: string, value: unknown) =>
     setData((prev) => ({ ...prev, [field]: value }));
 
   const toggleDay = (day: string) => {
@@ -126,7 +126,7 @@ export default function OnboardingWizard({
         }
       }
       onComplete();
-    } catch (e) {
+    } catch {
       setError("Something went wrong. Please try again.");
       setSaving(false);
     }

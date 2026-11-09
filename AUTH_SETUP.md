@@ -10,7 +10,11 @@ The error means the **built site has no Supabase keys**. `VITE_*` variables are 
 3. Vercel → Deployments → **Redeploy** the latest one (uncheck "use existing build cache"). Env changes don't apply to old builds.
 4. Supabase → Authentication → URL Configuration:
    - Site URL = `https://YOUR-DOMAIN`
-   - Redirect URLs: add `https://YOUR-DOMAIN/app` (and `http://localhost:5173/app`)
+   - Redirect URLs (add all of these):
+     - `https://YOUR-DOMAIN/auth/callback`
+     - `https://YOUR-DOMAIN/app`
+     - `http://localhost:3000/auth/callback` (for local development)
+     - `http://localhost:3000/app` (for local development)
 5. Supabase → SQL Editor: apply the schema and migrations in this order:
    1. `supabase/schema.sql`
    2. `supabase/001_multitenant.sql`
@@ -21,12 +25,22 @@ The error means the **built site has no Supabase keys**. `VITE_*` variables are 
    7. `supabase/006_lead_tenant_isolation.sql`
    8. `supabase/007_agent_tenant_isolation.sql`
    9. `supabase/008_rate_limit_service_role.sql`
+   10. `supabase/008_spend_limits.sql`
+   11. `supabase/009_followups.sql`
+   12. `supabase/010_followup_schedule_days.sql`
+   13. `supabase/011_crm_purchase_history_and_isolation.sql`
 
-   The root Vite deployment's lead widget requires migration `006` for tenant
-   widget keys and lead fields. Onboarding requires `005`; tenant-scoped agent
-   writes require `007`. Apply these only to the intended Supabase project after
-   reviewing their SQL and backing up production data. Never run them as part of
-   a frontend build or deployment.
-6. Optional while testing: Authentication → Providers → Email → turn off "Confirm email" so sign-up logs in instantly.
+   Apply these to your Supabase project in the SQL Editor. Never run them as part of a frontend build or deployment.
 
-Never put the service-role key in a `VITE_` variable.
+6. **Adding organization memberships (ABC Roofing & XYZ Roofing)**:
+   By default, migration 011 provisions the ABC and XYZ tenant rows. To link a contractor user to these organizations, run:
+   ```sql
+   -- Replace 'user-uuid-here' with the contractor's auth.users id
+   insert into public.organization_memberships (tenant_id, user_id, role)
+   values
+     ('11111111-aaaa-4111-8111-111111111111', 'user-uuid-here', 'owner'),
+     ('22222222-bbbb-4222-8222-222222222222', 'user-uuid-here', 'admin')
+   on conflict (tenant_id, user_id) do update set role = excluded.role;
+   ```
+
+7. Never put the service-role key in a `VITE_` variable or client-side code.
