@@ -192,18 +192,15 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </aside>
                 <div className="lp-dash-main">
-                  <div className="lp-dash-title">Dashboard <small>Sample data</small></div>
+                  <div className="lp-dash-title">Dashboard <small>Preview</small></div>
                   <div className="lp-stats">
-                    <div className="lp-stat"><span>Leads</span><b>128</b><em>+18%</em></div>
-                    <div className="lp-stat"><span>Inspections</span><b>34</b><em>+9%</em></div>
-                    <div className="lp-stat"><span>Won</span><b>21</b><em>+6%</em></div>
+                    <div className="lp-stat"><span>Leads</span><b>—</b></div>
+                    <div className="lp-stat"><span>Inspections</span><b>—</b></div>
+                    <div className="lp-stat"><span>Won</span><b>—</b></div>
                   </div>
-                  <div className="lp-bars" aria-hidden>
-                    {[34, 52, 40, 66, 48, 78, 60, 92].map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}
-                  </div>
+                  <div className="lp-bars" aria-label="Chart preview; no sample data shown">No sample data</div>
                   <div className="lp-leads">
-                    <div className="lp-lead-row"><div>Dana R.<br /><span>Hail damage, north side</span></div><b className="lp-pill">New Lead</b></div>
-                    <div className="lp-lead-row"><div>Marcus T.<br /><span>Leak after storm</span></div><b className="lp-pill lp-pill--ok">Inspection Scheduled</b></div>
+                    <div className="lp-lead-row"><div>Leads submitted through your widget appear here.</div></div>
                   </div>
                 </div>
               </div>
