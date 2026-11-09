@@ -135,16 +135,34 @@ function pickVariant(bank: string[], seed: string): string {
 /* Settings interpolation                                                     */
 /* ------------------------------------------------------------------------- */
 
+function removeUnavailableClaims(template: string, ctx: AgentContext): string {
+  const noStorm = !ctx.stormEvent?.trim();
+  const noFinancing = !ctx.financingOptions?.trim();
+  if (!noStorm && !noFinancing) return template;
+
+  return template
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => {
+      if (noStorm && (/\{\{storm(?:Date)?\}\}/i.test(sentence) || /\b(?:storm|hail)\b/i.test(sentence))) return false;
+      if (noFinancing && (/\{\{financing\}\}/i.test(sentence) || /\bfinanc(?:e|ing|ed|ial)\b/i.test(sentence))) return false;
+      return true;
+    })
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function interpolate(template: string, ctx: AgentContext): string {
-  const company = ctx.companyName || 'RoofFlow AI Roofing';
-  const city = ctx.city || 'Dallas-Fort Worth';
-  const storm = ctx.stormEvent || 'Great Hailstorm of 2026';
-  const stormDate = ctx.stormDate || 'May 15, 2026';
-  const financing = ctx.financingOptions || '0% APR for 12 months, or low-interest plans starting at $99/mo';
+  const company = ctx.companyName || 'your roofing team';
+  const city = ctx.city || 'your area';
+  const storm = ctx.stormEvent || '';
+  const stormDate = ctx.stormDate || '';
+  const financing = ctx.financingOptions || '';
   const tone = ctx.agentTone || 'Professional, reassuring, hazard-focused, and highly helpful';
   const leadName = ctx.leadName || 'there';
 
-  return template
+  const safeTemplate = removeUnavailableClaims(template, ctx);
+  return safeTemplate
     .split('{{company}}').join(company)
     .split('{{city}}').join(city)
     .split('{{storm}}').join(storm)
@@ -547,7 +565,7 @@ export function generateAgentReply(
   const seed = `${agentType}|${intent}|${input}|${messages.length}|${context.stormEvent || ''}`;
   const template = pickVariant(variants, seed);
 
-  return interpolate(template, context);
+  return interpolate(template, context) || 'I can help with roofing questions and inspection options. What would you like to know?';
 }
 
 /** Convenience: detect intent for the most recent user message. */

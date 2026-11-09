@@ -6,6 +6,7 @@ import {
   fetchLeads, upsertLeads, deleteLeads, fetchMyTenantId, fetchTenantConfig, saveTenantConfig,
 } from '../lib/leadsDb';
 import { validateEmail, validateName, validatePhone, formatPhone } from '../lib/validators';
+import { EMPTY_COMPANY_SETTINGS, settingsForTenant } from '../lib/companySettings';
 
 export interface Lead {
   id: string;
@@ -37,20 +38,11 @@ export interface CompanySettings {
   agentTone: string;
 }
 
-export interface AgentPrompts {
-  agent1: string;
-  agent2: string;
-  agent3: string;
-  agent4: string;
-}
-
 interface AppContextType {
   companySettings: CompanySettings;
   setCompanySettings: React.Dispatch<React.SetStateAction<CompanySettings>>;
   leads: Lead[];
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
-  prompts: AgentPrompts;
-  setPrompts: React.Dispatch<React.SetStateAction<AgentPrompts>>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   /**
@@ -67,6 +59,7 @@ interface AppContextType {
   /** 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error' */
   storageStatus: StorageStatus;
   storageError: string | null;
+  refreshTenant: () => Promise<void>;
 }
 
 export interface AddLeadErrors { name?: string; phone?: string; email?: string }
@@ -74,39 +67,7 @@ export type AddLeadResult = { ok: true; lead: Lead } | { ok: false; errors: AddL
 
 export type StorageStatus = 'loading' | 'ready' | 'signed-out' | 'unconfigured' | 'error';
 
-const defaultCompanySettings: CompanySettings = {
-  companyName: 'RoofFlow AI Roofing',
-  city: 'Dallas-Fort Worth',
-  stormName: 'Great Hailstorm of 2026',
-  stormDate: 'May 15, 2026',
-  financingOptions: '0% APR for 12 months, or low-interest plans starting at $99/mo',
-  agentTone: 'Professional, reassuring, hazard-focused, and highly helpful',
-};
-
-const defaultPrompts: AgentPrompts = {
-  agent1: `You are the Website Lead Capture Chatbot for {{companyName}} in {{city}}.
-Your goals:
-1. Capture the homeowner's Name, Phone, and Email.
-2. Confirm they are the homeowner (Property Ownership = Owner).
-3. Handle storm/objection inquiries about recent {{stormName}} on {{stormDate}}.
-4. Schedule a FREE professional roof health inspection.`,
-  agent2: `You are the Interactive Phone Voice Assistant.
-Your goals:
-1. Greet callers warmly with a professional corporate roofing tone.
-2. Quickly qualify if they have active storm damage from {{stormName}} in {{city}}.
-3. Offer financing options: {{financingOptions}}.
-4. Secure a scheduled time for an inspection.`,
-  agent3: `You are the SMS/Email Follow-Up & Nurture Agent.
-Your goals:
-1. Reactivate cold leads that filled out forms but did not book an inspection.
-2. Reference local hail events and urgent storm inspection deadlines.
-3. Keep the conversation conversational, low-pressure but urgent.`,
-  agent4: `You are the Estimate Follow-Up Agent.
-Your goals:
-1. Follow up with homeowners within 24h/3d/7d of receiving a repair estimate.
-2. Address typical contractor objections (e.g., insurance claim delays, financing, budget, competitor price matching).
-3. Offer low-interest payment terms: {{financingOptions}}.`
-};
+const defaultCompanySettings = EMPTY_COMPANY_SETTINGS;
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -118,7 +79,6 @@ function leadChanged(a: Lead, b: Lead): boolean {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [companySettings, setCompanySettings] = useState<CompanySettings>(defaultCompanySettings);
-  const [prompts, setPrompts] = useState<AgentPrompts>(defaultPrompts);
   const [leads, setLeadsState] = useState<Lead[]>([]);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tenantId, setTenantId] = useState<string | null>(null);
@@ -147,12 +107,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!id) {
         leadsRef.current = [];
         setLeadsState([]);
+        setCompanySettings(defaultCompanySettings);
         setStorageStatus('signed-out');
         return;
       }
-      const [cfg, rows] = await Promise.all([fetchTenantConfig(id), fetchLeads(id)]);
-      setCompanySettings({ ...defaultCompanySettings, ...cfg.settings });
-      setPrompts({ ...defaultPrompts, ...cfg.prompts });
+      const { data: { user } } = await supabase.auth.getUser();
+      const profileQuery = user
+        ? supabase.from('contractor_profiles').select('company_name, location, financing_available').eq('user_id', user.id).maybeSingle()
+        : Promise.resolve({ data: null, error: null });
+      const [cfg, rows, profileResult] = await Promise.all([
+        fetchTenantConfig(id),
+        fetchLeads(id),
+        profileQuery,
+      ]);
+      const profile = !profileResult.error && profileResult.data ? {
+        companyName: profileResult.data.company_name,
+        location: profileResult.data.location,
+        financing: profileResult.data.financing_available === true,
+      } : null;
+      setCompanySettings(settingsForTenant(cfg.settings, profile));
       leadsRef.current = rows;
       setLeadsState(rows);
       configLoaded.current = true;
@@ -176,6 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       leadsRef.current = [];
       setTenantId(null);
       setLeadsState([]);
+      setCompanySettings(defaultCompanySettings);
       setStorageStatus('signed-out');
       return;
     }
@@ -183,15 +157,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void loadTenant();
   }, [userId, loadTenant]);
 
-  // ---- Persist tenant settings/prompts (debounced) ----------------------
+  // ---- Persist tenant settings (debounced) ------------------------------
   useEffect(() => {
     if (!configLoaded.current || !tenantRef.current) return;
     const id = tenantRef.current;
     const t = setTimeout(() => {
-      saveTenantConfig(id, companySettings, prompts).catch(fail);
+      saveTenantConfig(id, companySettings).catch(fail);
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [companySettings, prompts, fail]);
+  }, [companySettings, fail]);
 
   // ---- Leads: same setState API, synced to Supabase ---------------------
   const setLeads: React.Dispatch<React.SetStateAction<Lead[]>> = useCallback((action) => {
@@ -284,10 +258,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       companySettings, setCompanySettings,
       leads, setLeads,
-      prompts, setPrompts,
       activeTab, setActiveTab,
       addLead,
-      tenantId, storageStatus, storageError,
+      tenantId, storageStatus, storageError, refreshTenant: loadTenant,
     }}>
       {children}
     </AppContext.Provider>

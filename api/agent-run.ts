@@ -6,7 +6,7 @@
 //
 // Env vars: MISTRAL_API_KEY, MISTRAL_MODEL,
 //           SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
-// NOTE: no email/SMS provider is wired — see api/_lib/tools.ts.
+// Email is optional and uses EMAIL_PROVIDER_API_KEY + EMAIL_FROM; SMS remains unsupported.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
@@ -26,6 +26,10 @@ import {
 } from './_lib/tools.js';
 import { guardChat } from './_lib/guard.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
+import { adminClient } from './_lib/supabaseAdmin.js';
+import { appOrigin, createResendProvider } from './_lib/email.js';
+import { createEmailActions, type EmailActionStore } from './_lib/emailActions.js';
+import { EMAIL_DAILY_CAP, EMAIL_MONTHLY_CAPS } from './_lib/plans.js';
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
@@ -36,6 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
+  const admin = adminClient();
 
   res.setHeader('Cache-Control', 'no-store');
 
@@ -44,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       live: Boolean(apiKey),
       tools: true,
       storage: Boolean(db),
-      email: false,
+      email: Boolean(process.env.EMAIL_PROVIDER_API_KEY && process.env.EMAIL_FROM && appOrigin(process.env.APP_BASE_URL) && process.env.SESSION_SECRET),
       model,
     });
   }
@@ -105,6 +110,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     messages.filter((m) => m.role === 'user').map((m) => m.content),
     [ctx.leadEmail, ctx.leadPhone],
   );
+  const customerProvidedContacts = collectAllowedContacts(messages.filter((m) => m.role === 'user').map((m) => m.content));
+
+  const emailProvider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
+  const emailStore: EmailActionStore | null = admin ? {
+    async getProfile() {
+      const { data, error } = await admin.from('contractor_profiles').select('company_name,email,business_address').eq('user_id', guard.user.id).maybeSingle();
+      if (error) throw error;
+      return { companyName: typeof data?.company_name === 'string' ? data.company_name : 'Your roofing company', contractorEmail: typeof data?.email === 'string' ? data.email : null, businessAddress: typeof data?.business_address === 'string' ? data.business_address : null };
+    },
+    async findLead(email) {
+      const { data, error } = await admin.from('leads').select('id,email,status,consent,conversation').eq('tenant_id', guard.tenantId).eq('email', email.toLowerCase()).limit(1).maybeSingle();
+      if (error) throw error;
+      const turns = Array.isArray(data?.conversation) ? data.conversation : [];
+      const emailWasProvidedByLead = turns.some((turn: unknown) => {
+        if (!turn || typeof turn !== 'object') return false;
+        const row = turn as Record<string, unknown>;
+        return typeof row.sender === 'string' && ['user', 'homeowner', 'visitor'].includes(row.sender.toLowerCase()) && typeof row.text === 'string' && row.text.toLowerCase().includes(email.toLowerCase());
+      });
+      return data && typeof data.id === 'string' && typeof data.email === 'string'
+        ? { id: data.id, email: data.email, status: typeof data.status === 'string' ? data.status : null, consent: data.consent === true, emailWasProvidedByLead }
+        : null;
+    },
+    async isSuppressed(email) {
+      const { data: suppressed, error } = await admin.from('email_suppressions').select('email').eq('tenant_id', guard.tenantId).eq('email', email.toLowerCase()).maybeSingle();
+      if (error) throw error;
+      if (suppressed) return true;
+      const { data: legacy, error: legacyError } = await admin.from('contact_optouts').select('contact').eq('contact', email.toLowerCase()).or(`tenant_id.eq.${guard.tenantId},tenant_id.is.null`).limit(1).maybeSingle();
+      if (legacyError) throw legacyError;
+      return Boolean(legacy);
+    },
+    async reserveUsage(monthlyCap, dailyCap) {
+      const { data, error } = await admin.rpc('reserve_email_usage', { p_tenant: guard.tenantId, p_monthly_cap: monthlyCap, p_daily_cap: dailyCap });
+      if (error) throw error;
+      return data === true;
+    },
+    async releaseUsage() {
+      const { error } = await admin.rpc('release_email_usage', { p_tenant: guard.tenantId });
+      if (error) throw error;
+    },
+    async insertMessage(row) {
+      const { data, error } = await admin.from('messages').insert(row).select('id').maybeSingle();
+      if (error) throw error;
+      return { id: typeof data?.id === 'string' ? data.id : undefined };
+    },
+    async insertScheduled(row) {
+      const { data, error } = await admin.from('scheduled_messages').insert(row).select('id').maybeSingle();
+      if (error) throw error;
+      return { id: typeof data?.id === 'string' ? data.id : undefined };
+    },
+    async updateLeadNote(leadId, note) {
+      const { data, error } = await admin.from('leads').select('note').eq('id', leadId).eq('tenant_id', guard.tenantId).maybeSingle();
+      if (error) throw error;
+      const prior = typeof data?.note === 'string' ? `${data.note}\n` : '';
+      const { error: updateError } = await admin.from('leads').update({ note: `${prior}${note}`.slice(-2000) }).eq('id', leadId).eq('tenant_id', guard.tenantId);
+      if (updateError) throw updateError;
+    },
+    async recordOnly(table, row) {
+      const { data, error } = await admin.from(table).insert(row).select('id').maybeSingle();
+      if (error) throw error;
+      return { id: typeof data?.id === 'string' ? data.id : undefined };
+    },
+  } : null;
+  const emailActions = createEmailActions({
+    store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM,
+    baseUrl: process.env.APP_BASE_URL, sessionSecret: process.env.SESSION_SECRET,
+    tenantId: guard.tenantId, sessionId: scopedSessionId(guard.tenantId, sessionId), plan: guard.plan,
+  });
 
   const chat: ChatFn = async (msgs, tools) => {
     const controller = new AbortController();
@@ -148,9 +220,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Namespaced by company: a guessed/foreign session id can never touch another company's rows.
         sessionId: scopedSessionId(guard.tenantId, sessionId),
         allowedContacts,
+        customerProvidedContacts,
         // Per-request only. Durable opt-outs live in the database (per company).
         optOuts: new Set<string>(),
         companyName: ctx.companyName,
+        emailActions,
       },
     });
 

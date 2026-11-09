@@ -53,8 +53,9 @@ export async function guardChat(
 
   const plan = effectivePlan(await getProfile(admin, user.id));
 
-  // Only the chatbot is available below Pro.
-  if (opts.agentType !== 'chatbot' && plan !== 'pro') {
+  // Phone automation remains Pro-only. Email follow-up agents are available
+  // on Starter and Pro, with sends independently capped in plans.ts.
+  if (opts.agentType === 'phone' && plan !== 'pro') {
     res.status(403).json({
       error: 'This agent requires the Pro plan',
       code: 'upgrade_required',

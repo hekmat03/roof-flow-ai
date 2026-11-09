@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import { normalizeBusinessAddress } from './businessAddress';
 
 export interface ContractorProfile {
   companyName: string;
   ownerName: string;
   phone: string;
   email: string;
+  businessAddress: string;
   location: string;
   openTime: string;
   closeTime: string;
@@ -52,6 +54,7 @@ export function useContractorProfile() {
           ownerName: data.owner_name || '',
           phone: data.phone || '',
           email: data.email || '',
+          businessAddress: data.business_address || '',
           location: data.location || '',
           openTime: data.open_time || '08:00',
           closeTime: data.close_time || '16:00',
@@ -73,7 +76,22 @@ export function useContractorProfile() {
     load();
   }, []);
 
-  return { profile, loading };
+  async function saveBusinessAddress(value: string): Promise<void> {
+    if (!supabase) throw new Error('Accounts are not configured.');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Sign in to save your business address.');
+    const { data, error } = await supabase
+      .from('contractor_profiles')
+      .update({ business_address: normalizeBusinessAddress(value) || null, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .select('user_id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error('Complete your contractor profile before saving this address.');
+    setProfile((current) => current ? { ...current, businessAddress: normalizeBusinessAddress(value) } : current);
+  }
+
+  return { profile, loading, saveBusinessAddress };
 }
 
 /**

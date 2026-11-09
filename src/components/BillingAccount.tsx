@@ -65,9 +65,9 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header className="glass rounded-2xl p-5 md:p-7">
-        <h1 className="text-2xl md:text-3xl font-bold text-white">Billing &amp; account</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">Billing &amp; account</h1>
         <p className="mt-2 text-slate-300 max-w-3xl">
           Your plan, your monthly chat allowance, and the controls for a paid subscription.
         </p>
@@ -82,7 +82,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
       {pastDue && <PaymentFailureNotice planName={planName} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <section className="glass rounded-2xl p-5 md:p-6">
+        <section className="glass rounded-2xl p-5 md:p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-semibold text-slate-100">Account</h2>
@@ -147,7 +147,7 @@ export const BillingAccount: React.FC<{ status: BillingStatus; onChanged: () => 
           {status.usage ? (
             <UsageMeter usage={status.usage} planName={planName} />
           ) : (
-            <div className="glass rounded-2xl p-5 md:p-6 text-sm text-slate-300">
+            <div className="glass rounded-2xl p-5 md:p-4 text-sm text-slate-300">
               Usage is unavailable right now.
             </div>
           )}

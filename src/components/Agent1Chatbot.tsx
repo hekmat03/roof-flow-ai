@@ -56,7 +56,10 @@ function defaultInspectionDateTime(): string {
 export const Agent1Chatbot: React.FC = () => {
   const { companySettings, addLead, leads, setLeads } = useApp();
   const { session } = useAuth();
-  const { profile } = useContractorProfile();
+  const { profile, loading: profileLoading } = useContractorProfile();
+  const profileState = useRef({ profile, loading: profileLoading });
+  profileState.current = { profile, loading: profileLoading };
+  const firstAgentTurnStarted = useRef(false);
 
   const [messages, setMessages] = useState<Array<{ sender: 'AI' | 'User'; text: string; timestamp: string }>>(() => [
     {
@@ -83,6 +86,15 @@ export const Agent1Chatbot: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const openingCompanyName = profile?.companyName || companySettings.companyName;
+  useEffect(() => {
+    if (!openingCompanyName) return;
+    const opening = pickOpening(openingCompanyName);
+    setMessages((current) => !firstAgentTurnStarted.current && current[0]?.sender === 'AI'
+      ? current.map((message, index) => index === 0 ? { ...message, text: opening } : message)
+      : current);
+  }, [openingCompanyName]);
 
   const quickReplies = [
     "Yes, my roof has hail damage",
@@ -178,7 +190,28 @@ export const Agent1Chatbot: React.FC = () => {
       return;
     }
 
-    const updatedMessages = [...messages, userMsg];
+    const firstAgentTurn = !firstAgentTurnStarted.current;
+    if (firstAgentTurn && profileState.current.loading) {
+      setIsLoading(true);
+      setError(null);
+      const deadline = Date.now() + 1500;
+      while (profileState.current.loading && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (profileState.current.loading) {
+        setError('Business details are still loading. Please try again in a moment.');
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const loadedProfile = profileState.current.profile;
+    const companyName = loadedProfile?.companyName || companySettings.companyName;
+    const conversation = firstAgentTurn && companyName && messages[0]?.sender === 'AI'
+      ? messages.map((message, index) => index === 0 ? { ...message, text: pickOpening(companyName) } : message)
+      : messages;
+    firstAgentTurnStarted.current = true;
+    const updatedMessages = [...conversation, userMsg];
     setMessages(updatedMessages);
     setInputText('');
     setIsLoading(true);
@@ -191,13 +224,13 @@ export const Agent1Chatbot: React.FC = () => {
       }));
 
       const { reply, actions } = await runAgentWithTools('chatbot', aiMessages, {
-        companyName: companySettings.companyName,
+        companyName: loadedProfile?.companyName || companySettings.companyName,
         city: companySettings.city,
         stormEvent: companySettings.stormName,
         stormDate: companySettings.stormDate,
         financingOptions: companySettings.financingOptions,
         agentTone: companySettings.agentTone,
-        businessInfo: profile ? buildBusinessInfo(profile) : undefined,
+        businessInfo: loadedProfile ? buildBusinessInfo(loadedProfile) : undefined,
       });
 
       if (actions.length > 0) {
@@ -337,16 +370,16 @@ export const Agent1Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
+        <h2 className="text-xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
         <p className="text-xs text-slate-400 mt-1">
           Real AI-powered chat. Ask anything about storm damage, insurance, or inspections — the assistant responds live and hands off to a booking form when you're ready to schedule.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Chat Interface (7 cols) */}
         <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
           {/* Top Chat Header */}
@@ -358,7 +391,7 @@ export const Agent1Chatbot: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">RoofFlow Virtual Specialist</h3>
-                <p className="text-[10px] text-slate-400">AI Assistant • Online 24/7</p>
+                <p className="text-[10px] text-slate-400">AI assistant</p>
               </div>
             </div>
             <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
@@ -367,7 +400,7 @@ export const Agent1Chatbot: React.FC = () => {
           </div>
 
           {/* Chat Messages Log */}
-          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
+          <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
               return (
@@ -532,8 +565,8 @@ export const Agent1Chatbot: React.FC = () => {
         </div>
 
         {/* Sidebar Simulator explanation (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="glass card-hover rounded-2xl p-6">
+        <div className="lg:col-span-5 space-y-4">
+          <div className="glass card-hover rounded-2xl p-4">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
               <Sparkles className="h-4.5 w-4.5 text-accent-400" /> How This Works
             </h3>

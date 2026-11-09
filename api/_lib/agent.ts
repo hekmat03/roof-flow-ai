@@ -74,6 +74,7 @@ export const TOOL_POLICY = `TOOLS:
 - If simulated is true, never claim a message was delivered; say it is queued or in demo mode.
 - If ok is false, say you could not complete it and offer a human follow-up.
 - Never contact, or call tools for, someone who asked to stop.
+- Email tools are limited to one address explicitly written by the customer in this conversation. SMS is not supported.
 ---
 `;
 
@@ -179,7 +180,7 @@ export function sanitizeMessages(
 const PERSONAS: Record<AgentType, (c: AgentContext) => string> = {
   chatbot: (c) =>
     `You are the website chat assistant for ${c.companyName || 'a roofing company'} in ${c.city || 'the local area'}. ` +
-    'Answer questions about roofing, storm damage, insurance claims and inspections, and gently guide qualified visitors toward a free inspection. ' +
+    'Answer questions about roofing, roof damage, insurance claims and inspections, and gently guide qualified visitors toward a free inspection. ' +
     'Keep replies to 2-4 sentences and ask only one question at a time. ' +
     'When the visitor wants to book, say a booking form will open; do not collect their details in chat or invent times.',
 
@@ -210,11 +211,16 @@ export function buildSystemPrompt(
       `Recent storm: ${ctx.stormEvent}${ctx.stormDate ? ` (${ctx.stormDate})` : ''}. Mention it only when relevant.`
     );
   }
+  if (agentType === 'chatbot' && !ctx.stormEvent) {
+    parts.push('No specific weather event or date is configured. Do not invent an event or date.');
+  }
 
   if (ctx.financingOptions) {
     parts.push(
       `Financing the company offers: ${ctx.financingOptions}.`
     );
+  } else if (agentType === 'chatbot') {
+    parts.push('No financing details are configured. Do not claim financing is available or quote financing terms.');
   }
 
   if (ctx.agentTone) {
@@ -222,8 +228,12 @@ export function buildSystemPrompt(
   }
 
   if (ctx.replyIntent) {
+    const intentLabel = INTENT_LABELS[ctx.replyIntent] || ctx.replyIntent;
+    const safeIntentLabel = !ctx.stormEvent
+      ? intentLabel.replace(/storm\/hail damage|storm-deadline/gi, 'roof damage').replace(/\bhail\b/gi, 'roof')
+      : intentLabel;
     parts.push(
-      `The person's latest message is best classified as "${INTENT_LABELS[ctx.replyIntent] || ctx.replyIntent}"; respond to that.`
+      `The person's latest message is best classified as "${safeIntentLabel}"; respond to that.`
     );
   }
 

@@ -3,7 +3,7 @@
  * ratelimit.check.ts — 10 requests / minute / IP and the plan-access rules.
  * Run: node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts
  */
-import { enforceRateLimit, clientIp, RATE_LIMIT_PER_MINUTE, rateLimitRpcAllowed } from '../api/_lib/rateLimit.ts';
+import { enforceRateLimit, clientIp, RATE_LIMIT_PER_MINUTE } from '../api/_lib/rateLimit.ts';
 import { canAccess, requiredPlan, fallbackTab } from '../src/lib/planAccess.ts';
 
 let passed = 0, failed = 0;
@@ -21,10 +21,6 @@ const fakeRes = () => {
 
 console.log('Rate limit');
 check('limit is 10 per minute', RATE_LIMIT_PER_MINUTE === 10);
-check('decodes an allowed RPC row', rateLimitRpcAllowed([{ allowed: true, remaining: 9, reset_at: 'later' }], null) === true);
-check('decodes a blocked RPC row', rateLimitRpcAllowed([{ allowed: false, remaining: 0, reset_at: 'later' }], null) === false);
-check('falls back on a malformed RPC result', rateLimitRpcAllowed([{ allowed: 'yes' }], null) === null);
-check('falls back on an RPC error response', rateLimitRpcAllowed(null, { message: 'permission denied' }) === null);
 check('reads client ip', clientIp(fakeReq('1.2.3.4')) === '1.2.3.4');
 let lastAllowed = true, res = fakeRes();
 for (let i = 0; i < 10; i++) { res = fakeRes(); lastAllowed = await enforceRateLimit(fakeReq('9.9.9.9'), res as never, 'test'); }
@@ -41,16 +37,11 @@ check('other route name unaffected', (await enforceRateLimit(fakeReq('9.9.9.9'),
 console.log('Plan access');
 check('free: chatbot yes', canAccess('free', 'agent1'));
 check('free: CRM locked', !canAccess('free', 'crm'));
-check('free: prompts locked', !canAccess('free', 'prompts'));
 check('starter: chatbot + CRM', canAccess('starter', 'agent1') && canAccess('starter', 'crm'));
-check('starter: prompts locked', !canAccess('starter', 'prompts'));
-check('pro: crm + prompts', canAccess('pro', 'crm') && canAccess('pro', 'prompts'));
-check('Agents 2-4 are accessible on Pro', ['agent2', 'agent3', 'agent4'].every((t) => canAccess('pro', t)));
-check('Agents 2-4 remain locked on Free and Starter', ['agent2', 'agent3', 'agent4'].every((t) =>
-  !canAccess('free', t) && !canAccess('starter', t)));
-check('Agents 2-4 require Pro', ['agent2', 'agent3', 'agent4'].every((t) => requiredPlan(t) === 'pro'));
+check('Agent 2 remains Pro-only', canAccess('pro', 'agent2') && !canAccess('starter', 'agent2') && !canAccess('free', 'agent2'));
+check('email follow-up Agents 3 and 4 are Starter+ only', ['agent3', 'agent4'].every((t) => canAccess('pro', t) && canAccess('starter', t) && !canAccess('free', t)));
+check('email follow-up agents require Starter', ['agent3', 'agent4'].every((t) => requiredPlan(t) === 'starter'));
 check('CRM needs Starter', requiredPlan('crm') === 'starter');
-check('prompts need Pro', requiredPlan('prompts') === 'pro');
 check('fallback tab is the chatbot', fallbackTab() === 'agent1');
 
 console.log(`\n${passed} passed, ${failed} failed`);

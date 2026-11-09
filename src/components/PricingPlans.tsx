@@ -30,12 +30,12 @@ export const UsageMeter: React.FC<{ usage: UsageView; planName: string }> = ({ u
   const storageReady = usage.storage === 'ok';
   const tone = pct >= 100 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-accent-500';
   return (
-    <div className="glass rounded-2xl p-5 md:p-6">
+    <div className="glass rounded-2xl p-5 md:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold text-slate-100">Chats this month</h3>
         <span className="text-sm text-slate-400">{planName} plan</span>
       </div>
-      <p className="mt-3 text-3xl font-bold text-white tabular-nums">
+      <p className="mt-3 text-2xl font-bold text-white tabular-nums">
         {usage.used}
         <span className="text-slate-500 text-xl"> / {usage.limit}</span>
       </p>
@@ -77,7 +77,7 @@ const PlanCard: React.FC<{
   const disabled = current || !paid || !paymentsActivated || busy || !authenticated;
   return (
     <div
-      className={`glass rounded-2xl p-5 md:p-6 flex flex-col ${
+      className={`glass rounded-2xl p-5 md:p-4 flex flex-col ${
         current ? 'ring-2 ring-accent-500/70' : ''
       }`}
     >
@@ -91,7 +91,7 @@ const PlanCard: React.FC<{
       </div>
       <p className="mt-1 text-sm text-slate-400">{plan.tagline}</p>
       <p className="mt-4">
-        <span className="text-3xl font-bold text-white">${plan.priceMonthlyUsd}</span>
+        <span className="text-2xl font-bold text-white">${plan.priceMonthlyUsd}</span>
         <span className="text-slate-400 text-sm"> / month</span>
       </p>
       <p className="mt-1 text-sm text-accent-300 font-medium">
@@ -158,11 +158,11 @@ export const PricingPlans: React.FC<{ status: BillingStatus; onChanged: () => vo
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header className="glass rounded-2xl p-5 md:p-7">
         <div className="flex flex-wrap items-center gap-3">
           <Sparkles className="h-6 w-6 text-accent-400" aria-hidden />
-          <h1 className="text-2xl md:text-3xl font-bold text-white">Plans &amp; pricing</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Plans &amp; pricing</h1>
         </div>
         <p className="mt-2 text-slate-300 max-w-3xl">
           Every account starts on Free. Limits are enforced on the server, so editing anything in the
@@ -199,7 +199,7 @@ export const PricingPlans: React.FC<{ status: BillingStatus; onChanged: () => vo
         ))}
       </div>
 
-      <section className="glass rounded-2xl p-5 md:p-6">
+      <section className="glass rounded-2xl p-5 md:p-4">
         <h2 className="font-semibold text-slate-100">What no plan includes yet</h2>
         <p className="mt-1 text-sm text-slate-400">
           These are simulations in the product today. They are listed so nothing is oversold.

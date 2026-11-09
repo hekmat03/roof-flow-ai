@@ -8,11 +8,9 @@ import {
   FileText,
   Users,
   Settings,
-  Terminal,
   CreditCard,
   Wallet,
   CloudLightning,
-  Calendar,
   Menu,
   X,
   Lock,
@@ -30,7 +28,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { companySettings, activeTab, setActiveTab, leads } = useApp();
+  const { companySettings, activeTab, setActiveTab } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const plan = usePlan();
   const { openUpgrade } = useBilling();
@@ -47,23 +45,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'agent1', label: 'Agent 1: Chatbot', icon: MessageSquare },
     { id: 'agent2', label: 'Agent 2: Phone Call', icon: PhoneCall },
-    { id: 'agent3', label: 'Agent 3: SMS & Email', icon: MessageSquarePlus },
+    { id: 'agent3', label: 'Agent 3: Email Follow-ups', icon: MessageSquarePlus },
     { id: 'agent4', label: 'Agent 4: Estimate Follow-up', icon: FileText },
     { id: 'crm', label: 'CRM Leads Board', icon: Users },
     { id: 'pricing', label: 'Plans & Pricing', icon: Wallet },
     { id: 'billing', label: 'Billing & Account', icon: CreditCard },
     { id: 'config', label: 'Configuration', icon: Settings },
-    { id: 'prompts', label: 'Prompt Playground', icon: Terminal },
   ];
 
-  // Plan access locks Agents 2-4 for Free and Starter accounts.
+  // Phone automation remains Pro-only. Email follow-up agents are available to Starter and Pro.
   const visibleItems = menuItems.filter((item) => !isHidden(item.id));
-
-  const totalLeads = leads.length;
-
-  const scheduledInspections = leads.filter(
-    l => l.status === 'Inspection Scheduled'
-  ).length;
 
   function handleTabSelect(id: string) {
     if (canAccess(plan, id)) {
@@ -97,7 +88,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         `}
       >
         <div>
-          <div className="p-4 md:p-6 border-b border-line/80 flex items-center justify-between bg-gradient-to-r from-page via-card/70 to-card/20">
+          <div className="p-4 md:p-4 border-b border-line/80 flex items-center justify-between bg-gradient-to-r from-page via-card/70 to-card/20">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-br from-accent-400 to-accent-600 p-2.5 rounded-xl shadow-lg shadow-accent-500/30 animate-glow-breathe">
                 <CloudLightning className="h-6 w-6 text-gold-ink stroke-[2.5]" />
@@ -204,57 +195,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </span>
             </div>
 
-            <div className="h-8 w-[1px] bg-line-strong/70 hidden lg:block shrink-0"></div>
-
-            <div className="flex items-center space-x-2 shrink-0 hidden lg:flex">
-              <div className="bg-danger/10 text-danger p-1 rounded-lg border border-danger/10">
-                <CloudLightning className="h-4 w-4" />
-              </div>
-
-              <div>
-                <span className="text-ink-mute font-medium text-xs block uppercase tracking-wider">
-                  Active Event Nurture
-                </span>
-                <span className="text-ink font-semibold text-xs flex items-center gap-1.5">
-                  {companySettings.stormName}
-                  <span className="text-ink-mute font-mono font-normal">
-                    ({companySettings.stormDate})
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-            <div className="hidden sm:flex items-center space-x-3 shrink-0">
-            <div className="bg-card/50 border border-line/80 px-3 md:px-4 py-2 rounded-xl flex items-center space-x-2 md:space-x-3 backdrop-blur-md">
-              <Users className="h-4 w-4 text-accent-400" />
-              <div>
-                <span className="text-[10px] text-ink-mute block font-bold uppercase tracking-wider">
-                  Total Leads
-                </span>
-                <span className="text-sm text-ink font-bold font-mono">
-                  {totalLeads}
-                </span>
-              </div>
-            </div>
-
-            <div className="hidden md:flex bg-card/50 border border-line/80 px-4 py-2 rounded-xl items-center space-x-3 backdrop-blur-md">
-              <Calendar className="h-4 w-4 text-accent-400" />
-              <div>
-                <span className="text-[10px] text-ink-mute block font-bold uppercase tracking-wider">
-                  Scheduled Inspections
-                </span>
-                <span className="text-sm text-ink font-bold font-mono">
-                  {scheduledInspections}
-                </span>
-              </div>
-            </div>
-            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 premium-scroll">
+        <main className="flex-1 overflow-y-auto p-4 md:p-5 premium-scroll">
           <div className="max-w-7xl mx-auto h-full">
             {children}
           </div>

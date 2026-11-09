@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Lead, CompanySettings, AgentPrompts } from '../context/AppContext';
+import type { Lead, CompanySettings } from '../context/AppContext';
 
 /** Row shape of public.leads (only the columns the app uses). */
 interface LeadRow {
@@ -102,27 +102,25 @@ export async function fetchMyTenantId(): Promise<string | null> {
 
 export async function fetchTenantConfig(
   tenantId: string,
-): Promise<{ settings: Partial<CompanySettings>; prompts: Partial<AgentPrompts> }> {
+): Promise<{ settings: Partial<CompanySettings> }> {
   const { data, error } = await client()
     .from('tenants')
-    .select('settings, prompts')
+    .select('settings')
     .eq('id', tenantId)
     .single();
   if (error) throw error;
   return {
     settings: (data?.settings ?? {}) as Partial<CompanySettings>,
-    prompts: (data?.prompts ?? {}) as Partial<AgentPrompts>,
   };
 }
 
 export async function saveTenantConfig(
   tenantId: string,
   settings: CompanySettings,
-  prompts: AgentPrompts,
 ): Promise<void> {
   const { error } = await client()
     .from('tenants')
-    .update({ settings, prompts })
+    .update({ settings })
     .eq('id', tenantId);
   if (error) throw error;
 }

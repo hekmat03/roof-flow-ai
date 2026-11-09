@@ -194,10 +194,16 @@ export interface ToolEnv {
   /** Already namespaced by tenant — see scopedSessionId(). */
   sessionId: string;
   allowedContacts: Set<string>;
+  /** User-role turns only; client-provided context is not proof of recipient consent. */
+  customerProvidedContacts?: Set<string>;
   /** Opt-outs seen during THIS request only (the database is the source of truth). */
   optOuts: Set<string>;
   companyName?: string;
   fetchFn?: Fetch;
+  emailActions?: {
+    sendEmail(input: { to: string; subject: string; body: string }): Promise<ToolResult>;
+    scheduleEmail(input: { contact: string; whenHours: number; hint: string }): Promise<ToolResult>;
+  };
 }
 
 const fail = (error: string): ToolResult => ({ ok: false, status: 'failed', simulated: false, persisted: false, error });
@@ -224,9 +230,15 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
   const v = validateToolArgs(name, rawArgs);
   if ('error' in v) return fail(v.error);
   const a = v.value as Record<string, any>;
+  if ((name === 'send_message' || name === 'schedule_followup') && a.channel === 'sms') {
+    return fail('SMS is not supported yet; no SMS is sent.');
+  }
   const contact: string = a.phone || a.email || a.to || a.contact;
   if (!env.allowedContacts.has(contact) && !(a.email && env.allowedContacts.has(a.email))) {
     return fail('contact was not provided by the customer in this conversation');
+  }
+  if ((name === 'send_message' || name === 'schedule_followup') && a.channel === 'email' && !env.customerProvidedContacts?.has(contact)) {
+    return fail('email must be provided by the customer in a user message');
   }
   try {
     switch (name) {
@@ -239,7 +251,8 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
       }
       case 'send_message': {
         if (await optedOut([a.to], env)) return fail('contact opted out');
-        const status = 'simulated_sent';
+        if (env.emailActions) return await env.emailActions.sendEmail({ to: a.to, subject: a.subject, body: a.body });
+        const status = 'recorded_only';
         const simulated = true;
         let persisted = false, id: string | undefined;
         if (env.db) {
@@ -247,7 +260,7 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
           persisted = true; id = saved.id;
         }
         return { ok: true, status, simulated, persisted, id,
-          detail: 'Recorded only — no email or SMS is actually delivered by RoofFlow AI.' };
+          detail: 'Recorded only — email delivery is not configured.' };
       }
       case 'update_crm': {
         const key = a.phone || a.email;
@@ -270,6 +283,7 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
       }
       case 'schedule_followup': {
         if (await optedOut([a.contact], env)) return fail('contact opted out');
+        if (env.emailActions) return await env.emailActions.scheduleEmail({ contact: a.contact, whenHours: a.when_hours, hint: a.hint });
         const due = new Date(Date.now() + a.when_hours * 3_600_000).toISOString();
         const saved = env.db ? await env.db.insert('followups', { tenant_id: env.tenantId, session_id: env.sessionId, channel: a.channel, contact: a.contact, due_at: due, hint: a.hint, status: 'scheduled' }) : null;
         return { ok: true, status: 'scheduled', simulated: !env.db, persisted: !!env.db, id: saved?.id,
@@ -290,8 +304,8 @@ const SPECS: Record<ToolName, { description: string; properties: Record<string, 
     required: ['name', 'phone', 'address_or_zip', 'preferred_time', 'issue'],
   },
   send_message: {
-    description: 'Send one email or SMS to a customer who asked for or agreed to it.',
-    properties: { channel: S('string', 'email or sms', { enum: ['email', 'sms'] }), to: S('string', 'Email address or phone number'), subject: S('string', 'Email subject (email only)'), body: S('string', 'Message text') },
+    description: 'Send one email to a customer who gave their email in this conversation and agreed to a reply. SMS is not available.',
+    properties: { channel: S('string', 'email; SMS is not supported', { enum: ['email'] }), to: S('string', 'Email address provided by the customer'), subject: S('string', 'Email subject'), body: S('string', 'Message text') },
     required: ['channel', 'to', 'body'],
   },
   update_crm: {
@@ -300,8 +314,8 @@ const SPECS: Record<ToolName, { description: string; properties: Record<string, 
     required: [],
   },
   schedule_followup: {
-    description: 'Schedule a future follow-up message to a lead (1-168 hours from now).',
-    properties: { channel: S('string', 'email or sms', { enum: ['email', 'sms'] }), contact: S('string', 'Email or phone'), when_hours: S('integer', 'Hours from now, 1-168'), message_hint: S('string', 'What the follow-up should say') },
+    description: 'Schedule one email follow-up to a consented lead who gave their email in this conversation (1-168 hours). SMS is not available.',
+    properties: { channel: S('string', 'email; SMS is not supported', { enum: ['email'] }), contact: S('string', 'Lead email provided in conversation'), when_hours: S('integer', 'Hours from now, 1-168'), message_hint: S('string', 'Short context for the follow-up') },
     required: ['channel', 'contact', 'when_hours'],
   },
 };

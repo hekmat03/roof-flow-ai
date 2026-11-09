@@ -14,6 +14,7 @@ import {
   sanitizeContext,
   sanitizeMessages,
 } from '../api/_lib/agent.ts';
+import { EMPTY_COMPANY_SETTINGS, settingsForTenant } from '../src/lib/companySettings.ts';
 
 let passed = 0;
 let failed = 0;
@@ -47,6 +48,27 @@ for (const t of AGENT_TYPES) {
 check('policy never tells the model to hide being an AI', !/don't volunteer that you are an ai/i.test(AGENT_POLICY));
 check('policy forbids fake bookings', /Never claim an appointment was booked/.test(AGENT_POLICY));
 check('intent label is injected', buildSystemPrompt('chatbot', { replyIntent: 'insurance' }).includes('insurance claim questions'));
+const unconfiguredStormPrompt = buildSystemPrompt('chatbot', { companyName: 'Acme Roofing', city: 'Phoenix' });
+check('chatbot prompt without an event excludes demo business and storm wording',
+  !/Dallas|RoofFlow AI Roofing|Great Hailstorm|May 15|\bstorm\b|\bhail\b/i.test(unconfiguredStormPrompt));
+const oldSampleSettings = {
+  companyName: 'RoofFlow AI Roofing', city: 'Dallas-Fort Worth', stormName: 'Great Hailstorm of 2026',
+  stormDate: 'May 15, 2026', financingOptions: '0% APR for 12 months, or low-interest plans starting at $99/mo',
+  agentTone: 'Professional, clear, and helpful',
+};
+const profileSettings = settingsForTenant(oldSampleSettings, {
+  companyName: 'Acme Roofing', location: 'Phoenix', financing: true,
+});
+check('new company settings contain no sample company, location, event, date, or financing offer',
+  Object.entries(EMPTY_COMPANY_SETTINGS).filter(([key]) => key !== 'agentTone').every(([, value]) => value === ''));
+check('legacy demo business defaults are replaced with onboarding facts',
+  profileSettings.companyName === 'Acme Roofing' && profileSettings.city === 'Phoenix');
+check('legacy storm and financing claims are cleared or derived from the profile',
+  !profileSettings.stormName && !profileSettings.stormDate && profileSettings.financingOptions === 'Financing available, ask us for details');
+const noFinancingSettings = settingsForTenant(oldSampleSettings, {
+  companyName: 'Acme Roofing', location: 'Phoenix', financing: false,
+});
+check('profile without financing receives no invented financing terms', !noFinancingSettings.financingOptions);
 
 console.log('\n[4] rate limiter');
 const now = 1_000_000;

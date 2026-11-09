@@ -20,7 +20,7 @@ export const BillingGateway: React.FC<{ view: string }> = ({ view }) => {
 
   if (!status) {
     return (
-      <div className="glass rounded-2xl p-6 md:p-8">
+      <div className="glass rounded-2xl p-4 md:p-5">
         <div className="flex items-start gap-3">
           <WifiOff className="h-6 w-6 shrink-0 text-gold" aria-hidden />
           <div>

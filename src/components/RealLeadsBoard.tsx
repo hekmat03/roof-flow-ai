@@ -40,7 +40,7 @@ export const RealLeadsBoard: React.FC = () => {
   const { state, leads, message, widgetKey } = result;
 
   return (
-    <div className="glass rounded-2xl p-5 md:p-6">
+    <div className="glass rounded-2xl p-5 md:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -198,7 +198,7 @@ export const RealLeadsBoard: React.FC = () => {
 const RealLeadDetail: React.FC<{ lead: RealLead; onClose: () => void }> = ({ lead, onClose }) => (
   <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm" onClick={onClose}>
     <div
-      className="w-full max-w-xl h-full overflow-y-auto glass-strong border-l border-slate-800 p-6 animate-slide-up"
+      className="w-full max-w-xl h-full overflow-y-auto glass-strong border-l border-slate-800 p-4 animate-slide-up"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-start justify-between gap-4 mb-5">

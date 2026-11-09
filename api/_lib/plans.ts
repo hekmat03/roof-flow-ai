@@ -2,6 +2,8 @@
 // The UI renders the server's /api/billing/status response.
 
 export type PlanId = 'free' | 'starter' | 'pro';
+export const EMAIL_DAILY_CAP = 100;
+export const EMAIL_MONTHLY_CAPS: Record<PlanId, number> = { free: 0, starter: 200, pro: 1000 };
 
 export interface Plan {
   id: PlanId;
@@ -27,7 +29,7 @@ export const PLANS: Record<PlanId, Plan> = {
       '20 chats per month',
       'Lead capture with validation',
     ],
-    capabilities: { chatbot: true, crm: false, otherAgents: false },
+    capabilities: { chatbot: true, crm: false, otherAgents: false, emailFollowups: false },
   },
   starter: {
     id: 'starter',
@@ -39,8 +41,9 @@ export const PLANS: Record<PlanId, Plan> = {
       'Everything in Free',
       '250 chats per month',
       'CRM leads board',
+      'Scheduled email follow-ups (200 per month, 100 per day)',
     ],
-    capabilities: { chatbot: true, crm: true, otherAgents: false },
+    capabilities: { chatbot: true, crm: true, otherAgents: false, emailFollowups: true },
   },
   pro: {
     id: 'pro',
@@ -52,15 +55,15 @@ export const PLANS: Record<PlanId, Plan> = {
       'Everything in Starter',
       '1,000 chats per month',
       'All agents and features',
+      'Scheduled email follow-ups (1,000 per month, 100 per day)',
     ],
-    capabilities: { chatbot: true, crm: true, otherAgents: true },
+    capabilities: { chatbot: true, crm: true, otherAgents: true, emailFollowups: true },
   },
 };
 
 export const NOT_INCLUDED_ANY_PLAN: string[] = [
   'Phone calls: Agent 2 is a simulation, no telephony provider is connected',
-  'SMS and email sending: messages are recorded, never delivered',
-  'Autonomous follow-ups: nothing runs on a schedule while you are away',
+  'SMS is not delivered; no SMS provider is connected',
 ];
 
 export const isPlanId = (v: unknown): v is PlanId =>

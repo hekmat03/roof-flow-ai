@@ -35,11 +35,11 @@ function check(label: string, ok: boolean, detail?: string) {
 }
 
 const ctx: AgentContext = {
-  companyName: 'RoofFlow AI Roofing',
-  city: 'Dallas-Fort Worth',
-  stormEvent: 'Great Hailstorm of 2026',
-  stormDate: 'May 15, 2026',
-  financingOptions: '0% APR for 12 months, or low-interest plans starting at $99/mo',
+  companyName: 'Acme Roofing',
+  city: 'Austin',
+  stormEvent: 'Configured Spring Hail Event',
+  stormDate: 'April 4, 2026',
+  financingOptions: 'Financing options available by request',
   agentTone: 'Professional, reassuring, hazard-focused, and highly helpful',
   leadName: 'Michael',
 };
@@ -92,6 +92,12 @@ const companyA = reply('chatbot', 'Hi there', { companyName: 'Lone Star Roofing'
   const companyB = reply('chatbot', 'Hi there', { companyName: 'Acme Shingles Co' });
   check('companyName changes the output (greeting embeds company)', companyA !== companyB, `${companyA} vs ${companyB}`);
   check('companyName actually appears in the greeting', /Lone Star Roofing/.test(companyA) && /Acme Shingles Co/.test(companyB));
+const noStormReply = generateAgentReply('chatbot', [{ role: 'user', content: 'Hello' }], {
+  companyName: 'Acme Roofing', city: 'Phoenix',
+});
+check('offline reply without an event excludes demo business, location, and storm wording',
+  !/Dallas|RoofFlow AI Roofing|Great Hailstorm|May 15|\bstorm\b|\bhail\b/i.test(noStormReply), noStormReply);
+check('offline reply uses the configured company name', /Acme Roofing/.test(noStormReply), noStormReply);
 const financeReply = reply('chatbot', "I can't afford the deductible right now");
 check('financingOptions is interpolated into finance replies', ctx.financingOptions !== undefined && financeReply.includes(ctx.financingOptions), financeReply);
 // Phone greeting embeds {{storm}} in BOTH variants → deterministic probe.

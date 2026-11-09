@@ -22,7 +22,7 @@ const mockDb: Supabase = {
   },
 };
 const mkEnv = (over: Partial<ToolEnv> = {}): ToolEnv => ({
-  db: null, tenantId: '11111111-1111-4111-8111-111111111111', sessionId: 'sess-12345678', optOuts: new Set(), allowedContacts: new Set(['5551234567', 'sam@gmail.com']), ...over,
+  db: null, tenantId: '11111111-1111-4111-8111-111111111111', sessionId: 'sess-12345678', optOuts: new Set(), allowedContacts: new Set(['5551234567', 'sam@gmail.com']), customerProvidedContacts: new Set(['5551234567', 'sam@gmail.com']), ...over,
 });
 const goodBook = { name: 'Sam Lee', phone: '(555) 123-4567', preferred_time: 'Tuesday morning', address_or_zip: '12 Palm St', issue: 'hail damage' };
 
@@ -52,33 +52,32 @@ check('book with DB: persisted', r.ok && r.persisted && !r.simulated && rows.at(
 r = await executeTool('book_inspection', goodBook, mkEnv({ allowedContacts: new Set() }));
 check('rejects contact the customer never provided', !r.ok && /not provided/.test(r.error || ''));
 r = await executeTool('send_message', { channel: 'sms', to: '5551234567', body: 'See you Tuesday' }, mkEnv());
-check('sms is always simulated (never claims delivery)', r.ok && r.simulated && r.status === 'simulated_sent');
+check('SMS is explicitly unsupported and never sent', !r.ok && /SMS is not supported/.test(r.error || ''));
 r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, mkEnv());
-check('email without provider key is simulated', r.ok && r.simulated);
+check('email without provider key is recorded only', r.ok && r.simulated && r.status === 'recorded_only');
 
 let sent: any = null;
 const fakeFetch = (async (url: string, init: any) => { sent = { url, body: JSON.parse(init.body), auth: init.headers.Authorization }; return { ok: true, json: async () => ({}) }; }) as any;
-// CONSTRAINT BOUNDARY: the owner's spec forbids email-sending services, so the
-// Resend integration was removed. These checks now pin that boundary: even if a
-// provider key were somehow present, nothing may be sent and no outbound
-// request may be made.
 r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, mkEnv({ fetchFn: fakeFetch, companyName: 'Acme' }));
-check('email is never really sent (no provider integration)', r.ok && r.simulated && r.status === 'simulated_sent');
-check('no outbound email request is made at all', sent === null);
+check('email without provider is recorded only', r.ok && r.simulated && r.status === 'recorded_only');
+check('provider is not called unless explicitly injected', sent === null);
 // A leftover RESEND_API_KEY in the environment must not re-enable sending.
 const legacyEnv = mkEnv({ fetchFn: fakeFetch }) as Record<string, unknown>;
 legacyEnv.resendKey = 'rk_legacy';
 legacyEnv.resendFrom = 'onboarding@resend.dev';
 r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, legacyEnv as never);
-check('a stray provider key cannot re-enable sending', r.ok && r.simulated && sent === null);
+check('a stray provider key cannot re-enable sending', r.ok && r.simulated && r.status === 'recorded_only' && sent === null);
+const contextOnly = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, mkEnv({ customerProvidedContacts: new Set() }));
+check('email from client context alone is rejected', !contextOnly.ok && /user message/.test(contextOnly.error || ''));
 
 const env = mkEnv({ db: mockDb });
-r = await executeTool('update_crm', { phone: '5551234567', status: 'Do Not Contact' }, env);
-check('opt-out recorded', r.ok && env.optOuts.has('5551234567'));
-r = await executeTool('send_message', { channel: 'sms', to: '5551234567', body: 'Still there?' }, env);
+r = await executeTool('update_crm', { phone: '5551234567', email: 'sam@gmail.com', status: 'Do Not Contact' }, env);
+check('opt-out recorded', r.ok && env.optOuts.has('5551234567') && env.optOuts.has('sam@gmail.com'));
+r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'Still there?' }, env);
 check('opted-out contact can no longer be messaged', !r.ok && r.error === 'contact opted out');
-r = await executeTool('schedule_followup', { channel: 'sms', contact: '5551234567', when_hours: 24 }, env);
+r = await executeTool('schedule_followup', { channel: 'email', contact: 'sam@gmail.com', when_hours: 24 }, env);
 check('opted-out contact cannot be scheduled', !r.ok);
+rows.length = 0; // isolate the persistence assertion from the opt-out fixture
 r = await executeTool('schedule_followup', { channel: 'email', contact: 'sam@gmail.com', when_hours: 24 }, mkEnv({ db: mockDb }));
 check('followup stored as "scheduled" (not sent)', r.ok && r.status === 'scheduled' && r.persisted);
 rows.length = 0; // clear opt-outs recorded by earlier tests

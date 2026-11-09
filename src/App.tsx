@@ -10,7 +10,6 @@ import { Agent3SMSEmail } from './components/Agent3SMSEmail';
 import { Agent4Estimate } from './components/Agent4Estimate';
 import { CRMLeadsBoard } from './components/CRMLeadsBoard';
 import { Configuration } from './components/Configuration';
-import { PromptPlayground } from './components/PromptPlayground';
 import { BillingGateway } from './components/BillingGateway';
 import { FallbackNotice } from './components/FallbackNotice';
 import { usePlan } from './lib/usePlan';
@@ -28,10 +27,14 @@ import { usePath } from './lib/router';
 import OnboardingWizard from './components/OnboardingWizard';
 
 function MainAppContent() {
-  const { activeTab: requestedTab } = useApp();
+  const { activeTab: requestedTab, refreshTenant } = useApp();
   const plan = usePlan();
   const { user, configured } = useAuth();
   const { status: onboarding, markComplete } = useOnboardingStatus(user?.id ?? null, configured);
+  const completeOnboarding = async () => {
+    await refreshTenant();
+    markComplete();
+  };
 
   const activeTab = canAccess(plan, requestedTab)
     ? requestedTab
@@ -39,7 +42,7 @@ function MainAppContent() {
 
   // One-time company info: asked only if this account has never completed it.
   if (onboarding === 'checking') return <FullScreenSpinner label="Loading your account…" />;
-  if (onboarding === 'needed') return <OnboardingWizard onComplete={markComplete} />;
+  if (onboarding === 'needed') return <OnboardingWizard onComplete={completeOnboarding} />;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -57,8 +60,6 @@ function MainAppContent() {
         return <CRMLeadsBoard />;
       case 'config':
         return <Configuration />;
-      case 'prompts':
-        return <PromptPlayground />;
       case 'pricing':
       case 'billing':
         return <BillingGateway view={activeTab} />;

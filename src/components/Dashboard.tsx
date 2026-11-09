@@ -1,24 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { useCountUp } from '../utils/useCountUp';
-import { AnalyticsCharts } from './AnalyticsCharts';
-import { canAccess } from '../lib/planAccess';
-import { usePlan } from '../lib/usePlan';
-import { 
-  Users, 
-  Calendar, 
-  TrendingUp, 
-  Zap, 
-  ArrowRight, 
-  MessageSquare, 
-  PhoneCall, 
-  MessageSquarePlus, 
-  FileText,
-  AlertTriangle,
-  BadgeDollarSign
-} from 'lucide-react';
-
-/** Maps a CRM status to its premium .st-* pill class (10 statuses). */
+import { useBilling } from '../context/BillingContext';
+/** Maps a CRM status to the shared status badge class. */
 export function statusPillClass(status: string): string {
   switch (status) {
     case 'New Lead': return 'st-new';
@@ -35,311 +18,57 @@ export function statusPillClass(status: string): string {
 }
 
 export const Dashboard: React.FC = () => {
-  const { leads, setActiveTab, companySettings } = useApp();
-  const plan = usePlan();
-
-  const totalLeads = leads.length;
-  const scheduledInspections = leads.filter(l => l.status === 'Inspection Scheduled').length;
-  const followUpLeads = leads.filter(l => l.status === 'Follow-up Nurture').length;
-
-  // Calculate a realistic pipeline estimation
-  // Assuming a 35% close rate on scheduled inspections and $12,000 average roof job value
-  const estimatedRevenue = scheduledInspections * 12000 * 0.35;
-  const bookingRate = totalLeads > 0 ? Math.round((scheduledInspections / totalLeads) * 100) : 0;
-
-  // Count-up animated KPIs
-  const animTotal = useCountUp(totalLeads);
-  const animScheduled = useCountUp(scheduledInspections);
-  const animFollowUp = useCountUp(followUpLeads);
-  const animRevenue = useCountUp(estimatedRevenue);
-
-  const agents = [
-    {
-      id: 'agent1',
-      number: '1',
-      title: 'Website Lead Chatbot',
-      description: 'Answers homeowners 24/7, checks their contact details and requests roof inspections.',
-      status: 'Active',
-      metric: `${totalLeads} lead${totalLeads === 1 ? '' : 's'} captured`,
-      color: 'from-gold to-gold-deep',
-      glow: 'shadow-gold/25',
-      icon: MessageSquare,
-    },
-    {
-      id: 'agent2',
-      number: '2',
-      title: 'Inbound Call Handler',
-      description: 'Simulated inbound call conversation; no real calls are made.',
-      status: 'Preview',
-      metric: 'Simulation only',
-      color: 'from-gold to-danger',
-      glow: 'shadow-gold/25',
-      icon: PhoneCall,
-    },
-    {
-      id: 'agent3',
-      number: '3',
-      title: 'SMS & Email Nurturer',
-      description: 'Simulated nurture conversation; no SMS or email is sent.',
-      status: 'Preview',
-      metric: 'Simulation only',
-      color: 'from-gold to-gold-deep',
-      glow: 'shadow-gold/25',
-      icon: MessageSquarePlus,
-    },
-    {
-      id: 'agent4',
-      number: '4',
-      title: 'Estimate Follow-up',
-      description: 'Simulated estimate follow-up and CRM updates; no outbound messages are sent.',
-      status: 'Preview',
-      metric: 'Simulation only',
-      color: 'from-gold to-danger',
-      glow: 'shadow-gold/25',
-      icon: FileText,
-    }
+  const { leads, setActiveTab } = useApp();
+  const { status: billingStatus } = useBilling();
+  const stats = [
+    { label: 'Captured leads', value: leads.length },
+    { label: 'Inspections scheduled', value: leads.filter(lead => lead.status === 'Inspection Scheduled').length },
+    { label: 'Estimates sent', value: leads.filter(lead => lead.status === 'Estimate Sent').length },
   ];
-
-  const kpis = [
-    {
-      label: 'Captured Leads',
-      value: Math.round(animTotal),
-      display: String(Math.round(animTotal)),
-      sub: '24/7 Automated capture',
-      subIcon: Zap,
-      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/20',
-      icon: Users,
-      iconColor: 'text-accent-400',
-    },
-    {
-      label: 'Inspections Scheduled',
-      value: Math.round(animScheduled),
-      display: String(Math.round(animScheduled)),
-      sub: `${bookingRate}% Lead-to-Booking Rate`,
-      subIcon: null,
-      chip: 'bg-gold/10 text-gold border border-gold/20',
-      icon: Calendar,
-      iconColor: 'text-accent-400',
-    },
-    {
-      label: 'Est. Pipeline Value',
-      value: Math.round(animRevenue),
-      display: `$${Math.round(animRevenue).toLocaleString()}`,
-      sub: 'Illustrative: 35% close × $12k job',
-      subIcon: null,
-      chip: 'bg-accent-500/10 text-accent-400 border border-accent-500/20',
-      icon: BadgeDollarSign,
-      iconColor: 'text-accent-400',
-    },
-  ];
+  const usage = billingStatus?.usage?.storage === 'ok' ? billingStatus.usage : null;
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <div className="glass hero-glow dashboard-hero rounded-3xl p-6 md:p-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-6 opacity-[0.07] animate-float-slow">
-          <TrendingUp className="h-44 w-44 md:h-56 md:w-56 text-accent-400" />
-        </div>
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex items-center gap-2 bg-accent-500/10 text-accent-300 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider border border-accent-500/25 animate-pop-in">
-            <Zap className="h-3 w-3" />
-            RoofFlow Console
-          </span>
-          <h2 className="text-fluid-hero font-extrabold text-ink mt-4 tracking-tight">
-            Capture More Storm Damage Leads with <span className="bg-gradient-to-r from-accent-300 via-accent-400 to-gold-deep bg-clip-text text-transparent">Your AI Chatbot</span>
-          </h2>
-          <p className="text-ink-soft mt-2 text-fluid-body leading-relaxed">
-            RoofFlow AI answers homeowners, checks their contact details, and requests roof inspections in the <span className="font-bold text-ink">{companySettings.city}</span> market, so leads from events like the <span className="font-bold text-ink">{companySettings.stormName}</span>.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-3 sm:space-y-0">
-            <button 
-              onClick={() => setActiveTab('agent1')}
-              className="btn-accent px-5 py-3 text-sm flex items-center justify-center gap-2 group"
-            >
-              Open Chatbot 
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-            </button>
-            <button 
-              onClick={() => setActiveTab('crm')}
-              className="btn-ghost px-5 py-3 text-sm flex items-center justify-center gap-2"
-            >
-              View Leads Board
-            </button>
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold text-ink">Dashboard</h1>
+
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Lead summary">
+        {stats.map(stat => (
+          <article key={stat.label} className="glass rounded-xl p-4">
+            <p className="text-xs font-medium text-ink-mute">{stat.label}</p>
+            <p className="mt-1 text-2xl font-bold font-mono text-ink">{stat.value}</p>
+          </article>
+        ))}
+      </section>
+
+      {usage && (
+        <section className="glass rounded-xl p-4" aria-label="Monthly chat usage">
+          <div className="flex items-center justify-between text-xs">
+            <h2 className="font-semibold text-ink">Chats used this month</h2>
+            <span className="font-mono text-ink-soft">{usage.used} / {usage.limit}</span>
           </div>
-        </div>
-      </div>
+          <progress className="mt-2 h-2 w-full accent-orange-500" value={Math.min(usage.used, usage.limit)} max={usage.limit || 1} aria-label={`${usage.used} of ${usage.limit} chats used`} />
+        </section>
+      )}
 
-      {/* Main KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-        {kpis.map((kpi) => {
-          const SubIcon = kpi.subIcon;
-          return (
-            <div key={kpi.label} className="glass dashboard-kpi card-hover rounded-2xl p-5 md:p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-ink-mute">{kpi.label}</p>
-                  <h3 className="text-3xl font-black font-mono text-ink mt-1 count-up-flash">{kpi.display}</h3>
-                </div>
-                <div className={`p-3 rounded-xl ${kpi.chip}`}>
-                  <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center text-xs text-ink-mute">
-                {SubIcon ? <SubIcon className="h-3.5 w-3.5 text-accent-400 mr-1" /> : null}
-                <span>{kpi.sub}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Live Analytics: Revenue Attribution + Conversion Funnel */}
-      <AnalyticsCharts />
-      {/* Plan access controls which agent previews are shown on the dashboard. */}
-      <div>
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div>
-            <h3 className="text-fluid-title font-bold text-ink">Your AI Chatbot</h3>
-            <p className="text-xs text-ink-mute mt-1">Talk to it the way a homeowner would, then check the lead in your CRM</p>
+      {leads.length === 0 ? (
+        <p className="glass rounded-xl p-4 text-sm text-ink-soft">No leads yet. Open Agent 1 and try a conversation.</p>
+      ) : (
+        <section className="glass rounded-xl p-4" aria-label="Recent leads">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-ink">Recent leads</h2>
+            <button type="button" onClick={() => setActiveTab('crm')} className="text-xs font-semibold text-accent-400 hover:text-accent-300">Open CRM</button>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-          {agents.filter((agent) => canAccess(plan, agent.id)).map((agent) => {
-            const Icon = agent.icon;
-            return (
-              <div 
-                key={agent.id}
-                className="glass dashboard-agent card-hover rounded-2xl p-6 flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${agent.color} shadow-lg ${agent.glow} group-hover:scale-105 transition-transform duration-200`}>
-                      <Icon className="h-5 w-5 text-gold-ink stroke-[2.5]" />
-                    </div>
-                    <span className="text-xs bg-card/70 border border-line/70 text-ink-mute font-mono font-bold px-2 py-0.5 rounded-md uppercase">
-                      Agent {agent.number}
-                    </span>
-                  </div>
-                  <h4 className="text-base font-bold text-ink group-hover:text-accent-300 transition-colors duration-200">
-                    {agent.title}
-                  </h4>
-                  {agent.id !== 'agent1' && (
-                    <span className="inline-flex mt-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                      Simulation preview
-                    </span>
-                  )}
-                  <p className="text-xs text-ink-mute mt-2 leading-relaxed">
-                    {agent.description}
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-line/70 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-ink-mute block font-semibold uppercase tracking-wider text-[9px]">Captured so far</span>
-                    <span className="text-ink font-bold font-mono">{agent.metric}</span>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab(agent.id)}
-                    className="btn-ghost px-3 py-2 rounded-lg flex items-center gap-1 text-xs"
-                  >
-                    Open
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Bottom Row: Recent Leads & Active Storm Warnings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Recent Leads (Left/Mid) */}
-        <div className="lg:col-span-2 glass card-hover rounded-2xl p-5 md:p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-bold text-ink">Latest Pipeline Inflow</h3>
-              <p className="text-xs text-ink-mute mt-0.5">Real-time leads automatically qualified by active agents</p>
-            </div>
-            <button 
-              onClick={() => setActiveTab('crm')}
-              className="text-xs text-accent-400 hover:text-accent-300 font-bold flex items-center gap-1.5 transition-colors hover:gap-2.5"
-            >
-              Open CRM Board
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {leads.length === 0 && (
-            <div className="py-10 text-center">
-              <div className="mx-auto h-12 w-12 rounded-2xl bg-inset/70 border border-line/70 flex items-center justify-center mb-3">
-                <Users className="h-5 w-5 text-ink-mute" />
-              </div>
-              <p className="text-sm font-semibold text-ink-soft">No leads captured yet</p>
-              <p className="text-xs text-ink-mute mt-1 max-w-xs mx-auto">
-                Chat with the chatbot — a real lead appears here instantly, with its full
-                conversation transcript. Nothing is pre-seeded.
-              </p>
-            </div>
-          )}
-
-          <div className="divide-y divide-line/70">
-            {leads.slice(0, 4).map((lead, idx) => (
-              <div key={lead.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0 gap-3 animate-slide-up" style={{ animationDelay: `${idx * 60}ms` }}>
-                <div className="flex items-center space-x-3.5 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-line-strong to-card border border-line/70 flex items-center justify-center font-bold text-accent-300 shrink-0 shadow-lg">
-                    {lead.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-ink truncate">{lead.name}</h4>
-                    <p className="text-xs text-ink-mute flex items-center gap-1.5 mt-0.5 truncate">
-                      <span>{lead.email}</span>
-                      <span className="text-ink-mute">•</span>
-                      <span>{lead.phone}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 shrink-0">
-                  <div className="text-right hidden sm:block">
-                    <span className="text-[10px] text-ink-mute block font-semibold uppercase tracking-wider">Acquired via</span>
-                    <span className="text-xs text-ink-soft font-medium">{lead.agentType}</span>
-                  </div>
-                  <span className={`status-pill ${statusPillClass(lead.status)}`}>
-                    {lead.status}
-                  </span>
-                </div>
-              </div>
+          <ul className="divide-y divide-line/70">
+            {leads.slice(0, 5).map(lead => (
+              <li key={lead.id} className="flex items-center justify-between gap-3 py-2 text-xs">
+                <span className="min-w-0 truncate text-ink">{lead.name}</span>
+                <span className={`status-pill shrink-0 ${statusPillClass(lead.status)}`}>{lead.status}</span>
+                <time className="shrink-0 text-ink-mute">{lead.chatLog[0]?.timestamp || '—'}</time>
+              </li>
             ))}
-          </div>
-        </div>
-
-        {/* Storm/Objection Focus (Right) */}
-        <div className="glass card-hover rounded-2xl p-5 md:p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center space-x-2 text-accent-400 mb-4 bg-accent-500/10 p-3 rounded-xl border border-accent-500/25">
-              <AlertTriangle className="h-5 w-5 stroke-[2.5]" />
-              <span className="text-xs font-bold uppercase tracking-wider">Storm Objection Vector</span>
-            </div>
-            <h3 className="text-base font-bold text-ink">Local Target Event Analysis</h3>
-            <p className="text-xs text-ink-mute mt-2 leading-relaxed">
-              AI agents are currently programmed to inject references to the <span className="text-ink font-bold">{companySettings.stormName}</span> that impacted the <span className="text-ink font-bold">{companySettings.city}</span> region on <span className="text-ink font-bold">{companySettings.stormDate}</span>.
-            </p>
-            <div className="bg-card/60 p-3.5 rounded-xl border border-line/80 text-xs text-ink-soft mt-4 space-y-2 font-mono leading-relaxed">
-              <p className="text-accent-400 font-bold uppercase tracking-wider text-[9px] mb-1">Active AI Objection Script</p>
-              {`Most insurance policies have a 1-year filing limit from the event date (${companySettings.stormDate}). We provide a free inspection report so you don't miss the deadline.`}
-            </div>
-          </div>
-
-          <button 
-            onClick={() => setActiveTab('config')}
-            className="w-full mt-6 btn-ghost text-xs py-3"
-          >
-            Adjust Target Event Settings
-          </button>
-        </div>
-      </div>
+          </ul>
+        </section>
+      )}
     </div>
   );
 };

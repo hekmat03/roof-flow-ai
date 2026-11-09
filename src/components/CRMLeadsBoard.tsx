@@ -222,7 +222,7 @@ export const CRMLeadsBoard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-white">CRM Leads Board</h2>
+          <h2 className="text-xl font-black text-white">CRM Leads Board</h2>
           <p className="text-xs text-slate-400 mt-1">Every lead your agents capture, with its full conversation.</p>
         </div>
         <button

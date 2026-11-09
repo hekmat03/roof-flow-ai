@@ -40,7 +40,7 @@ const makeDb = () => {
 /** A fresh env each time = a cold start: nothing in memory, only the database remembers. */
 const envFor = (db: Supabase, tenantId: string, over: Partial<ToolEnv> = {}): ToolEnv => ({
   db, tenantId, sessionId: scopedSessionId(tenantId, 'sess-12345678'), optOuts: new Set(),
-  allowedContacts: new Set([PHONE, EMAIL]), ...over,
+  allowedContacts: new Set([PHONE, EMAIL]), customerProvidedContacts: new Set([PHONE, EMAIL]), ...over,
 });
 const book = { name: 'Sam Lee', phone: '(555) 123-4567', email: EMAIL, preferred_time: 'Tuesday', address_or_zip: '12 Palm St', issue: 'hail damage' };
 
@@ -49,8 +49,8 @@ console.log('\n[1] every row the agent writes carries the company');
   const { db, tables } = makeDb();
   const env = envFor(db, TENANT_A);
   await executeTool('book_inspection', book, env);
-  await executeTool('send_message', { channel: 'sms', to: PHONE, body: 'See you Tuesday' }, env);
-  await executeTool('schedule_followup', { channel: 'sms', contact: PHONE, when_hours: 24 }, env);
+  await executeTool('send_message', { channel: 'email', to: EMAIL, body: 'See you Tuesday' }, env);
+  await executeTool('schedule_followup', { channel: 'email', contact: EMAIL, when_hours: 24 }, env);
   await executeTool('update_crm', { phone: PHONE, name: 'Sam Lee', note: 'hi there' }, env);
   await executeTool('update_crm', { phone: PHONE, email: EMAIL, status: 'Do Not Contact' }, env);
   for (const t of ['inspection_requests', 'messages', 'followups', 'leads', 'contact_optouts']) {
@@ -63,10 +63,10 @@ console.log('\n[1] every row the agent writes carries the company');
 console.log('\n[2] opt-out is durable (survives a cold start)');
 {
   const { db, tables } = makeDb();
-  await executeTool('update_crm', { phone: PHONE, status: 'Do Not Contact' }, envFor(db, TENANT_A));
+  await executeTool('update_crm', { phone: PHONE, email: EMAIL, status: 'Do Not Contact' }, envFor(db, TENANT_A));
   const coldStart = envFor(db, TENANT_A); // empty in-memory set, like a fresh serverless instance
   check('cold-start env has nothing in memory', coldStart.optOuts.size === 0);
-  const r = await executeTool('send_message', { channel: 'sms', to: PHONE, body: 'Still there?' }, coldStart);
+  const r = await executeTool('send_message', { channel: 'email', to: EMAIL, body: 'Still there?' }, coldStart);
   check('opted-out contact is still blocked after a "restart"', !r.ok && r.error === 'contact opted out');
   check('nothing was written for the blocked message', (tables.messages ?? []).length === 0);
 }
@@ -86,19 +86,19 @@ console.log('\n[3] opt-out stores BOTH phone and email');
 console.log('\n[4] opt-outs are per company');
 {
   const { db, tables } = makeDb();
-  await executeTool('update_crm', { phone: PHONE, status: 'Do Not Contact' }, envFor(db, TENANT_A));
-  const b = await executeTool('send_message', { channel: 'sms', to: PHONE, body: 'Quick roof check?' }, envFor(db, TENANT_B));
+  await executeTool('update_crm', { phone: PHONE, email: EMAIL, status: 'Do Not Contact' }, envFor(db, TENANT_A));
+  const b = await executeTool('send_message', { channel: 'email', to: EMAIL, body: 'Quick roof check?' }, envFor(db, TENANT_B));
   check("company A's opt-out does NOT block company B", b.ok);
   check("company B's message is stamped company B", (tables.messages ?? []).every((r) => r.tenant_id === TENANT_B));
-  const a = await executeTool('send_message', { channel: 'sms', to: PHONE, body: 'Quick roof check?' }, envFor(db, TENANT_A));
+  const a = await executeTool('send_message', { channel: 'email', to: EMAIL, body: 'Quick roof check?' }, envFor(db, TENANT_A));
   check('company A is still blocked', !a.ok);
 }
 
 console.log('\n[5] legacy opt-outs (no company) still block everyone');
 {
   const { db, tables } = makeDb();
-  tables.contact_optouts = [{ contact: PHONE, tenant_id: null }];
-  const r = await executeTool('send_message', { channel: 'sms', to: PHONE, body: 'Hello there' }, envFor(db, TENANT_B));
+  tables.contact_optouts = [{ contact: EMAIL, tenant_id: null }];
+  const r = await executeTool('send_message', { channel: 'email', to: EMAIL, body: 'Hello there' }, envFor(db, TENANT_B));
   check('an opt-out recorded before tenant scoping is honoured', !r.ok && r.error === 'contact opted out');
 }
 
@@ -106,9 +106,9 @@ console.log('\n[6] fails CLOSED when the opt-out list cannot be read');
 {
   const { db, tables, breakOptOutCheck } = makeDb();
   breakOptOutCheck();
-  const send = await executeTool('send_message', { channel: 'sms', to: PHONE, body: 'Hello there' }, envFor(db, TENANT_A));
+  const send = await executeTool('send_message', { channel: 'email', to: EMAIL, body: 'Hello there' }, envFor(db, TENANT_A));
   const bookR = await executeTool('book_inspection', book, envFor(db, TENANT_A));
-  const fu = await executeTool('schedule_followup', { channel: 'sms', contact: PHONE, when_hours: 24 }, envFor(db, TENANT_A));
+  const fu = await executeTool('schedule_followup', { channel: 'email', contact: EMAIL, when_hours: 24 }, envFor(db, TENANT_A));
   check('send_message blocked on storage error', !send.ok && send.error === 'storage_error');
   check('book_inspection blocked on storage error', !bookR.ok && bookR.error === 'storage_error');
   check('schedule_followup blocked on storage error', !fu.ok && fu.error === 'storage_error');
