@@ -63,7 +63,7 @@ export function createEmailActions(o: {
       businessAddress: businessAddress || undefined, unsubscribeUrl,
       idempotencyKey: `single/${o.tenantId}/${idempotencyHash}`,
     }));
-    if (!result.ok) {
+    if (result.ok === false) {
       await o.store.releaseUsage();
       await o.store.insertMessage({ tenant_id: o.tenantId, session_id: o.sessionId, channel: 'email', recipient: input.to, subject: input.subject, body: input.body, status: 'failed' });
       return fail(result.error || 'email_provider_error');
