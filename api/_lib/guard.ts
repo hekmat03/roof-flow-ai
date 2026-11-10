@@ -44,7 +44,7 @@ export async function guardChat(
   let tenantId: string | null = null;
   if (opts.requireTenant) {
     const t = await lookupTenant(admin, user.id);
-    if (!t.ok) {
+    if (t.ok === false) {
       res.status(t.status).json({ error: t.error, code: t.code });
       return null;
     }
