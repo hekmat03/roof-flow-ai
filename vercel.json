@@ -1,7 +1,7 @@
 
 {
   "crons": [
-    { "path": "/api/cron/send-followups", "schedule": "0 13 * * *" }
+    { "path": "/api/cron/send-followups", "schedule": "*/15 * * * *" }
   ],
   "rewrites": [
     {
