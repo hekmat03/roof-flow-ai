@@ -41,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = await userFromRequest(req);
   if (!user) return json(res, 401, { error: 'unauthenticated' });
   const tenant = await lookupTenant(admin, user.id);
-  if (!tenant.ok) return json(res, tenant.status, { error: tenant.code });
+  if (tenant.ok === false) return json(res, tenant.status, { error: tenant.code });
   const plan = effectivePlan(await getProfile(admin, user.id));
   if (plan === 'free') return json(res, 403, { error: 'Email follow-ups require Starter or Pro.', code: 'upgrade_required', plan });
   const cap = EMAIL_MONTHLY_CAPS[plan];
@@ -204,4 +204,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('followups API error:', error instanceof Error ? error.message : 'unknown');
     return json(res, 503, { error: 'Follow-up service unavailable. Confirm migration 009 is installed.' });
   }
-}
+        }
