@@ -33,7 +33,7 @@ function createStore(): LeadStore | null {
     },
     async resolveUserTenant(userId) {
       const tenant = await lookupTenant(admin, userId);
-      if (tenant.ok) return tenant.tenantId;
+      if (tenant.ok === true) return tenant.tenantId;
       if (tenant.status === 503) throw new Error('tenant_lookup_failed');
       return null;
     },
@@ -49,7 +49,7 @@ function createStore(): LeadStore | null {
         .order('created_at', { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return (data ?? []) as Array<Record<string, unknown>>;
+      return (data ?? []) as unknown as Array<Record<string, unknown>>;
     },
     async insert(tenantId, lead, userAgent, score) {
       const { data, error } = await admin.from('leads').insert({
