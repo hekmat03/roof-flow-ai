@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const auth = await authenticateRequest(req);
-    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+    if (auth.ok === false) return res.status(auth.status).json({ error: auth.error });
     const connection = await getCalendarConnection(auth.profile.tenantId);
     const { clientId, clientSecret } = googleConfig();
     return res.status(200).json({
