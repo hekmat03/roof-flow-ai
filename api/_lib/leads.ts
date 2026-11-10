@@ -39,15 +39,15 @@ export function parseWidgetLead(value: unknown): ParseResult {
   if (!WIDGET_KEY_RE.test(widgetKey)) return { ok: false, field: 'widget_key', message: 'This widget is not configured correctly.' };
 
   const name = validateName(input.name);
-  if (!name.ok) return { ok: false, field: 'name', message: name.error };
+  if (name.ok === false) return { ok: false, field: 'name', message: name.error };
 
   const phoneRaw = clean(input.phone, 32);
   const emailRaw = clean(input.email, 254);
   const phone = phoneRaw ? validatePhone(phoneRaw) : null;
   const email = emailRaw ? validateEmail(emailRaw) : null;
   if (!phoneRaw && !emailRaw) return { ok: false, field: 'contact', message: 'Please give us a phone number or email address.' };
-  if (phone && !phone.ok) return { ok: false, field: 'phone', message: phone.error };
-  if (email && !email.ok) return { ok: false, field: 'email', message: email.error };
+  if (phone && phone.ok === false) return { ok: false, field: 'phone', message: phone.error };
+  if (email && email.ok === false) return { ok: false, field: 'email', message: email.error };
 
   const zip = clean(input.zip_code, 10) || 'N/A';
   if (zip !== 'N/A' && !/^\d{5}$/.test(zip)) return { ok: false, field: 'zip_code', message: 'Enter a 5-digit ZIP code, or N/A.' };
@@ -73,8 +73,8 @@ export function parseWidgetLead(value: unknown): ParseResult {
     widgetKey,
     lead: {
       name: name.value,
-      phone: phone?.ok ? phoneRaw : null,
-      email: email?.ok ? email.value : null,
+      phone: phone?.ok === true ? phoneRaw : null,
+      email: email?.ok === true ? email.value : null,
       zip_code: zip,
       roofing_need: roofingNeed,
       consent: true,
@@ -141,7 +141,7 @@ export async function handleLeadsRequest(request: Request, deps: LeadsApiDepende
     try { body = await request.json(); }
     catch { return json({ ok: false, error: 'bad_json' }, 400, PUBLIC_HEADERS); }
     const parsed = parseWidgetLead(body);
-    if (!parsed.ok) return json({ ok: false, error: 'validation', field: parsed.field, message: parsed.message }, 400, PUBLIC_HEADERS);
+    if (parsed.ok === false) return json({ ok: false, error: 'validation', field: parsed.field, message: parsed.message }, 400, PUBLIC_HEADERS);
     if (!deps.configured) return json({ ok: false, error: 'database_not_configured' }, 503, PUBLIC_HEADERS);
     try {
       const tenantId = await deps.store.resolveWidgetKey(parsed.widgetKey);
@@ -173,11 +173,11 @@ export async function handleLeadsRequest(request: Request, deps: LeadsApiDepende
         return safeRow;
       });
       const widgetKey = await deps.store.resolveWidgetKeyForTenant(tenantId);
-      return json({ ok: true, leads, count: leads.length, widget_key: widgetKey ?? null });
+      return json({ ok: true, leads, count: leads.length, widget_key: widgetKey ?? null }, 200);
     } catch {
       return json({ ok: false, error: 'storage_error' }, 503);
     }
   }
 
   return json({ ok: false, error: 'method_not_allowed' }, 405, { Allow: 'GET, POST, OPTIONS' });
-}
+  }
