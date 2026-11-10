@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const auth = await authenticateRequest(req);
-    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+    if (auth.ok === false) return res.status(auth.status).json({ error: auth.error });
     const { clientId, clientSecret } = googleConfig();
     if (!clientId || !clientSecret) {
       return res.status(503).json({ error: 'Google Calendar OAuth is not configured on the server yet.' });
