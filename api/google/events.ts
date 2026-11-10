@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const auth = await authenticateRequest(req);
-    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+    if (auth.ok === false) return res.status(auth.status).json({ error: auth.error });
 
     const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>;
     const issue = typeof body.issue === 'string' ? body.issue.trim() : '';
