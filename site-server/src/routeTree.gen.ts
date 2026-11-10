@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiWidgetReplyRouteImport } from './routes/api/widget-reply'
 import { Route as ApiSupabaseHealthRouteImport } from './routes/api/supabase-health'
 import { Route as ApiPlansRouteImport } from './routes/api/plans'
+import { Route as ApiLemonWebhookRouteImport } from './routes/api/lemon-webhook'
 import { Route as ApiLeadsRouteImport } from './routes/api/leads'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiBillingStatusRouteImport } from './routes/api/billing.status'
@@ -40,6 +41,11 @@ const ApiSupabaseHealthRoute = ApiSupabaseHealthRouteImport.update({
 const ApiPlansRoute = ApiPlansRouteImport.update({
   id: '/api/plans',
   path: '/api/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLemonWebhookRoute = ApiLemonWebhookRouteImport.update({
+  id: '/api/lemon-webhook',
+  path: '/api/lemon-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLeadsRoute = ApiLeadsRouteImport.update({
@@ -86,6 +92,7 @@ const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/leads': typeof ApiLeadsRoute
+  '/api/lemon-webhook': typeof ApiLemonWebhookRoute
   '/api/plans': typeof ApiPlansRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/widget-reply': typeof ApiWidgetReplyRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/leads': typeof ApiLeadsRoute
+  '/api/lemon-webhook': typeof ApiLemonWebhookRoute
   '/api/plans': typeof ApiPlansRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/widget-reply': typeof ApiWidgetReplyRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/leads': typeof ApiLeadsRoute
+  '/api/lemon-webhook': typeof ApiLemonWebhookRoute
   '/api/plans': typeof ApiPlansRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/widget-reply': typeof ApiWidgetReplyRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/leads'
+    | '/api/lemon-webhook'
     | '/api/plans'
     | '/api/supabase-health'
     | '/api/widget-reply'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/api/leads'
+    | '/api/lemon-webhook'
     | '/api/plans'
     | '/api/supabase-health'
     | '/api/widget-reply'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/api/leads'
+    | '/api/lemon-webhook'
     | '/api/plans'
     | '/api/supabase-health'
     | '/api/widget-reply'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiLeadsRoute: typeof ApiLeadsRoute
+  ApiLemonWebhookRoute: typeof ApiLemonWebhookRoute
   ApiPlansRoute: typeof ApiPlansRoute
   ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
   ApiWidgetReplyRoute: typeof ApiWidgetReplyRoute
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/api/plans'
       fullPath: '/api/plans'
       preLoaderRoute: typeof ApiPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lemon-webhook': {
+      id: '/api/lemon-webhook'
+      path: '/api/lemon-webhook'
+      fullPath: '/api/lemon-webhook'
+      preLoaderRoute: typeof ApiLemonWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/leads': {
@@ -278,6 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiLeadsRoute: ApiLeadsRoute,
+  ApiLemonWebhookRoute: ApiLemonWebhookRoute,
   ApiPlansRoute: ApiPlansRoute,
   ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
   ApiWidgetReplyRoute: ApiWidgetReplyRoute,

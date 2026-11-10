@@ -564,26 +564,45 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .animate-slideDown { animation: slide-down 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-slideLeft { animation: slide-left 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* Theme toggle button */
+/* Theme toggle — icon-led round button, gold-tinted so it reads as a control */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--rf-line);
-  background: var(--rf-card);
-  color: var(--rf-ink);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 40px;
   min-height: 40px;
+  padding: 0;
+  border-radius: 9999px;
+  border: 1px solid rgb(212 175 55 / 0.45);
+  background: rgb(212 175 55 / 0.14);
+  color: var(--rf-gold-deep);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.15s ease;
+}
+.theme-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
 }
 .theme-toggle:hover {
+  background: rgb(212 175 55 / 0.24);
   border-color: var(--rf-gold);
+  color: var(--rf-gold-deep);
   transform: translateY(-1px);
+  box-shadow: 0 8px 20px -14px rgb(212 175 55 / 0.75);
+}
+.theme-toggle:active {
+  transform: translateY(0) scale(0.96);
+}
+@media (min-width: 640px) {
+  .theme-toggle { padding: 0 0.9rem; }
 }
 
 /* =============================================================
@@ -643,16 +662,6 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
 .roofflow-shell a:focus-visible {
   outline: 2px solid var(--rf-gold);
   outline-offset: 3px;
-}
-
-.theme-toggle {
-  color: var(--rf-ink-soft);
-  background: var(--rf-inset);
-  border-color: var(--rf-line);
-}
-.theme-toggle:hover {
-  color: var(--rf-gold);
-  border-color: var(--rf-gold);
 }
 
 /* Dashboard visual hierarchy */
