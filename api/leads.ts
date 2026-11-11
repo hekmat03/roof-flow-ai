@@ -2,7 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { handleLeadsRequest, LEAD_COLUMNS, type LeadStore } from './_lib/leads.js';
 import { adminClient } from './_lib/supabaseAdmin.js';
 import { lookupTenant } from './_lib/tenant.js';
-import { enforceRateLimit } from './_lib/rateLimit.js';
+import { enforceRateLimit, rateLimitRpcAllowed } from './_lib/rateLimit.js';
+import { createResendProvider } from './_lib/email.js';
+import { sendLeadConfirmation } from './_lib/emailConfirm.js';
 
 function toWebRequest(req: VercelRequest): Request {
   const host = req.headers.host ?? 'localhost';
@@ -95,6 +97,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await admin.auth.getUser(token);
       if (error || !data.user?.email_confirmed_at) return null;
       return { id: data.user.id };
+    },
+    afterInsert: async ({ tenantId, leadId, email }) => {
+      const admin = adminClient();
+      if (!admin || !email) return;
+      await sendLeadConfirmation({
+        provider: createResendProvider(process.env.EMAIL_PROVIDER_API_KEY),
+        from: process.env.EMAIL_FROM,
+        baseUrl: process.env.APP_BASE_URL,
+        sessionSecret: process.env.SESSION_SECRET,
+        lead: { id: leadId, tenantId, email },
+        store: {
+          async isSuppressed(tid, addr) {
+            const { data, error } = await admin.from('email_suppressions').select('email').eq('tenant_id', tid).eq('email', addr).maybeSingle();
+            if (error) throw error;
+            return Boolean(data);
+          },
+          async companyInfo(tid) {
+            const { data: owner } = await admin.from('profiles').select('user_id').eq('tenant_id', tid).limit(1).maybeSingle();
+            if (!owner?.user_id) return { companyName: '', businessAddress: null };
+            const { data } = await admin.from('contractor_profiles').select('company_name,business_address').eq('user_id', owner.user_id).maybeSingle();
+            return {
+              companyName: typeof data?.company_name === 'string' ? data.company_name : '',
+              businessAddress: typeof data?.business_address === 'string' ? data.business_address : null,
+            };
+          },
+          async allow(key, limit, windowSeconds) {
+            try {
+              const { data, error } = await admin.rpc('consume_rate_limit', { p_key: key, p_limit: limit, p_window_seconds: windowSeconds });
+              return rateLimitRpcAllowed(data, error) === true;
+            } catch { return false; }
+          },
+        },
+      });
     },
     store: store ?? {
       resolveWidgetKey: async () => null,
