@@ -1,4 +1,3 @@
-
 {
   "crons": [
     { "path": "/api/cron/send-followups", "schedule": "0 3 * * *" }
