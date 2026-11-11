@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     async getContext(message) {
       if (!message.lead_id) return null;
       const [{ data: lead, error: leadError }, { data: userProfile, error: userError }] = await Promise.all([
-        admin.from('leads').select('email,status,consent,conversation').eq('id', message.lead_id).eq('tenant_id', message.tenant_id).maybeSingle(),
+        admin.from('leads').select('email,status,consent,conversation,email_verified_at').eq('id', message.lead_id).eq('tenant_id', message.tenant_id).maybeSingle(),
         admin.from('profiles').select('user_id,current_plan,subscription_status,current_period_end').eq('tenant_id', message.tenant_id).maybeSingle(),
       ]);
       if (leadError || userError) throw leadError || userError;
@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return {
         plan: effectivePlan(userProfile), leadStatus: typeof lead.status === 'string' ? lead.status : null,
         leadEmail: typeof lead.email === 'string' ? lead.email : null,
-        emailWasProvidedByLead: lead.consent === true && emailProvided(lead.conversation, message.to_email),
+        emailWasProvidedByLead: lead.consent === true && lead.email_verified_at != null && emailProvided(lead.conversation, message.to_email),
         suppressed: Boolean(suppression || legacyOptout), companyName: tidy(profile?.company_name) || 'Your roofing company',
         businessAddress: typeof profile?.business_address === 'string' ? profile.business_address : null,
         contractorEmail: typeof profile?.email === 'string' ? profile.email : null,
