@@ -124,3 +124,46 @@ export function emailEnvelope(o: {
     } } : {}),
   };
 }
+
+// ---- Lead email confirmation (double opt-in) ------------------------------
+// Domain-separated from unsubscribe tokens: the HMAC input is prefixed with a
+// purpose string, so a token minted for one purpose never verifies for another
+// even though both use the same secret.
+const CONFIRM_PURPOSE = 'lead-confirm-v1:';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export interface LeadConfirmPayload { leadId: string; tenantId: string; email: string; expiresAt: number }
+
+export function signLeadConfirmToken(payload: LeadConfirmPayload, secret: string): string {
+  const body = Buffer.from(JSON.stringify({
+    leadId: payload.leadId,
+    tenantId: payload.tenantId,
+    email: payload.email.trim().toLowerCase(),
+    expiresAt: payload.expiresAt,
+  })).toString('base64url');
+  const signature = createHmac('sha256', secret).update(CONFIRM_PURPOSE + body).digest('base64url');
+  return `${body}.${signature}`;
+}
+
+export function verifyLeadConfirmToken(
+  token: string,
+  secret: string,
+  now = Date.now(),
+): Omit<LeadConfirmPayload, 'expiresAt'> | null {
+  if (typeof token !== 'string' || token.length > 2048 || !secret) return null;
+  const [body, signature, extra] = token.split('.');
+  if (!body || !signature || extra) return null;
+  const expected = createHmac('sha256', secret).update(CONFIRM_PURPOSE + body).digest();
+  const supplied = Buffer.from(signature, 'base64url');
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+  try {
+    const value: unknown = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!value || typeof value !== 'object') return null;
+    const row = value as Record<string, unknown>;
+    if (typeof row.leadId !== 'string' || typeof row.tenantId !== 'string' || typeof row.email !== 'string' ||
+        typeof row.expiresAt !== 'number' || row.expiresAt <= now ||
+        !UUID_PATTERN.test(row.leadId) || !UUID_PATTERN.test(row.tenantId) ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) return null;
+    return { leadId: row.leadId, tenantId: row.tenantId, email: row.email.toLowerCase() };
+  } catch { return null; }
+}
