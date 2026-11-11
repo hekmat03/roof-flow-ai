@@ -108,6 +108,8 @@ export interface LeadsApiDependencies {
   configured: boolean;
   authenticate(accessToken: string): Promise<{ id: string } | null>;
   store: LeadStore;
+  /** Best-effort hook after a widget lead is saved (e.g. send the email confirmation). Never fails the request. */
+  afterInsert?(info: { tenantId: string; leadId: string; email: string | null }): Promise<void>;
 }
 
 const json = (body: unknown, status: number, headers: Record<string, string> = {}): Response =>
@@ -148,6 +150,10 @@ export async function handleLeadsRequest(request: Request, deps: LeadsApiDepende
       if (!isUuid(tenantId)) return json({ ok: false, error: 'invalid_widget' }, 404, PUBLIC_HEADERS);
       const userAgent = clean(request.headers.get('user-agent'), 300) || null;
       const row = await deps.store.insert(tenantId, parsed.lead, userAgent, scoreLead(parsed.lead));
+      if (deps.afterInsert) {
+        try { await deps.afterInsert({ tenantId, leadId: row.id, email: parsed.lead.email }); }
+        catch { /* the lead is saved; confirmation is best effort */ }
+      }
       return json({ ok: true, id: row.id, score: row.lead_score }, 201, PUBLIC_HEADERS);
     } catch {
       return json({ ok: false, error: 'storage_error', message: 'We could not save that request. Please try again.' }, 503, PUBLIC_HEADERS);
