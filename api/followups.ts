@@ -112,11 +112,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const leadId = tidy(req.body?.leadId);
     if (!UUID_RE.test(leadId)) return json(res, 400, { error: 'invalid_lead_id' });
     const { data: lead, error: leadError } = await admin.from('leads')
-      .select('id,tenant_id,name,email,status,consent,conversation,note')
+      .select('id,tenant_id,name,email,status,consent,conversation,note,email_verified_at')
       .eq('id', leadId).eq('tenant_id', tenant.tenantId).maybeSingle();
     if (leadError) throw leadError;
     if (!lead || !EMAIL_RE.test(tidy(lead.email)) || lead.consent !== true || !emailInLeadConversation(lead.conversation, tidy(lead.email))) {
       return json(res, 400, { error: 'A consented lead with an email provided in conversation is required.' });
+    }
+    if (!lead.email_verified_at) {
+      return json(res, 409, { error: 'This lead has not confirmed their email address yet.', code: 'email_not_verified' });
     }
     const { data: suppression, error: suppressError } = await admin.from('email_suppressions').select('email')
       .eq('tenant_id', tenant.tenantId).eq('email', tidy(lead.email).toLowerCase()).maybeSingle();
