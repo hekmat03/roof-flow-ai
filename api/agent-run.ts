@@ -120,10 +120,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return { companyName: typeof data?.company_name === 'string' ? data.company_name : 'Your roofing company', contractorEmail: typeof data?.email === 'string' ? data.email : null, businessAddress: typeof data?.business_address === 'string' ? data.business_address : null };
     },
     async findLead(email) {
-      const { data, error } = await admin.from('leads').select('id,email,status,consent,conversation').eq('tenant_id', guard.tenantId).eq('email', email.toLowerCase()).limit(1).maybeSingle();
+      const { data, error } = await admin.from('leads').select('id,email,status,consent,conversation,email_verified_at').eq('tenant_id', guard.tenantId).eq('email', email.toLowerCase()).limit(1).maybeSingle();
       if (error) throw error;
       const turns = Array.isArray(data?.conversation) ? data.conversation : [];
-      const emailWasProvidedByLead = turns.some((turn: unknown) => {
+      const emailWasProvidedByLead = data?.email_verified_at != null && turns.some((turn: unknown) => {
         if (!turn || typeof turn !== 'object') return false;
         const row = turn as Record<string, unknown>;
         return typeof row.sender === 'string' && ['user', 'homeowner', 'visitor'].includes(row.sender.toLowerCase()) && typeof row.text === 'string' && row.text.toLowerCase().includes(email.toLowerCase());
