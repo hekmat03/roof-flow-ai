@@ -155,8 +155,15 @@ const p = (current_plan: string, subscription_status: string, current_period_end
 check('no profile -> free', effectivePlan(null, NOW) === 'free');
 check('pro + active -> pro', effectivePlan(p('pro', 'active'), NOW) === 'pro');
 check('pro + past_due -> pro', effectivePlan(p('pro', 'past_due'), NOW) === 'pro');
+check('pro + on_trial -> pro', effectivePlan(p('pro', 'on_trial'), NOW) === 'pro');
 check('pro + expired -> free', effectivePlan(p('pro', 'expired'), NOW) === 'free');
 check('pro + paused -> free', effectivePlan(p('pro', 'paused'), NOW) === 'free');
+check('pro + unpaid -> free', effectivePlan(p('pro', 'unpaid'), NOW) === 'free');
+check('pro + none -> free', effectivePlan(p('pro', 'none'), NOW) === 'free');
+check('pro + empty status -> free', effectivePlan(p('pro', ''), NOW) === 'free');
+check('pro + unknown status -> free (fail closed, not the paid plan)', effectivePlan(p('pro', 'weird'), NOW) === 'free');
+check('starter + unknown status -> free (fail closed)', effectivePlan(p('starter', 'status_from_the_future'), NOW) === 'free');
+check('cancelled with unparseable period end -> free', effectivePlan(p('pro', 'cancelled', 'not-a-date'), NOW) === 'free');
 check('starter + cancelled, period left -> starter', effectivePlan(p('starter', 'cancelled', FUTURE), NOW) === 'starter');
 check('starter + cancelled, period over -> free', effectivePlan(p('starter', 'cancelled', PAST), NOW) === 'free');
 check('garbage plan value -> free', effectivePlan(p('enterprise', 'active'), NOW) === 'free');
