@@ -22,11 +22,15 @@ const fakeRes = () => {
 console.log('Rate limit');
 check('limit is 10 per minute', RATE_LIMIT_PER_MINUTE === 10);
 check('reads client ip', clientIp(fakeReq('1.2.3.4')) === '1.2.3.4');
+// Unique key per run: when SUPABASE_* is present the limiter counts in the shared
+// Postgres table, whose bucket survives 60s — a fixed key made a second run inside
+// the same minute fail with a stale count.
+const RL_IP = `198.18.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
 let lastAllowed = true, res = fakeRes();
-for (let i = 0; i < 10; i++) { res = fakeRes(); lastAllowed = await enforceRateLimit(fakeReq('9.9.9.9'), res as never, 'test'); }
+for (let i = 0; i < 10; i++) { res = fakeRes(); lastAllowed = await enforceRateLimit(fakeReq(RL_IP), res as never, 'test'); }
 check('10th request allowed', lastAllowed === true && res.code === 0);
 res = fakeRes();
-const eleventh = await enforceRateLimit(fakeReq('9.9.9.9'), res as never, 'test');
+const eleventh = await enforceRateLimit(fakeReq(RL_IP), res as never, 'test');
 check('11th request blocked with 429', eleventh === false && res.code === 429);
 check('sends Retry-After', res.headers['Retry-After'] === '60');
 res = fakeRes();
