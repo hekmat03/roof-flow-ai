@@ -45,14 +45,19 @@ export function effectivePlan(
 
   const status = p.subscription_status ?? '';
 
-  if (['expired', 'unpaid', 'paused', 'none'].includes(status)) return 'free';
+  // Allowlist, mirroring entitlement() in lemon.ts: only the statuses Lemon Squeezy
+  // treats as granting access keep the paid plan. Anything unrecognised fails closed.
+  // past_due keeps access while Lemon Squeezy retries the card.
+  if (['active', 'on_trial', 'past_due'].includes(status)) return p.current_plan;
 
+  // Cancelled = no renewal, but the period already paid for is still owed.
   if (status === 'cancelled') {
     const end = p.current_period_end ? Date.parse(p.current_period_end) : 0;
     return end > now ? p.current_plan : 'free';
   }
 
-  return p.current_plan;
+  // expired, unpaid, paused, none, and anything unknown.
+  return 'free';
 }
 
 export const periodStart = (now = new Date()): string =>
