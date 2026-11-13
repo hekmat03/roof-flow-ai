@@ -183,6 +183,12 @@ check(
   "effectivePlan: cancelled with a future period end still counts as paid",
   effectivePlan({ current_plan: "pro", subscription_status: "cancelled", current_period_end: FUTURE }, NOW) === "pro"
 );
+check("effectivePlan: unknown status fails closed (never grants the paid plan)", effectivePlan({ current_plan: "pro", subscription_status: "weird" }, NOW) === "free");
+check("effectivePlan: empty status fails closed", effectivePlan({ current_plan: "pro", subscription_status: "" }, NOW) === "free");
+check("effectivePlan: expired -> free", effectivePlan({ current_plan: "pro", subscription_status: "expired" }, NOW) === "free");
+check("effectivePlan: unpaid -> free", effectivePlan({ current_plan: "pro", subscription_status: "unpaid" }, NOW) === "free");
+check("effectivePlan: active -> pro", effectivePlan({ current_plan: "pro", subscription_status: "active" }, NOW) === "pro");
+check("effectivePlan: on_trial -> pro", effectivePlan({ current_plan: "pro", subscription_status: "on_trial" }, NOW) === "pro");
 
 // ---------------------------------------------------------------------------
 console.log("\n[4] webhook: unconfigured deployment degrades cleanly");

@@ -12,7 +12,8 @@
          static/SSR serving — a failure here just leaves the brand default. */
       (function () {
         try {
-          var stored = window.localStorage.getItem('roof-flow-theme');
+          var stored = window.localStorage.getItem('roof-flow-theme') ||
+            window.localStorage.getItem('roofflow-theme'); /* legacy key */
           var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
           var root = document.documentElement;
           root.classList.toggle('dark', theme === 'dark');
