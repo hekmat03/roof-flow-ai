@@ -1,6 +1,6 @@
 # Email follow-up setup
 
-Real delivery is optional. Until configured, the API records outbound intent and does not send email. SMS and phone delivery are not implemented.
+Real delivery is optional. Until configured, the API records outbound intent and does not send email. Phone delivery is not implemented.
 
 ## Configure the provider
 
@@ -21,7 +21,7 @@ Real delivery is optional. Until configured, the API records outbound intent and
 - A scheduled sequence requires a tenant-owned lead, a consented lead whose conversation contains that email address, an eligible lead status, no suppression record, and a business mailing address of at least 10 trimmed characters.
 - Single replies do not require a mailing address. They still require the email to be present in the current conversation and include an unsubscribe link.
 - Messages include the contractor profile email as Reply-To, contractor name/address in the footer, and one-click unsubscribe headers/link.
-- SMS requests are rejected as unsupported. The worker rechecks plan, lead, suppression and address immediately before send.
+- Only the email channel is supported. The worker rechecks plan, lead, suppression and address immediately before send.
 - Queue claims use `FOR UPDATE SKIP LOCKED`; retries use the same provider idempotency key and stop after three attempts.
 
 ## Manual verification checklist
