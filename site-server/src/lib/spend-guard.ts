@@ -1,7 +1,7 @@
 /**
  * spend-guard.ts — the lock on the AI wallet.
  * ---------------------------------------------------------------------------
- * /api/widget-reply is PUBLIC and every real reply costs money (Groq). Before the
+ * /api/widget-reply is PUBLIC and every real reply costs money (xAI Grok). Before the
  * server may call the paid AI, ALL of these must pass:
  *
  *   1. the request names a real contractor (widget key → tenant)
