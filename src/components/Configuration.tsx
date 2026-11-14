@@ -253,11 +253,10 @@ const IntegrationPanel: React.FC = () => {
         <h3 className="text-sm font-bold text-white flex items-center gap-2"><PlugZap className="h-4 w-4 text-orange-500" /> Live integrations</h3>
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 py-3 text-xs md:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 py-3 text-xs md:grid-cols-3">
         <div><dt className="text-slate-500">AI</dt><dd className="text-slate-200">{ai === 'loading' ? 'Checking' : ai === null ? 'Unavailable' : aiLive ? 'Live' : 'Not live'}</dd></div>
         <div><dt className="text-slate-500">Database</dt><dd className="text-slate-200">{storageStatus === 'loading' ? 'Checking' : storageStatus === 'ready' ? 'Connected' : 'Not connected'}</dd></div>
         <div><dt className="text-slate-500">Email</dt><dd className="text-slate-200">{ai === 'loading' ? 'Checking' : ai === null ? 'Unavailable' : ai.email ? 'Configured' : 'Not configured'}</dd></div>
-        <div><dt className="text-slate-500">SMS</dt><dd className="text-slate-200">Not available</dd></div>
       </dl>
       </section>
 
