@@ -68,3 +68,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  const signUp = useCallback<AuthContextType['signUp']>(async (email, password) => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+
+      if (error) return { error: friendly(error.message) };
+
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        return { error: 'An account with this email already exists. Try logging in.' };
+      }
+
+      return { needsVerification: !data.user?.email_confirmed_at };
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const signIn = useCallback<AuthContextType['signIn']>(async (email, password) => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        const unverified = error.message.toLowerCase().includes('email not confirmed');
+        return { error: friendly(error.message), unverified };
+      }
+
+      return {};
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+  }, []);
+
+  const resendVerification = useCallback<AuthContextType['resendVerification']>(async (email) => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+
+      return error ? { error: friendly(error.message) } : {};
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const value = useMemo<AuthContextType>(() => {
+    const user = session?.user ?? null;
+    return {
+      user,
+      session,
+      loading,
+      configured: Boolean(supabase),
+      emailVerified: Boolean(user?.email_confirmed_at),
+      signUp,
+      signIn,
+      signOut,
+      resendVerification,
+    };
+  }, [session, loading, signUp, signIn, signOut, resendVerification]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = (): AuthContextType => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
+};
