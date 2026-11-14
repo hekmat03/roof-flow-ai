@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Lead } from '../context/AppContext';
@@ -217,6 +218,7 @@ export const CRMLeadsBoard: React.FC = () => {
 
   const selectedInspection = selected ? inspectionOf(selected) : null;
 
+    
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Header */}
@@ -265,88 +267,76 @@ export const CRMLeadsBoard: React.FC = () => {
             </div>
           )}
 
-          <details className="text-xs text-slate-400">
-            <summary className="cursor-pointer hover:text-slate-200 select-none">More details</summary>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-              <select className="input-premium" value={form.ownership} onChange={e => setField('ownership', e.target.value as Lead['propertyOwnership'])} aria-label="Ownership">
-                <option value="Owner">Property owner</option>
-                <option value="Renter">Renter / tenant</option>
-              </select>
-              <select className="input-premium" value={form.source} onChange={e => setField('source', e.target.value as Lead['agentType'])} aria-label="Source">
-                <option value="Chatbot">Source: Website chatbot</option>
-                <option value="Phone Call">Source: Phone call</option>
-                <option value="SMS Nurture">Source: SMS / email</option>
-                <option value="Estimate Follow-Up">Source: Estimate follow-up</option>
-              </select>
-            </div>
-          </details>
-
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setIsAddOpen(false)} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
-            <button type="submit" className="btn-accent px-5 py-2 text-sm">Save lead</button>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setIsAddOpen(false)} className="px-4 py-2 text-xs text-slate-400 hover:text-white">Cancel</button>
+            <button type="submit" className="btn-accent px-5 py-2 text-xs">Save lead</button>
           </div>
         </form>
       )}
 
-      {/* Toolbar + table */}
-      <div className="glass rounded-2xl p-4 md:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-3 h-5 w-5 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search name, phone, zip or issue"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="input-premium pl-11"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as 'All' | Status)}
-            className="input-premium sm:w-56"
-            aria-label="Filter by status"
-          >
-            <option value="All">All statuses ({leads.length})</option>
-            {STATUSES.filter(s => counts[s] > 0 || s === statusFilter).map(s => (
-              <option key={s} value={s}>{s} ({counts[s]})</option>
-            ))}
-          </select>
-          {leads.length > 0 && (
-            <span className="text-xs text-slate-500 sm:ml-auto whitespace-nowrap">
-              {filteredLeads.length} of {leads.length}
-            </span>
-          )}
+      {/* Search + status filters */}
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search name, phone, email, ZIP or issue..."
+            className="input-premium pl-10"
+          />
         </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setStatusFilter('All')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === 'All' ? 'bg-accent-500 text-slate-950' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          >
+            All ({leads.length})
+          </button>
+          {STATUSES.filter(s => counts[s] > 0 || statusFilter === s).map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === s ? 'bg-accent-500 text-slate-950' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+            >
+              {s} ({counts[s]})
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500">
+          Showing {filteredLeads.length} of {leads.length} leads
+        </p>
+      </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-900/20 premium-scroll table-sticky-header">
-          <table className="w-full border-collapse text-left text-sm text-slate-300">
+      {/* Leads table */}
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-slate-800/80 bg-slate-950/85 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <th className="px-5 py-3.5">Lead</th>
-                <th className="px-5 py-3.5">Issue</th>
-                <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5">Inspection</th>
-                <th className="px-5 py-3.5 text-right"><span className="sr-only">Actions</span></th>
+              <tr className="border-b border-slate-800 text-[10px] text-slate-500 uppercase tracking-wider">
+                <th className="px-5 py-3 font-bold">Lead</th>
+                <th className="px-5 py-3 font-bold">Roof issue</th>
+                <th className="px-5 py-3 font-bold">Status</th>
+                <th className="px-5 py-3 font-bold">Inspection</th>
+                <th className="px-5 py-3 font-bold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70 row-stripe bg-slate-900/10">
+            <tbody className="divide-y divide-slate-800/60">
               {filteredLeads.map(lead => {
                 const slot = inspectionOf(lead);
                 return (
                   <tr
                     key={lead.id}
-                    className="hover:bg-slate-800/40 transition cursor-pointer"
                     onClick={() => setSelectedId(lead.id)}
+                    className="hover:bg-slate-800/30 cursor-pointer transition"
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-accent-300 shrink-0">
+                        <div className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-accent-400 shrink-0">
                           {initials(lead.name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-white truncate">{lead.name}</p>
-                          <p className="text-xs text-slate-500">{lead.phone}</p>
+                          <p className="text-xs font-bold text-white truncate">{lead.name}</p>
+                          <p className="text-[11px] text-slate-500">{lead.phone}</p>
                         </div>
                       </div>
                     </td>
@@ -429,6 +419,7 @@ export const CRMLeadsBoard: React.FC = () => {
         </div>
       </div>
 
+      
       {/* Lead panel */}
       {selected && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end animate-fadeIn" onClick={closePanel}>
