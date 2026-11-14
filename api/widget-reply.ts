@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { aiConfig } from './_lib/ai.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 const TIMEOUT_MS = 10_000;
 
 const PUBLIC_HEADERS: Record<string, string> = {
@@ -33,7 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.MISTRAL_API_KEY;
+  const ai = aiConfig();
+  const apiKey = ai.apiKey;
   if (!apiKey) {
     return res.status(200).json({ fallback: true });
   }
@@ -64,17 +65,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const response = await fetch(MISTRAL_API_URL, {
+    const response = await fetch(ai.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.MISTRAL_MODEL || 'mistral-small-latest',
+        model: ai.model,
         messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
         temperature: 0.5,
         max_tokens: 60,
+        ...ai.extra,
       }),
       signal: controller.signal,
     });
