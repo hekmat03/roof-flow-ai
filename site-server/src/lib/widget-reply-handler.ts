@@ -1,8 +1,8 @@
 /**
  * /api/widget-reply — OPTIONAL live-AI reply for the embeddable widget.
  * ---------------------------------------------------------------------------
- * If GROQ_API_KEY exists in the server environment we proxy Groq
- * (llama-3.3-70b-versatile) to produce the next conversational line; otherwise
+ * If XAI_API_KEY exists in the server environment we proxy xAI Grok
+ * (grok-4.3, override with AI_MODEL) to produce the next conversational line; otherwise
  * we return { fallback: true } and widget.html runs its built-in scripted flow.
  * The key is read server-side only and is never echoed back. Message content is
  * NEVER logged (it is visitor PII).
@@ -26,8 +26,8 @@ import {
   usageStorageMissingResponse,
 } from "./usage";
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const XAI_URL = "https://api.x.ai/v1/chat/completions";
+const XAI_MODEL = (process.env.AI_MODEL ?? "").trim() || "grok-4.3";
 const TIMEOUT_MS = 10_000;
 const MAX_TURNS = 12;
 /** A real widget request is a few hundred bytes. Anything huge is abuse. */
@@ -64,7 +64,7 @@ export const handleWidgetReplyPost = async (request: Request): Promise<Response>
   const rawId = typeof body.conversationId === "string" ? body.conversationId.trim() : "";
   const conversationId = /^[A-Za-z0-9_-]{8,128}$/.test(rawId) ? rawId : crypto.randomUUID();
 
-  const key = process.env.GROQ_API_KEY;
+  const key = process.env.XAI_API_KEY;
   const session = sessionFromRequest(request);
   let usage: Record<string, unknown> | null = null;
   let charged = false;
@@ -133,11 +133,12 @@ export const handleWidgetReplyPost = async (request: Request): Promise<Response>
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(GROQ_URL, {
+    const res = await fetch(XAI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: XAI_MODEL,
+        reasoning_effort: "none",
         max_tokens: 120,
         temperature: 0.6,
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
@@ -146,7 +147,7 @@ export const handleWidgetReplyPost = async (request: Request): Promise<Response>
     });
     if (!res.ok) {
       // Status only — never the body, which can echo the prompt.
-      console.warn("[widget-reply] groq non-2xx", res.status);
+      console.warn("[widget-reply] xai non-2xx", res.status);
       await release();
       return done({ fallback: true });
     }
@@ -158,7 +159,7 @@ export const handleWidgetReplyPost = async (request: Request): Promise<Response>
     }
     return done({ fallback: false, reply });
   } catch {
-    console.warn("[widget-reply] groq unreachable");
+    console.warn("[widget-reply] xai unreachable");
     await release();
     return done({ fallback: true });
   } finally {
