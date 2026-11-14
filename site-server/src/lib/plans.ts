@@ -4,7 +4,7 @@
  * check that gates a feature or a quota happens here, on the server.
  *
  * HONESTY RULE for this file: a feature may only appear in `includes` if it
- * demonstrably works today. Phone calls, SMS, email sending, autonomous
+ * demonstrably works today. Phone calls, email sending, autonomous
  * follow-ups and calendar booking are SIMULATED in this product and are never
  * advertised as plan features. They are listed once in `NOT_INCLUDED_ANY_PLAN`
  * so the UI can state the boundary out loud instead of hiding it.
@@ -132,7 +132,7 @@ export const PLAN_ORDER: PlanId[] = ["free", "starter", "pro"];
  */
 export const NOT_INCLUDED_ANY_PLAN: string[] = [
   "Phone calls — Agent 2 is an interactive simulation, there is no telephony provider",
-  "SMS and email sending — no gateway is connected; sequences are simulated in-app",
+  "Email sending — no gateway is connected; sequences are simulated in-app",
   "Autonomous follow-ups — nothing runs on a schedule while you are away",
   "Calendar booking — inspections are recorded in the CRM, not written to a calendar",
 ];
