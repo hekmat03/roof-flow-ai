@@ -1,21 +1,19 @@
 /**
  * /api/billing/checkout — start a subscription checkout.
  *
- * Two providers, one route, in this order:
- *  1. **Lemon Squeezy** (the live one). When the owner has saved
- *     LS_CHECKOUT_URL_STARTER / LS_CHECKOUT_URL_PRO, the hosted buy link is
- *     returned with the buyer's email and user id pre-filled. The plan itself
- *     is only ever granted by the webhook (/api/lemon-webhook), never here.
- *  2. **Stripe** (coded, dormant). Unchanged: without STRIPE_SECRET_KEY it
- *     answers `{ paymentsActivated: false }` and makes no network call.
+ * Provider: **Lemon Squeezy**. When the owner has saved
+ * LS_CHECKOUT_URL_STARTER / LS_CHECKOUT_URL_PRO, the hosted buy link is
+ * returned with the buyer's email and user id pre-filled. The plan itself is
+ * only ever granted by the webhook (/api/lemon-webhook), never here. Without a
+ * saved link the route answers `{ paymentsActivated: false }`.
  *
  * `GET` is a read-only view of the same configuration: the buy link per plan, or
  * a clear not-configured state. It never creates anything.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { sessionFromRequest } from "../../lib/auth";
-import { createCheckoutSession, getProfile } from "../../lib/billing";
-import { isSameOrigin, json, readJson, requestOrigin } from "../../lib/http";
+import { getProfile } from "../../lib/billing";
+import { isSameOrigin, json, readJson } from "../../lib/http";
 import { isPlanId } from "../../lib/plans";
 import {
   buildCheckoutLink,
@@ -113,7 +111,6 @@ export const Route = createFileRoute("/api/billing/checkout")({
           );
         }
 
-        // ---- Lemon Squeezy (hosted buy link) --------------------------------
         const lemonLink = checkoutUrlForPlan(plan);
         if (lemonLink) {
           const profile = await getProfile(session.userId).catch(() => null);
@@ -141,18 +138,10 @@ export const Route = createFileRoute("/api/billing/checkout")({
           });
         }
 
-        // ---- Stripe (dormant until a secret key exists) ---------------------
-        const result = await createCheckoutSession({
-          userId: session.userId,
-          plan,
-          origin: requestOrigin(request),
-          email: session.email,
-        });
-        if ("paymentsActivated" in result && result.paymentsActivated === false) {
-          return json({ ok: false, ...result }, 503);
-        }
-        if ("error" in result) return json({ ok: false, ...result }, 409);
-        return json({ ok: true, ...result });
+        return json(
+          { ok: false, paymentsActivated: false, error: "not_configured", message: notConfiguredMessage },
+          503
+        );
       },
     },
   },
