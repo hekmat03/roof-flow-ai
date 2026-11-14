@@ -1,19 +1,14 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { BillingProvider } from './context/BillingContext';
-import { UpgradeModal } from './components/UpgradeModal';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { Agent1Chatbot } from './components/Agent1Chatbot';
 import { Agent2PhoneCall } from './components/Agent2PhoneCall';
-import { Agent3SMSEmail } from './components/Agent3SMSEmail';
+import { Agent3EmailFollowups } from './components/Agent3EmailFollowups';
 import { Agent4Estimate } from './components/Agent4Estimate';
 import { CRMLeadsBoard } from './components/CRMLeadsBoard';
 import { Configuration } from './components/Configuration';
-import { BillingGateway } from './components/BillingGateway';
 import { FallbackNotice } from './components/FallbackNotice';
-import { usePlan } from './lib/usePlan';
-import { canAccess, fallbackTab } from './lib/planAccess';
 import { StatusBanner } from './components/StatusBanner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FullScreenSpinner } from './components/Spinner';
@@ -29,18 +24,13 @@ import { usePath } from './lib/router';
 import OnboardingWizard from './components/OnboardingWizard';
 
 function MainAppContent() {
-  const { activeTab: requestedTab, refreshTenant } = useApp();
-  const plan = usePlan();
+  const { activeTab, refreshTenant } = useApp();
   const { user, configured } = useAuth();
   const { status: onboarding, markComplete } = useOnboardingStatus(user?.id ?? null, configured);
   const completeOnboarding = async () => {
     await refreshTenant();
     markComplete();
   };
-
-  const activeTab = canAccess(plan, requestedTab)
-    ? requestedTab
-    : fallbackTab();
 
   // One-time company info: asked only if this account has never completed it.
   if (onboarding === 'checking') return <FullScreenSpinner label="Loading your account…" />;
@@ -55,16 +45,13 @@ function MainAppContent() {
       case 'agent2':
         return <Agent2PhoneCall />;
       case 'agent3':
-        return <Agent3SMSEmail />;
+        return <Agent3EmailFollowups />;
       case 'agent4':
         return <Agent4Estimate />;
       case 'crm':
         return <CRMLeadsBoard />;
       case 'config':
         return <Configuration />;
-      case 'pricing':
-      case 'billing':
-        return <BillingGateway view={activeTab} />;
       default:
         return <Dashboard />;
     }
@@ -77,7 +64,6 @@ function MainAppContent() {
         {renderContent()}
       </div>
       <FallbackNotice />
-      <UpgradeModal />
     </Layout>
   );
 }
@@ -100,9 +86,7 @@ function Routes() {
       return (
         <ProtectedRoute>
           <AppProvider>
-            <BillingProvider>
-              <MainAppContent />
-            </BillingProvider>
+            <MainAppContent />
           </AppProvider>
         </ProtectedRoute>
       );
