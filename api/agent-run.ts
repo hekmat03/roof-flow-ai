@@ -2,11 +2,11 @@
 // POST: run the agent loop (reply + executed actions). GET: capability status.
 //
 // Requires a signed-in, email-verified user.
-// Plan + monthly chat limit are enforced by guardChat() before any AI call.
+// Sign-in and the per-conversation message cap are enforced by guardChat() before any AI call.
 //
-// Env vars: MISTRAL_API_KEY, MISTRAL_MODEL,
+// Env vars: XAI_API_KEY (see api/_lib/ai.ts for AI_MODEL etc.),
 //           SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
-// Email is optional and uses EMAIL_PROVIDER_API_KEY + EMAIL_FROM; SMS remains unsupported.
+// Email is optional and uses EMAIL_PROVIDER_API_KEY + EMAIL_FROM.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
@@ -24,18 +24,17 @@ import {
   scopedSessionId,
   type ChatFn,
 } from './_lib/tools.js';
+import { aiConfig } from './_lib/ai.js';
 import { guardChat } from './_lib/guard.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 import { adminClient } from './_lib/supabaseAdmin.js';
 import { appOrigin, createResendProvider } from './_lib/email.js';
 import { createEmailActions, type EmailActionStore } from './_lib/emailActions.js';
-import { EMAIL_DAILY_CAP, EMAIL_MONTHLY_CAPS } from './_lib/plans.js';
-
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const apiKey = process.env.MISTRAL_API_KEY;
-  const model = process.env.MISTRAL_MODEL || 'mistral-small-latest';
+  const ai = aiConfig();
+  const apiKey = ai.apiKey;
+  const model = ai.model;
   const db = createSupabase(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -91,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? body.sessionId
       : 'anon';
 
-  // Auth + plan + monthly limit.
+  // Auth + conversation cap.
   // requireTenant: every row the tools write is stamped with the caller's company.
   const guard = await guardChat(req, res, {
     agentType,
@@ -175,7 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const emailActions = createEmailActions({
     store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM,
     baseUrl: process.env.APP_BASE_URL, sessionSecret: process.env.SESSION_SECRET,
-    tenantId: guard.tenantId, sessionId: scopedSessionId(guard.tenantId, sessionId), plan: guard.plan,
+    tenantId: guard.tenantId, sessionId: scopedSessionId(guard.tenantId, sessionId),
   });
 
   const chat: ChatFn = async (msgs, tools) => {
@@ -183,7 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const timer = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const r = await fetch(MISTRAL_API_URL, {
+      const r = await fetch(ai.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,6 +193,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           messages: msgs,
           temperature: 0.4,
           max_tokens: 350,
+          ...ai.extra,
           ...(tools ? { tools, tool_choice: 'auto' } : {}),
         }),
         signal: controller.signal,
