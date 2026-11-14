@@ -4,8 +4,8 @@
 // per-IP AND global daily caps so it can never run up your AI bill.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { enforceRateLimit } from './_lib/rateLimit.js';
+import { aiConfig } from './_lib/ai.js';
 
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 const MAX_TURNS = 6;
 const MAX_CHARS = 400;
 
@@ -20,7 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const apiKey = process.env.MISTRAL_API_KEY;
+  const ai = aiConfig();
+  const apiKey = ai.apiKey;
   if (!apiKey) return res.status(503).json({ error: 'The demo is not available right now.' });
 
   // 6 / minute and 30 / day per visitor, 400 / day for the whole site.
@@ -47,11 +48,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12_000);
   try {
-    const response = await fetch(MISTRAL_API_URL, {
+    const response = await fetch(ai.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: process.env.MISTRAL_MODEL || 'mistral-small-latest',
+        model: ai.model,
+        ...ai.extra,
         messages: [{ role: 'system', content: DEMO_PROMPT }, ...messages],
         temperature: 0.5,
         max_tokens: 160,
