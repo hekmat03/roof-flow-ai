@@ -153,10 +153,9 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
     }
     case 'send_message': {
       const ch = a.channel, body = text(a.body, 5, 600);
-      if (ch !== 'email' && ch !== 'sms') return bad('channel must be email or sms');
+      if (ch !== 'email') return bad('channel must be email');
       if (!body) return bad('body is required (5-600 chars)');
       if (ch === 'email' && !isEmail(a.to)) return bad('a valid email is required');
-      if (ch === 'sms' && !isPhone(a.to)) return bad('a valid phone number is required (at least 10 digits)');
       const subject = text(a.subject, 3, 120) || 'Your roof inspection';
       return { ok: true, value: { channel: ch, to: normContact(String(a.to)), subject, body } };
     }
@@ -177,8 +176,8 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
     }
     case 'schedule_followup': {
       const ch = a.channel, hrs = Number(a.when_hours);
-      if (ch !== 'email' && ch !== 'sms') return bad('channel must be email or sms');
-      if (ch === 'email' ? !isEmail(a.contact) : !isPhone(a.contact)) return bad('a valid contact is required');
+      if (ch !== 'email') return bad('channel must be email');
+      if (!isEmail(a.contact)) return bad('a valid contact is required');
       if (!Number.isInteger(hrs) || hrs < 1 || hrs > 168) return bad('when_hours must be an integer 1-168');
       return { ok: true, value: { channel: ch, contact: normContact(String(a.contact)), when_hours: hrs, hint: text(a.message_hint, 2, 200) || '' } };
     }
@@ -230,9 +229,6 @@ export async function executeTool(name: string, rawArgs: unknown, env: ToolEnv):
   const v = validateToolArgs(name, rawArgs);
   if ('error' in v) return fail(v.error);
   const a = v.value as Record<string, any>;
-  if ((name === 'send_message' || name === 'schedule_followup') && a.channel === 'sms') {
-    return fail('SMS is not supported yet; no SMS is sent.');
-  }
   const contact: string = a.phone || a.email || a.to || a.contact;
   if (!env.allowedContacts.has(contact) && !(a.email && env.allowedContacts.has(a.email))) {
     return fail('contact was not provided by the customer in this conversation');
@@ -317,8 +313,8 @@ const SPECS: Record<ToolName, { description: string; properties: Record<string, 
     required: ['name', 'phone', 'address_or_zip', 'preferred_time', 'issue'],
   },
   send_message: {
-    description: 'Send one email to a customer who gave their email in this conversation and agreed to a reply. SMS is not available.',
-    properties: { channel: S('string', 'email; SMS is not supported', { enum: ['email'] }), to: S('string', 'Email address provided by the customer'), subject: S('string', 'Email subject'), body: S('string', 'Message text') },
+    description: 'Send one email to a customer who gave their email in this conversation and agreed to a reply.',
+    properties: { channel: S('string', 'email', { enum: ['email'] }), to: S('string', 'Email address provided by the customer'), subject: S('string', 'Email subject'), body: S('string', 'Message text') },
     required: ['channel', 'to', 'body'],
   },
   update_crm: {
@@ -327,8 +323,8 @@ const SPECS: Record<ToolName, { description: string; properties: Record<string, 
     required: [],
   },
   schedule_followup: {
-    description: 'Schedule one email follow-up to a consented lead who gave their email in this conversation (1-168 hours). SMS is not available.',
-    properties: { channel: S('string', 'email; SMS is not supported', { enum: ['email'] }), contact: S('string', 'Lead email provided in conversation'), when_hours: S('integer', 'Hours from now, 1-168'), message_hint: S('string', 'Short context for the follow-up') },
+    description: 'Schedule one email follow-up to a consented lead who gave their email in this conversation (1-168 hours).',
+    properties: { channel: S('string', 'email', { enum: ['email'] }), contact: S('string', 'Lead email provided in conversation'), when_hours: S('integer', 'Hours from now, 1-168'), message_hint: S('string', 'Short context for the follow-up') },
     required: ['channel', 'contact', 'when_hours'],
   },
 };
