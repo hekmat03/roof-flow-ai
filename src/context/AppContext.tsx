@@ -38,7 +38,7 @@ export interface Lead {
   };
   zipCode: string;
   roofIssue: string;
-  agentType: 'Chatbot' | 'Phone Call' | 'SMS Nurture' | 'Estimate Follow-Up';
+  agentType: 'Chatbot' | 'Phone Call' | 'Email Nurture' | 'Estimate Follow-Up';
   chatLog: Array<{ sender: 'User' | 'AI' | 'System'; text: string; timestamp: string }>;
   purchaseHistory: PurchaseRecord[];
 }
