@@ -3,11 +3,10 @@
 // GET : report whether live AI is configured (no secrets exposed).
 //
 // Requires a signed-in, email-verified user (Authorization: Bearer <supabase token>).
-// Plan + monthly chat limit are enforced by guardChat() before any AI call.
+// Sign-in and the per-conversation message cap are enforced by guardChat() before any AI call.
 //
 // Env vars (Vercel → Project Settings → Environment Variables):
-//   MISTRAL_API_KEY   required for live AI
-//   MISTRAL_MODEL     optional, defaults to mistral-small-latest
+//   XAI_API_KEY       required for live AI (see api/_lib/ai.ts for AI_MODEL etc.)
 //   SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY   required (auth + usage)
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -18,19 +17,19 @@ import {
   sanitizeMessages,
   type AgentType,
 } from './_lib/agent.js';
+import { aiConfig } from './_lib/ai.js';
 import { guardChat } from './_lib/guard.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const apiKey = process.env.MISTRAL_API_KEY;
-  const model = process.env.MISTRAL_MODEL || 'mistral-small-latest';
+  const ai = aiConfig();
+  const apiKey = ai.apiKey;
+  const model = ai.model;
 
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'GET') {
-    return res.status(200).json({ live: Boolean(apiKey), provider: 'mistral', model });
+    return res.status(200).json({ live: Boolean(apiKey), provider: ai.provider, model });
   }
 
   if (req.method !== 'POST') {
@@ -56,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'messages must be an array of {role, content}' });
   }
 
-  // Auth + plan + monthly limit (sends the response itself when blocked).
+  // Auth + conversation cap (sends the response itself when blocked).
   const guard = await guardChat(req, res, { agentType, conversationId: body.conversationId });
   if (!guard) return;
 
@@ -66,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const timer = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch(MISTRAL_API_URL, {
+    const response = await fetch(ai.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,12 +76,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
         temperature: 0.6,
         max_tokens: agentType === 'phone' ? 120 : 300,
+        ...ai.extra,
       }),
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      console.error('Mistral API error:', response.status);
+      console.error('AI provider error:', ai.provider, response.status);
       return res.status(502).json({ error: 'AI provider error' });
     }
 
