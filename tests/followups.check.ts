@@ -188,7 +188,7 @@ check('cron requires the bearer secret', hasCronAuthorization('Bearer cron-secre
   check('onboarding completion still depends only on onboarding_complete', current.includes(".select('onboarding_complete')") && current.includes('data?.onboarding_complete === true') && !current.includes('business_address'));
 }
 {
-  const agent3 = readFileSync(new URL('../src/components/Agent3SMSEmail.tsx', import.meta.url), 'utf8');
+  const agent3 = readFileSync(new URL('../src/components/Agent3EmailFollowups.tsx', import.meta.url), 'utf8');
   const agent4 = readFileSync(new URL('../src/components/Agent4Estimate.tsx', import.meta.url), 'utf8');
   check('Agent 3 selects real email leads and has no fake lead or reply simulator', agent3.includes('leads.filter') && agent3.includes("'sequence'") && !agent3.includes('addLead(') && !agent3.includes('Sequence Trigger Simulator') && !agent3.includes('SMS preview'));
   check('Agent 4 test chat does not create CRM leads', agent4.includes('Test the agent') && !agent4.includes('addLead(') && !agent4.includes('setLeads('));
