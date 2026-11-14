@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { saveOnboarding } from "../lib/onboarding";
 import { supabase } from "../lib/supabase";
@@ -294,8 +295,8 @@ export default function OnboardingWizard({
                   }`}
                 />
               </button>
-              <span className="text-white">
-                Emergency/After-hours available
+              <span className="text-gray-300 text-sm">
+                Available for emergency repairs
               </span>
             </div>
             {data.emergency && (
@@ -303,14 +304,13 @@ export default function OnboardingWizard({
                 className="w-full bg-gray-800 text-white rounded-lg p-3 border border-gray-700 focus:border-orange-500 outline-none"
                 placeholder="Emergency Phone Number"
                 value={data.emergencyPhone}
-                onChange={(e) =>
-                  update("emergencyPhone", e.target.value)
-                }
+                onChange={(e) => update("emergencyPhone", e.target.value)}
               />
             )}
           </div>
         )}
 
+        
         {/* STEP 3 - Services */}
         {step === 3 && (
           <div className="space-y-4">
