@@ -1,5 +1,4 @@
-
- // api/_lib/agent.ts
+// api/_lib/agent.ts
 // Pure helpers shared by the serverless handler and the test-suite.
 // Files/folders starting with "_" are NOT exposed as routes by Vercel.
 
@@ -74,7 +73,7 @@ export const TOOL_POLICY = `TOOLS:
 - If simulated is true, never claim a message was delivered; say it is queued or in demo mode.
 - If ok is false, say you could not complete it and offer a human follow-up.
 - Never contact, or call tools for, someone who asked to stop.
-- Email tools are limited to one address explicitly written by the customer in this conversation. SMS is not supported.
+- Email tools are limited to one address explicitly written by the customer in this conversation.
 ---
 `;
 
@@ -190,8 +189,8 @@ const PERSONAS: Record<AgentType, (c: AgentContext) => string> = {
     'Collect name, phone, address and whether an insurance claim exists. Offer a free inspection; never say it is already scheduled.',
 
   nurturer: (c) =>
-    `You write follow-up SMS/email for ${c.companyName || 'a roofing company'} to ${c.leadName || 'a lead'} who has not replied. ` +
-    'Write ONE short, friendly, low-pressure message (SMS under 300 characters, email under 150 words) that references the free inspection. Plain text only.',
+    `You write follow-up email for ${c.companyName || 'a roofing company'} to ${c.leadName || 'a lead'} who has not replied. ` +
+    'Write ONE short, friendly, low-pressure email (under 150 words) that references the free inspection. Plain text only.',
 
   closer: (c) =>
     `You are the post-estimate follow-up assistant for ${c.companyName || 'a roofing company'}, helping ${c.leadName || 'a customer'}. ` +
