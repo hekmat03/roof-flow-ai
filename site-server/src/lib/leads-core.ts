@@ -14,7 +14,7 @@
  *  - The rate limiter is an in-memory Map. It RESETS WHENEVER THE SERVER
  *    RESTARTS (every publish). It is a speed bump against casual abuse, not a
  *    durable quota; a real one needs shared storage.
- *  - Nothing here sends email or SMS. Capture is store-only by design.
+ *  - Nothing here sends email. Capture is store-only by design.
  *
  * TENANT ISOLATION: the service-role key bypasses Row Level Security, so this
  * file is the isolation boundary. `insertLead` REQUIRES a tenant id and
