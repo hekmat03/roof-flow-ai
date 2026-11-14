@@ -1,22 +1,18 @@
 // Middleware for chat endpoints:
-// 1) signed-in, email-verified user  2) plan allows the agent
-// 3) monthly chat limit enforced atomically in the database.
+// 1) signed-in, email-verified user  2) per-conversation message cap, enforced
+// atomically in the database. There are no plans and no monthly chat limit.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { adminClient, userFromRequest, type AuthedUser } from './supabaseAdmin.js';
-import { effectivePlan, getProfile } from './billing.js';
-import { limitForPlan, type PlanId } from './plans.js';
+import { MAX_MESSAGES_PER_CONVERSATION, NO_MONTHLY_CHAT_LIMIT } from './limits.js';
 import { lookupTenant } from './tenant.js';
 
 export const CONVERSATION_ID_RE = /^[A-Za-z0-9_-]{8,80}$/;
-export const MAX_MESSAGES_PER_CONVERSATION = 60;
+export { MAX_MESSAGES_PER_CONVERSATION };
 
 export interface GuardResult {
   user: AuthedUser;
   /** The user's company, resolved server-side. Only set when `requireTenant` was asked for. */
   tenantId: string | null;
-  plan: PlanId;
-  used: number;
-  limit: number;
 }
 
 export async function guardChat(
@@ -51,20 +47,6 @@ export async function guardChat(
     tenantId = t.tenantId;
   }
 
-  const plan = effectivePlan(await getProfile(admin, user.id));
-
-  // Phone automation remains Pro-only. Email follow-up agents are available
-  // on Starter and Pro, with sends independently capped in plans.ts.
-  if (opts.agentType === 'phone' && plan !== 'pro') {
-    res.status(403).json({
-      error: 'This agent requires the Pro plan',
-      code: 'upgrade_required',
-      plan,
-      requiredPlan: 'pro',
-    });
-    return null;
-  }
-
   const conversationId =
     typeof opts.conversationId === 'string' ? opts.conversationId : '';
 
@@ -76,18 +58,17 @@ export async function guardChat(
     return null;
   }
 
-  const limit = limitForPlan(plan);
   const { data, error } = await admin.rpc('consume_chat', {
     p_user: user.id,
     p_conversation: conversationId,
-    p_limit: limit,
+    p_limit: NO_MONTHLY_CHAT_LIMIT,
     p_max_messages: MAX_MESSAGES_PER_CONVERSATION,
   });
 
   const row = Array.isArray(data) ? data[0] : data;
 
   if (error || !row) {
-    // Fail closed if usage cannot be verified.
+    // Fail closed if the conversation cap cannot be verified.
     console.error('consume_chat failed:', error?.message);
     res.status(503).json({
       error: 'Usage service unavailable, try again shortly',
@@ -97,17 +78,12 @@ export async function guardChat(
   }
 
   if (!row.allowed) {
-    res.status(402).json({
-      error: row.reason === 'conversation_cap'
-        ? 'This conversation reached its message limit. Start a new chat.'
-        : `You have used all ${limit} chats on the ${plan} plan this month.`,
-      code: row.reason === 'conversation_cap' ? 'conversation_cap' : 'limit_reached',
-      plan,
-      used: row.used,
-      limit,
+    res.status(429).json({
+      error: 'This conversation reached its message limit. Start a new chat.',
+      code: 'conversation_cap',
     });
     return null;
   }
 
-  return { user, tenantId, plan, used: row.used, limit };
+  return { user, tenantId };
 }
