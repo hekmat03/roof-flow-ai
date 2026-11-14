@@ -63,7 +63,6 @@ export const PLANS: Record<PlanId, Plan> = {
 
 export const NOT_INCLUDED_ANY_PLAN: string[] = [
   'Phone calls: Agent 2 is a simulation, no telephony provider is connected',
-  'SMS is not delivered; no SMS provider is connected',
 ];
 
 export const isPlanId = (v: unknown): v is PlanId =>
