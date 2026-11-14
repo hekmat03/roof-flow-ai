@@ -1,41 +1,35 @@
 {
-  "name": "roof-flow-ai",
+  "name": "team-site-template",
   "private": true,
-  "version": "0.0.0",
+  "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "typecheck": "tsc -b --force",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "node --experimental-strip-types --import ./tests/register-ts.mjs tests/generator.test.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/integrations.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/api.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/tools.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/actions.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/validators.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/google.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/billing.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/leads.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/followups.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/email-send-consent.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/lead-confirm.check.ts && node --experimental-strip-types --import ./tests/register-ts.mjs tests/crm-isolation-auth.check.ts"
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "bun run serve.ts",
+    "publish": "bash ./publish.sh",
+    "go-live": "bash ./go-live.sh",
+    "test": "bun run tests/origin.check.ts && bun run tests/leads-isolation.check.ts && bun run tests/usage.check.ts && bun run tests/lemon.check.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
-    "chart.js": "^4.5.1",
-    "lucide-react": "^1.18.0",
-    "react": "^19.2.6",
-    "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.2.6"
+    "@neondatabase/serverless": "^1.1.0",
+    "@tanstack/react-router": "^1.158.1",
+    "@tanstack/react-start": "^1.158.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@tailwindcss/vite": "^4.3.1",
-    "@types/node": "^24.12.3",
-    "@types/react": "^19.2.14",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.3.0",
+    "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
-    "@vercel/node": "^3.0.0",
-    "@vitejs/plugin-react": "^6.0.1",
-    "autoprefixer": "^10.5.0",
-    "eslint": "^10.3.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.1",
-    "typescript": "~6.0.2",
-    "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "@vitejs/plugin-react": "^5.1.3",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-tsconfig-paths": "^6.0.5"
   }
 }
