@@ -37,8 +37,6 @@ export interface Plan {
   priceMonthlyUsd: number;
   /** Server-enforced conversations (one widget chat thread) per billing month. */
   conversationsPerMonth: number;
-  /** Name of the env var holding the Stripe price id, or null when there is none. */
-  priceEnvVar: string | null;
   tagline: string;
   includes: string[];
   capabilities: PlanCapabilities;
@@ -50,7 +48,6 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Free",
     priceMonthlyUsd: 0,
     conversationsPerMonth: 20,
-    priceEnvVar: null,
     tagline: "Try the live chat capture with a real CRM behind it.",
     includes: [
       "Website chat widget — captures real leads into the CRM",
@@ -75,7 +72,6 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Starter",
     priceMonthlyUsd: 29,
     conversationsPerMonth: 200,
-    priceEnvVar: "STRIPE_PRICE_STARTER",
     tagline: "Room for real traffic, with qualification and scoring.",
     includes: [
       "Everything in Free",
@@ -101,7 +97,6 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Pro",
     priceMonthlyUsd: 79,
     conversationsPerMonth: 750,
-    priceEnvVar: "STRIPE_PRICE_PRO",
     tagline: "The full working product, tuned to one contractor's market.",
     includes: [
       "Everything in Starter",
@@ -137,55 +132,14 @@ export const NOT_INCLUDED_ANY_PLAN: string[] = [
   "Calendar booking — inspections are recorded in the CRM, not written to a calendar",
 ];
 
-/**
- * Default price ids used when the owner has not configured env overrides. Echo
- * `price_...` strings so a misconfigured dashboard is obvious rather than silent.
- */
-export const DEFAULT_PRICE_IDS: Record<Exclude<PlanId, "free">, string> = {
-  starter: "price_starter_placeholder",
-  pro: "price_pro_placeholder",
-};
-
 export const isPlanId = (v: unknown): v is PlanId =>
   typeof v === "string" && (PLAN_ORDER as string[]).includes(v);
 
-/**
- * Resolve the Stripe price id for a paid plan: env wins, default otherwise. A
- * placeholder id is never a real Stripe id, so it can only be used while
- * payments are dormant.
- */
-export const priceIdForPlan = (plan: PlanId): string | null => {
-  if (plan === "free") return null;
-  const envVar = PLANS[plan].priceEnvVar;
-  const fromEnv = envVar ? (process.env[envVar] ?? "").trim() : "";
-  return fromEnv || DEFAULT_PRICE_IDS[plan];
-};
-
-/** Reverse lookup used by the Stripe webhook to map money back to a plan. */
-export const planFromPriceId = (priceId: string | null | undefined): PlanId | null => {
-  if (!priceId) return null;
-  for (const id of PLAN_ORDER) {
-    if (id === "free") continue;
-    if (priceIdForPlan(id) === priceId) return id;
-  }
-  return null;
-};
-
 export const limitForPlan = (plan: PlanId): number => PLANS[plan].conversationsPerMonth;
-
-/** True when the plan is merely a placeholder (no live Stripe price behind it). */
-export const isPlaceholderPriceId = (priceId: string | null): boolean =>
-  priceId !== null && Object.values(DEFAULT_PRICE_IDS).includes(priceId);
 
 /** The catalogue as JSON-safe data for `GET /api/plans` (no env leakage). */
 export const planCatalog = () => ({
-  plans: PLAN_ORDER.map((id) => {
-    const plan = PLANS[id];
-    const priceId = priceIdForPlan(id);
-    return {
-      ...plan,
-      priceIdConfigured: priceId !== null && !isPlaceholderPriceId(priceId),
-    };
-  }),
+  // `priceIdConfigured` is filled in by the routes from the Lemon Squeezy buy links.
+  plans: PLAN_ORDER.map((id) => ({ ...PLANS[id], priceIdConfigured: false })),
   notIncluded: NOT_INCLUDED_ANY_PLAN,
 });
