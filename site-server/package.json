@@ -9,7 +9,7 @@
     "start": "bun run serve.ts",
     "publish": "bash ./publish.sh",
     "go-live": "bash ./go-live.sh",
-    "test": "bun run tests/origin.check.ts && bun run tests/leads-isolation.check.ts && bun run tests/usage.check.ts && bun run tests/webhook.check.ts && bun run tests/lemon.check.ts",
+    "test": "bun run tests/origin.check.ts && bun run tests/leads-isolation.check.ts && bun run tests/usage.check.ts && bun run tests/lemon.check.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --write ."
   },
@@ -18,8 +18,7 @@
     "@tanstack/react-router": "^1.158.1",
     "@tanstack/react-start": "^1.158.3",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "stripe": "^23.0.0"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
