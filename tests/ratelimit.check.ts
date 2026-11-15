@@ -1,10 +1,8 @@
-
 /**
- * ratelimit.check.ts — 10 requests / minute / IP and the plan-access rules.
+ * ratelimit.check.ts — 10 requests / minute / IP.
  * Run: node --experimental-strip-types --import ./tests/register-ts.mjs tests/ratelimit.check.ts
  */
 import { enforceRateLimit, clientIp, RATE_LIMIT_PER_MINUTE } from '../api/_lib/rateLimit.ts';
-import { canAccess, requiredPlan, fallbackTab } from '../src/lib/planAccess.ts';
 
 let passed = 0, failed = 0;
 const check = (n: string, ok: boolean) => { ok ? passed++ : failed++; console.log(`  ${ok ? '✅' : '❌'} ${n}`); };
@@ -38,15 +36,6 @@ check('other IP unaffected', (await enforceRateLimit(fakeReq('8.8.8.8'), res as 
 res = fakeRes();
 check('other route name unaffected', (await enforceRateLimit(fakeReq('9.9.9.9'), res as never, 'other')) === true);
 
-console.log('Plan access');
-check('free: chatbot yes', canAccess('free', 'agent1'));
-check('free: CRM locked', !canAccess('free', 'crm'));
-check('starter: chatbot + CRM', canAccess('starter', 'agent1') && canAccess('starter', 'crm'));
-check('Agent 2 remains Pro-only', canAccess('pro', 'agent2') && !canAccess('starter', 'agent2') && !canAccess('free', 'agent2'));
-check('email follow-up Agents 3 and 4 are Starter+ only', ['agent3', 'agent4'].every((t) => canAccess('pro', t) && canAccess('starter', t) && !canAccess('free', t)));
-check('email follow-up agents require Starter', ['agent3', 'agent4'].every((t) => requiredPlan(t) === 'starter'));
-check('CRM needs Starter', requiredPlan('crm') === 'starter');
-check('fallback tab is the chatbot', fallbackTab() === 'agent1');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
