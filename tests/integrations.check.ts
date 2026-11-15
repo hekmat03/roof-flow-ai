@@ -7,6 +7,16 @@
  */
 
 import { callAgentApi, fetchAiStatus } from '../src/utils/aiService.ts';
+import {
+  AI_NOTICES,
+  DB_NOTICES,
+  classifyAiFailure,
+  classifyDbError,
+  getServiceStatus,
+  reportAiOk,
+  reportDbFailure,
+  reportDbOk,
+} from '../src/lib/serviceStatus.ts';
 import { postLeadToWebhook, setWebhookUrl, getWebhookUrl } from '../src/utils/webhook.ts';
 import {
   isSpeechSynthesisSupported,
@@ -65,6 +75,21 @@ try {
   r1 = 'THREW: ' + String(e);
 }
 check('callAgentApi returns null (never throws) when API unreachable', r1 === null);
+check('an unreachable AI is recorded as a connection problem', getServiceStatus().ai === 'network');
+check('every AI reason has a plain-language title and detail', Object.values(AI_NOTICES).every((n) => n.title.length > 3 && n.detail.length > 10));
+check('every database reason has a plain-language title and detail', Object.values(DB_NOTICES).every((n) => n.title.length > 3 && n.detail.length > 10));
+check('AI 503 "not configured" is explained as not set up', classifyAiFailure({ status: 503, message: 'AI is not configured on the server' }) === 'not_configured');
+check('AI 502 is explained as unavailable', classifyAiFailure({ status: 502 }) === 'unavailable');
+check('AI 429 is explained as too many messages', classifyAiFailure({ status: 429 }) === 'rate_limited');
+check('AI 401 is explained as an expired session', classifyAiFailure({ status: 401 }) === 'session');
+check('AI timeout is explained as a timeout', classifyAiFailure({ aborted: true }) === 'timeout');
+check('database "Failed to fetch" is a connection problem', classifyDbError(new Error('TypeError: Failed to fetch')) === 'network');
+check('database JWT expiry is a session problem', classifyDbError({ message: 'JWT expired', status: 401 }) === 'session');
+check('any other database error is "not responding"', classifyDbError(new Error('boom')) === 'unavailable');
+reportDbFailure('unavailable');
+check('database failure is recorded', getServiceStatus().db === 'unavailable');
+reportDbOk(); reportAiOk();
+check('success clears both warnings', getServiceStatus().db === null && getServiceStatus().ai === null);
 
 // ------------------------------------------------------------------
 // 2. aiService — status probe + no browser-held keys
