@@ -1,5 +1,4 @@
 import { authHeaders } from '../lib/authFetch';
-import { notifyLimit } from '../lib/limitEvents';
 
 export const AGENT_API_ENDPOINT = '/api/agent-response';
 export const REQUEST_TIMEOUT_MS = 15000;
@@ -10,7 +9,7 @@ export interface AgentApiRequest {
   agentType: ApiAgentType;
   messages: { role: 'user' | 'assistant'; content: string }[];
   context?: Record<string, string | undefined>;
-  /** One id per chat thread; the server counts each id once per month. */
+  /** One id per chat thread; the server caps messages per id. */
   conversationId?: string;
 }
 
@@ -30,9 +29,8 @@ function notifyFallback(): void {
 
 /**
  * Ask the server for a reply. Returns null on failure (never throws).
- * A plan limit (402) or missing plan feature (403) is NOT a failure to hide:
- * it opens the upgrade modal and returns the server's message instead of
- * silently falling back to free offline replies.
+ * A conversation cap or rate limit (429) is NOT a failure to hide: the
+ * server's message is returned instead of silently falling back to offline replies.
  */
 export async function callAgentApi(req: AgentApiRequest): Promise<string | null> {
   const controller = new AbortController();
@@ -44,11 +42,9 @@ export async function callAgentApi(req: AgentApiRequest): Promise<string | null>
       body: JSON.stringify(req),
       signal: controller.signal,
     });
-    if (res.status === 402 || res.status === 403) {
+    if (res.status === 429 || res.status === 403) {
       const body = await res.json().catch(() => null);
-      const message = typeof body?.error === 'string' ? body.error : 'Plan limit reached.';
-      notifyLimit({ code: String(body?.code ?? 'limit_reached'), message });
-      return message;
+      return typeof body?.error === 'string' ? body.error : 'Too many requests. Please wait a moment and try again.';
     }
     if (!res.ok) {
       notifyFallback();
