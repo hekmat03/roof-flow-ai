@@ -5,9 +5,9 @@ export type PlanId = 'free' | 'starter' | 'pro';
 export const HIDDEN_TABS: readonly string[] = [];
 
 const ACCESS: Record<PlanId, string[]> = {
-  free:    ['agent1', 'pricing', 'billing', 'config'],
-  starter: ['agent1', 'dashboard', 'crm', 'agent3', 'agent4', 'pricing', 'billing', 'config'],
-  pro:     ['agent1', 'dashboard', 'crm', 'agent2', 'agent3', 'agent4', 'pricing', 'billing', 'config'],
+  free:    ['agent1', 'pricing', 'billing', 'team', 'config'],
+  starter: ['agent1', 'dashboard', 'crm', 'agent3', 'agent4', 'pricing', 'billing', 'team', 'config'],
+  pro:     ['agent1', 'dashboard', 'crm', 'agent2', 'agent3', 'agent4', 'pricing', 'billing', 'team', 'config'],
 };
 
 const PLAN_ORDER: PlanId[] = ['free', 'starter', 'pro'];
