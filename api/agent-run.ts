@@ -29,6 +29,7 @@ import { guardChat } from './_lib/guard.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 import { adminClient } from './_lib/supabaseAdmin.js';
 import { appOrigin, createResendProvider } from './_lib/email.js';
+import { ownerUserId } from './_lib/team.js';
 import { createEmailActions, type EmailActionStore } from './_lib/emailActions.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -114,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const emailProvider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
   const emailStore: EmailActionStore | null = admin ? {
     async getProfile() {
-      const { data, error } = await admin.from('contractor_profiles').select('company_name,email,business_address').eq('user_id', guard.user.id).maybeSingle();
+      const { data, error } = await admin.from('contractor_profiles').select('company_name,email,business_address').eq('user_id', await ownerUserId(admin, guard.user.id)).maybeSingle();
       if (error) throw error;
       return { companyName: typeof data?.company_name === 'string' ? data.company_name : 'Your roofing company', contractorEmail: typeof data?.email === 'string' ? data.email : null, businessAddress: typeof data?.business_address === 'string' ? data.business_address : null };
     },
