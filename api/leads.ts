@@ -4,6 +4,7 @@ import { adminClient } from './_lib/supabaseAdmin.js';
 import { lookupTenant } from './_lib/tenant.js';
 import { enforceRateLimit, rateLimitRpcAllowed } from './_lib/rateLimit.js';
 import { createResendProvider } from './_lib/email.js';
+import { ownerIdForTenant } from './_lib/team.js';
 import { sendLeadConfirmation } from './_lib/emailConfirm.js';
 
 function toWebRequest(req: VercelRequest): Request {
@@ -114,9 +115,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return Boolean(data);
           },
           async companyInfo(tid) {
-            const { data: owner } = await admin.from('profiles').select('user_id').eq('tenant_id', tid).limit(1).maybeSingle();
-            if (!owner?.user_id) return { companyName: '', businessAddress: null };
-            const { data } = await admin.from('contractor_profiles').select('company_name,business_address').eq('user_id', owner.user_id).maybeSingle();
+            const ownerId = await ownerIdForTenant(admin, tid);
+            if (!ownerId) return { companyName: '', businessAddress: null };
+            const { data } = await admin.from('contractor_profiles').select('company_name,business_address').eq('user_id', ownerId).maybeSingle();
             return {
               companyName: typeof data?.company_name === 'string' ? data.company_name : '',
               businessAddress: typeof data?.business_address === 'string' ? data.business_address : null,
