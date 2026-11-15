@@ -15,7 +15,7 @@ npm test
 npm run build
 ```
 
-The root Vite application is built to `dist`. Use `npx vercel dev` to run the Vercel API routes locally as well as the frontend. Live AI requires `MISTRAL_API_KEY`; without it, the dashboard chatbot uses its offline reply generator and live-AI widget acknowledgements are unavailable.
+The root Vite application is built to `dist`. Use `npx vercel dev` to run the Vercel API routes locally as well as the frontend. Live AI requires `XAI_API_KEY` (xAI Grok); without it, the dashboard chatbot uses its offline reply generator and live-AI widget acknowledgements are unavailable.
 
 ## Embeddable widget
 
@@ -32,7 +32,7 @@ The widget guides a visitor through a roof concern, property ZIP, name, contact 
 Apply these SQL files in the listed order in the intended Supabase environment:
 
 1. `supabase/001_multitenant.sql` — tenant tables, user profiles and row-level security.
-2. `supabase/002_billing.sql` — subscription fields and chat usage limits.
+2. `supabase/002_billing.sql` — chat usage tracking (the old subscription columns are unused now).
 3. `supabase/003_ratelimit.sql` — shared API rate-limit storage and RPC.
 4. `supabase/004_calendar.sql` — tenant calendar connection storage.
 5. `supabase/005_onboarding.sql` — contractor onboarding profiles.
@@ -51,8 +51,10 @@ Copy `.env.example` to `.env.local` for local development. Never commit real cre
 
 | Variable | Purpose / requirement |
 |---|---|
-| `MISTRAL_API_KEY` | Server-side API key; required for live AI responses. |
-| `MISTRAL_MODEL` | Optional model override; defaults to `mistral-small-latest`. |
+| `XAI_API_KEY` | Server-side xAI Grok API key; required for live AI responses. |
+| `AI_MODEL` | Optional model override; defaults to `grok-4.3`. |
+| `AI_REASONING_EFFORT` | Optional (`none` default, `low`, `medium`, `high`, `off`). |
+| `AI_PROVIDER` / `GROQ_API_KEY` | Optional: `AI_PROVIDER=groq` switches to GroqCloud. |
 | `SUPABASE_URL` | Server-side Supabase URL. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase service-role key; required by privileged API operations. |
 | `EMAIL_PROVIDER_API_KEY` | Optional Resend API key; without it, no real email is sent. |
@@ -60,12 +62,6 @@ Copy `.env.example` to `.env.local` for local development. Never commit real cre
 | `CRON_SECRET` | Bearer secret required by the scheduled email worker. |
 | `VITE_SUPABASE_URL` | Supabase URL for the browser client. |
 | `VITE_SUPABASE_ANON_KEY` | Public anonymous key for the browser client; row-level security protects data. |
-| `LS_WEBHOOK_SECRET` | Lemon Squeezy webhook verification secret. |
-| `LS_VARIANT_STARTER` | Starter subscription variant ID. |
-| `LS_VARIANT_PRO` | Pro subscription variant ID. |
-| `LS_CHECKOUT_URL_STARTER` | Starter hosted checkout URL. |
-| `LS_CHECKOUT_URL_PRO` | Pro hosted checkout URL. |
-| `LS_API_KEY` | Optional Lemon Squeezy API key used to create billing portal links. |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID for Calendar connection. |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. |
 | `GOOGLE_REDIRECT_URI` | OAuth callback URL; set it to this deployment's `/api/google/callback` URL. |
@@ -75,7 +71,7 @@ Copy `.env.example` to `.env.local` for local development. Never commit real cre
 
 Email follow-up setup and the manual verification checklist are in [EMAIL_SETUP.md](EMAIL_SETUP.md).
 
-Supabase browser credentials are required for authenticated tenant storage. Billing and Google Calendar variables are needed only when those integrations are configured. Keep service-role, billing, OAuth and signing secrets server-side.
+Supabase browser credentials are required for authenticated tenant storage. Google Calendar variables are needed only when that integration is configured. Keep service-role, billing, OAuth and signing secrets server-side.
 
 ## Main project paths
 
@@ -84,6 +80,6 @@ Supabase browser credentials are required for authenticated tenant storage. Bill
 | `src/` | Vite frontend, dashboard, CRM, onboarding and chatbot. |
 | `public/widget.js` | Embeds the contractor lead-capture widget. |
 | `public/widget.html` | Guided widget conversation and consent flow. |
-| `api/` | Vercel serverless routes for chatbot, lead capture, follow-up email, billing and Calendar operations. |
+| `api/` | Vercel serverless routes for chatbot, lead capture, follow-up email and Calendar operations. |
 | `supabase/001_*.sql` – `supabase/009_*.sql` | Ordered database migrations (two existing 008 migrations precede 009). |
 | `tests/` | Offline checks for generators, API helpers, integrations and validation. |
