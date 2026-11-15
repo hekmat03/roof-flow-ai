@@ -5,6 +5,7 @@ import { processDueMessages, type FollowupStore, type ScheduledMessage } from '.
 import { effectivePlan } from '../_lib/billing.js';
 import { hasCronAuthorization } from '../_lib/cronAuth.js';
 import { EMAIL_MONTHLY_CAPS } from '../_lib/plans.js';
+import { ownerIdForTenant } from '../_lib/team.js';
 
 export const config = { maxDuration: 60 };
 
@@ -32,9 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     },
     async getContext(message) {
       if (!message.lead_id) return null;
+      const ownerId = await ownerIdForTenant(admin, message.tenant_id);
       const [{ data: lead, error: leadError }, { data: userProfile, error: userError }] = await Promise.all([
         admin.from('leads').select('email,status,consent,conversation,email_verified_at').eq('id', message.lead_id).eq('tenant_id', message.tenant_id).maybeSingle(),
-        admin.from('profiles').select('user_id,current_plan,subscription_status,current_period_end').eq('tenant_id', message.tenant_id).maybeSingle(),
+        ownerId
+          ? admin.from('profiles').select('user_id,current_plan,subscription_status,current_period_end').eq('user_id', ownerId).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
       ]);
       if (leadError || userError) throw leadError || userError;
       if (!lead || !userProfile) return null;
