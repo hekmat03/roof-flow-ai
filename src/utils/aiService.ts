@@ -1,4 +1,6 @@
 import { authHeaders } from '../lib/authFetch';
+import { notifyLimit } from '../lib/limitEvents';
+import { classifyAiFailure, reportAiFailure, reportAiOk, type AiReason } from '../lib/serviceStatus';
 
 export const AGENT_API_ENDPOINT = '/api/agent-response';
 export const REQUEST_TIMEOUT_MS = 15000;
@@ -9,7 +11,7 @@ export interface AgentApiRequest {
   agentType: ApiAgentType;
   messages: { role: 'user' | 'assistant'; content: string }[];
   context?: Record<string, string | undefined>;
-  /** One id per chat thread; the server caps messages per id. */
+  /** One id per chat thread; the server counts each id once per month. */
   conversationId?: string;
 }
 
@@ -19,7 +21,8 @@ export interface AiStatus {
   model?: string;
 }
 
-function notifyFallback(): void {
+function notifyFallback(reason: AiReason): void {
+  reportAiFailure(reason);
   try {
     window.dispatchEvent(new CustomEvent('roofflow:fallback'));
   } catch {
@@ -29,8 +32,9 @@ function notifyFallback(): void {
 
 /**
  * Ask the server for a reply. Returns null on failure (never throws).
- * A conversation cap or rate limit (429) is NOT a failure to hide: the
- * server's message is returned instead of silently falling back to offline replies.
+ * A plan limit (402) or missing plan feature (403) is NOT a failure to hide:
+ * it opens the upgrade modal and returns the server's message instead of
+ * silently falling back to free offline replies.
  */
 export async function callAgentApi(req: AgentApiRequest): Promise<string | null> {
   const controller = new AbortController();
@@ -42,23 +46,27 @@ export async function callAgentApi(req: AgentApiRequest): Promise<string | null>
       body: JSON.stringify(req),
       signal: controller.signal,
     });
-    if (res.status === 429 || res.status === 403) {
+    if (res.status === 402 || res.status === 403) {
       const body = await res.json().catch(() => null);
-      return typeof body?.error === 'string' ? body.error : 'Too many requests. Please wait a moment and try again.';
+      const message = typeof body?.error === 'string' ? body.error : 'Plan limit reached.';
+      notifyLimit({ code: String(body?.code ?? 'limit_reached'), message });
+      return message;
     }
     if (!res.ok) {
-      notifyFallback();
+      const body = await res.json().catch(() => null);
+      notifyFallback(classifyAiFailure({ status: res.status, message: typeof body?.error === 'string' ? body.error : '' }));
       return null;
     }
     const data = await res.json();
     const text: unknown = data?.reply;
     if (typeof text !== 'string' || !text.trim()) {
-      notifyFallback();
+      notifyFallback('unavailable');
       return null;
     }
+    reportAiOk();
     return text.trim();
   } catch {
-    notifyFallback();
+    notifyFallback(classifyAiFailure({ aborted: controller.signal.aborted }));
     return null;
   } finally {
     clearTimeout(timer);
