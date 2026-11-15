@@ -1,7 +1,7 @@
-
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { MIN_PASSWORD_LENGTH } from '../lib/passwordRules';
 
 export interface AuthResult {
   error?: string;
@@ -19,11 +19,18 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   resendVerification: (email: string) => Promise<AuthResult>;
+  requestPasswordReset: (email: string) => Promise<AuthResult>;
+  /** Sets a new password for the signed-in (or recovery) session and signs out other devices. */
+  updatePassword: (password: string) => Promise<AuthResult>;
+  /** Starts an email change; Supabase emails a confirmation link to the new address. */
+  updateEmail: (email: string) => Promise<AuthResult>;
+  signOutEverywhere: () => Promise<AuthResult>;
+  signInWithGoogle: () => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const MIN_PASSWORD_LENGTH = 8;
+export { MIN_PASSWORD_LENGTH };
 
 function friendly(message: string): string {
   const m = message.toLowerCase();
@@ -31,7 +38,10 @@ function friendly(message: string): string {
   if (m.includes('email not confirmed')) return 'Please verify your email first. Check your inbox.';
   if (m.includes('already registered') || m.includes('already been registered'))
     return 'An account with this email already exists. Try logging in.';
-  if (m.includes('rate limit') || m.includes('too many'))
+  if (m.includes('expired') || m.includes('session missing') || m.includes('otp'))
+    return 'This link has expired. Request a new one.';
+  if (m.includes('same') && m.includes('password')) return 'Choose a password you have not used before.';
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('seconds'))
     return 'Too many attempts. Please wait a minute and try again.';
   if (m.includes('password')) return message;
   if (m.includes('fetch') || m.includes('network'))
@@ -129,6 +139,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const requestPasswordReset = useCallback<AuthContextType['requestPasswordReset']>(async (email) => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      return error ? { error: friendly(error.message) } : {};
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const updatePassword = useCallback<AuthContextType['updatePassword']>(async (password) => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) return { error: friendly(error.message) };
+      // A new password should end every other login (a stolen session, an old laptop).
+      await supabase.auth.signOut({ scope: 'others' }).catch(() => undefined);
+      return {};
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const updateEmail = useCallback<AuthContextType['updateEmail']>(async (email) => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.updateUser(
+        { email: email.trim() },
+        { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      );
+      return error ? { error: friendly(error.message) } : {};
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const signOutEverywhere = useCallback<AuthContextType['signOutEverywhere']>(async () => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      return error ? { error: friendly(error.message) } : {};
+    } catch (e) {
+      return { error: friendly(e instanceof Error ? e.message : '') };
+    }
+  }, []);
+
+  const signInWithGoogle = useCallback<AuthContextType['signInWithGoogle']>(async () => {
+    if (!supabase) return { error: 'Authentication is not configured.' };
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      return error ? { error: 'Google sign-in is not available right now.' } : {};
+    } catch {
+      return { error: 'Google sign-in is not available right now.' };
+    }
+  }, []);
+
   const value = useMemo<AuthContextType>(() => {
     const user = session?.user ?? null;
     return {
@@ -141,8 +212,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn,
       signOut,
       resendVerification,
+      requestPasswordReset,
+      updatePassword,
+      updateEmail,
+      signOutEverywhere,
+      signInWithGoogle,
     };
-  }, [session, loading, signUp, signIn, signOut, resendVerification]);
+  }, [session, loading, signUp, signIn, signOut, resendVerification, requestPasswordReset, updatePassword, updateEmail, signOutEverywhere, signInWithGoogle]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
