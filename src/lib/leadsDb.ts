@@ -55,7 +55,7 @@ export function rowToLead(r: LeadRow): Lead {
     appointmentDetails: r.appointment ?? undefined,
     zipCode: r.zip_code ?? r.zip ?? 'N/A',
     roofIssue: r.roof_issue ?? r.roofing_need ?? '',
-    agentType: (r.agent_type as Lead['agentType']) ?? 'Chatbot',
+    agentType: (r.agent_type === 'SMS Nurture' ? 'Email Nurture' : (r.agent_type as Lead['agentType'])) ?? 'Chatbot',
     chatLog: r.conversation ?? [],
     purchaseHistory: Array.isArray(r.purchase_history) ? r.purchase_history : [],
   };
