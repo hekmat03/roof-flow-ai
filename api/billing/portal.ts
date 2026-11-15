@@ -1,8 +1,8 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { adminClient, userFromRequest } from '../_lib/supabaseAdmin.js';
 import { getProfile } from '../_lib/billing.js';
+import { normalizeRole } from '../_lib/team.js';
 
 async function freshPortalUrl(subscriptionId: string): Promise<string | null> {
   const key = (process.env.LS_API_KEY ?? '').trim();
@@ -35,6 +35,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!admin || !user) return res.status(401).json({ ok: false, message: 'Please log in first.' });
 
   const profile = await getProfile(admin, user.id);
+  if (normalizeRole(profile?.role) !== 'owner') {
+    return res.status(200).json({ ok: false, message: 'Only the workspace owner can manage billing.' });
+  }
 
   if (!profile?.ls_subscription_id) {
     return res.status(200).json({ ok: false, message: 'There is no subscription to manage yet.' });
