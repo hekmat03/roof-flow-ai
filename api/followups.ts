@@ -2,11 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'node:crypto';
 import { adminClient, userFromRequest } from './_lib/supabaseAdmin.js';
 import { lookupTenant } from './_lib/tenant.js';
-import { getProfile, effectivePlan } from './_lib/billing.js';
 import { appOrigin, createResendProvider, emailEnvelope, signUnsubscribeToken } from './_lib/email.js';
-import { ownerUserId } from './_lib/team.js';
 import { scheduledSequenceTimes, sequenceEmailCopy } from './_lib/followups.js';
-import { EMAIL_MONTHLY_CAPS, EMAIL_DAILY_CAP } from './_lib/plans.js';
+import { EMAIL_MONTHLY_CAP, EMAIL_DAILY_CAP } from './_lib/limits.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,9 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) return json(res, 401, { error: 'unauthenticated' });
   const tenant = await lookupTenant(admin, user.id);
   if (tenant.ok === false) return json(res, tenant.status, { error: tenant.code });
-  const plan = effectivePlan(await getProfile(admin, user.id));
-  if (plan === 'free') return json(res, 403, { error: 'Email follow-ups require Starter or Pro.', code: 'upgrade_required', plan });
-  const cap = EMAIL_MONTHLY_CAPS[plan];
+  const cap = EMAIL_MONTHLY_CAP;
   const provider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
   const from = process.env.EMAIL_FROM?.trim();
   const origin = appOrigin(process.env.APP_BASE_URL);
@@ -54,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { data: profile, error: profileError } = await admin.from('contractor_profiles')
-      .select('company_name,email,business_address,location').eq('user_id', await ownerUserId(admin, user.id)).maybeSingle();
+      .select('company_name,email,business_address,location').eq('user_id', user.id).maybeSingle();
     if (profileError) throw profileError;
     const companyName = tidy(profile?.company_name) || 'Your roofing company';
     const businessAddress = tidy(profile?.business_address);
@@ -208,4 +204,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('followups API error:', error instanceof Error ? error.message : 'unknown');
     return json(res, 503, { error: 'Follow-up service unavailable. Confirm migration 009 is installed.' });
   }
-        }
+}
