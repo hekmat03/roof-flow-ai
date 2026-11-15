@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { classifyDbError, reportDbFailure, reportDbOk } from '../lib/serviceStatus';
 import { postLeadToWebhook } from '../utils/webhook';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -211,6 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fail = useCallback((e: unknown) => {
     const msg = e instanceof Error ? e.message : 'Storage request failed.';
     setStorageError(msg);
+    reportDbFailure(classifyDbError(e));
   }, []);
 
   const activeCompany = availableCompanies.find((c: CompanyInfo) => c.id === tenantId) ?? availableCompanies[0] ?? null;
@@ -246,7 +248,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const [cfg, rows, profileResult, comps] = await Promise.all([
         fetchTenantConfig(targetTenantId).catch(() => ({ settings: {} })),
-        fetchLeads(targetTenantId).catch(() => []),
+        // A failed leads load must show the database warning, not look like "no leads yet".
+        fetchLeads(targetTenantId),
         profileQuery,
         fetchUserCompanies(),
       ]);
@@ -282,6 +285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLeadsState(rows);
       configLoaded.current = true;
       setStorageError(null);
+      reportDbOk();
       setStorageStatus('ready');
     } catch (e) {
       fail(e);
@@ -373,7 +377,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     const removed = prev.filter((l) => !nextIds.has(l.id)).map((l) => l.id);
 
-    Promise.all([upsertLeads(id, changed), deleteLeads(id, removed)]).catch((e) => {
+    Promise.all([upsertLeads(id, changed), deleteLeads(id, removed)]).then(() => {
+      reportDbOk();
+      setStorageError(null);
+    }).catch((e) => {
       fail(e);
       void fetchLeads(id).then((rows) => {
         leadsRef.current = rows;
