@@ -1,8 +1,8 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { adminClient, userFromRequest } from '../_lib/supabaseAdmin.js';
 import { effectivePlan, getProfile } from '../_lib/billing.js';
+import { normalizeRole } from '../_lib/team.js';
 import { checkoutUrlForPlan, isPlanId, paymentsActivated } from '../_lib/plans.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -25,6 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const profile = await getProfile(admin, user.id);
+  if (normalizeRole(profile?.role) !== 'owner') {
+    return res.status(200).json({ ok: false, message: 'Only the workspace owner can change the plan.' });
+  }
   const current = effectivePlan(profile);
 
   if (current !== 'free') {
