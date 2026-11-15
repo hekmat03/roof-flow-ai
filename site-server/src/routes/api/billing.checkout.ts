@@ -14,7 +14,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { sessionFromRequest } from "../../lib/auth";
-import { createCheckoutSession, getProfile } from "../../lib/billing";
+import { createCheckoutSession, getProfileStrict } from "../../lib/billing";
 import { isSameOrigin, json, readJson, requestOrigin } from "../../lib/http";
 import { isPlanId } from "../../lib/plans";
 import {
@@ -116,7 +116,21 @@ export const Route = createFileRoute("/api/billing/checkout")({
         // ---- Lemon Squeezy (hosted buy link) --------------------------------
         const lemonLink = checkoutUrlForPlan(plan);
         if (lemonLink) {
-          const profile = await getProfile(session.userId).catch(() => null);
+          let profile: Awaited<ReturnType<typeof getProfileStrict>> = null;
+          try {
+            profile = await getProfileStrict(session.userId);
+          } catch {
+            // Fail closed: a storage hiccup must not read as "no profile" —
+            // an existing subscriber could otherwise check out a second time.
+            return json(
+              {
+                ok: false,
+                error: "profile_unavailable",
+                message: "Could not verify your subscription right now — try again in a moment.",
+              },
+              503
+            );
+          }
           const current = effectivePlan(profile);
           if (current !== "free") {
             return json(

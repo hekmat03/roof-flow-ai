@@ -75,6 +75,20 @@ export const getProfile = async (userId: string): Promise<ProfileRow | null> => 
   return rows[0] ?? null;
 };
 
+/** Strict read: throws on a failed DB fetch. A transient storage error must
+ *  never look like "no profile" — an existing subscriber could otherwise pass
+ *  the already-subscribed guard and check out a second time. Returns null only
+ *  when profiles storage is unconfigured or the row is genuinely absent. */
+export const getProfileStrict = async (userId: string): Promise<ProfileRow | null> => {
+  if (!isConfigured()) return null;
+  const res = await adminFetch(
+    `/rest/v1/${PROFILES_TABLE}?user_id=eq.${encodeURIComponent(userId)}&select=*&limit=1`
+  );
+  if (!res.ok) throw new Error(`profiles_read_failed_${res.status}`);
+  const rows = (await res.json()) as ProfileRow[];
+  return rows[0] ?? null;
+};
+
 /**
  * Upsert a profile row. Service-key only: this is the sole writer of plan state,
  * which is what makes the plan tamper-proof from the browser.
