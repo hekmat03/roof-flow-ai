@@ -6,7 +6,7 @@ The error means the **built site has no Supabase keys**. `VITE_*` variables are 
 2. Vercel → your project → Settings → Environment Variables. Add for **Production, Preview and Development**:
    - `VITE_SUPABASE_URL` = Project URL
    - `VITE_SUPABASE_ANON_KEY` = anon public key
-   - (server only) `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `MISTRAL_API_KEY`
+   - (server only) `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `XAI_API_KEY`
 3. Vercel → Deployments → **Redeploy** the latest one (uncheck "use existing build cache"). Env changes don't apply to old builds.
 4. Supabase → Authentication → URL Configuration:
    - Site URL = `https://YOUR-DOMAIN`
