@@ -1,13 +1,15 @@
 /**
  * agentRunner.ts — runs an agent turn WITH tools via /api/agent-run.
  * Falls back to the offline engine (no tools, no actions) on network/server
- * failure so the app never breaks. A conversation cap or rate limit is NOT a
- * failure: the server's message is shown (no free offline replies).
+ * failure so the app never breaks. A plan limit is NOT a failure: it opens the
+ * upgrade modal and returns the server's message (no free offline replies).
  */
 import { getAgentResponse, type AgentType, type AgentMessage, type AgentContext } from './agentService';
 import type { AgentAction } from './applyActions';
 import { authHeaders } from './authFetch';
 import { conversationIdFor } from './conversation';
+import { notifyLimit } from './limitEvents';
+import { classifyAiFailure, reportAiFailure, reportAiOk, type AiReason } from './serviceStatus';
 
 export const AGENT_RUN_ENDPOINT = '/api/agent-run';
 const TIMEOUT_MS = 25000;
@@ -40,6 +42,7 @@ export async function runAgentWithTools(
 ): Promise<AgentRunResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let reason: AiReason = 'unavailable';
   try {
     const res = await fetch(AGENT_RUN_ENDPOINT, {
       method: 'POST',
@@ -54,30 +57,38 @@ export async function runAgentWithTools(
       signal: controller.signal,
     });
 
-    if (res.status === 429 || res.status === 403) {
+    if (res.status === 402 || res.status === 403) {
       const body = await res.json().catch(() => null);
-      const message = typeof body?.error === 'string' ? body.error : 'Too many requests. Please wait a moment and try again.';
+      const code = String(body?.code ?? 'limit_reached');
+      const message = typeof body?.error === 'string' ? body.error : 'Plan limit reached.';
+      notifyLimit({ code, message });
       return {
-        reply: message,
+        reply: code === 'conversation_cap' ? message : `${message} Upgrade your plan to keep chatting.`,
         actions: [],
         live: false,
         limitReached: true,
       };
     }
     if (res.status === 401) {
+      reportAiFailure('session');
       return { reply: 'Your session expired. Please log in again.', actions: [], live: false };
     }
     if (res.ok) {
       const data = await res.json();
       if (typeof data?.reply === 'string' && data.reply.trim()) {
+        reportAiOk();
         return { reply: data.reply.trim(), actions: Array.isArray(data.actions) ? data.actions : [], live: true };
       }
+    } else {
+      const body = await res.json().catch(() => null);
+      reason = classifyAiFailure({ status: res.status, message: typeof body?.error === 'string' ? body.error : '' });
     }
   } catch {
-    /* fall through to offline engine */
+    reason = classifyAiFailure({ aborted: controller.signal.aborted });
   } finally {
     clearTimeout(timer);
   }
+  reportAiFailure(reason);
   try { window.dispatchEvent(new CustomEvent('roofflow:fallback')); } catch { /* best-effort */ }
   const reply = await getAgentResponse(agentType, messages, ctx, { skipLive: true });
   return { reply, actions: [], live: false };
