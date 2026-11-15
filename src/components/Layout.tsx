@@ -8,20 +8,13 @@ import {
   FileText,
   Users,
   Settings,
-  CreditCard,
-  Wallet,
-  UserCog,
   CloudLightning,
   Menu,
   X,
-  Lock,
   LogOut
 } from 'lucide-react';
-import { usePlan } from '../lib/usePlan';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../lib/router';
-import { canAccess, upgradeLabel, isHidden, requiredPlan, PLAN_NAMES } from '../lib/planAccess';
-import { useBilling } from '../context/BillingContext';
 import { CalendarConnection } from './CalendarConnection';
 
 interface LayoutProps {
@@ -31,8 +24,6 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { companySettings, activeTab, setActiveTab, activeCompany, availableCompanies, switchCompany } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const plan = usePlan();
-  const { openUpgrade } = useBilling();
   const { user, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -49,24 +40,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'agent3', label: 'Agent 3: Email Follow-ups', icon: MessageSquarePlus },
     { id: 'agent4', label: 'Agent 4: Estimate Follow-up', icon: FileText },
     { id: 'crm', label: 'CRM Leads Board', icon: Users },
-    { id: 'pricing', label: 'Plans & Pricing', icon: Wallet },
-    { id: 'billing', label: 'Billing & Account', icon: CreditCard },
-    { id: 'team', label: 'Team & Users', icon: UserCog },
     { id: 'config', label: 'Configuration', icon: Settings },
   ];
 
-  // Phone automation remains Pro-only. Email follow-up agents are available to Starter and Pro.
-  const visibleItems = menuItems.filter((item) => !isHidden(item.id));
-
   function handleTabSelect(id: string) {
-    if (canAccess(plan, id)) {
-      setActiveTab(id);
-    } else {
-      // Locked: stay where you are and show the upgrade prompt.
-      const needs = requiredPlan(id);
-      const label = menuItems.find((m) => m.id === id)?.label ?? 'This feature';
-      openUpgrade(`${label} is included in the ${needs ? PLAN_NAMES[needs] : 'Pro'} plan and above.`);
-    }
+    setActiveTab(id);
     setMobileMenuOpen(false);
   }
 
@@ -119,7 +97,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
 
           <nav className="p-3 md:p-4 space-y-1">
-            {visibleItems.map((item) => {
+            {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 
@@ -136,13 +114,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   />
 
                   <span className="truncate">{item.label}</span>
-
-                  {!canAccess(plan, item.id) && (
-                    <span className="ml-auto flex items-center gap-1 text-[10px] font-bold uppercase text-accent-400 shrink-0">
-                      <Lock className="h-3.5 w-3.5" />
-                      {upgradeLabel(plan)}
-                    </span>
-                  )}
                 </button>
               );
             })}
