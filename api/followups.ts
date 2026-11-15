@@ -4,6 +4,7 @@ import { adminClient, userFromRequest } from './_lib/supabaseAdmin.js';
 import { lookupTenant } from './_lib/tenant.js';
 import { getProfile, effectivePlan } from './_lib/billing.js';
 import { appOrigin, createResendProvider, emailEnvelope, signUnsubscribeToken } from './_lib/email.js';
+import { ownerUserId } from './_lib/team.js';
 import { scheduledSequenceTimes, sequenceEmailCopy } from './_lib/followups.js';
 import { EMAIL_MONTHLY_CAPS, EMAIL_DAILY_CAP } from './_lib/plans.js';
 
@@ -53,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { data: profile, error: profileError } = await admin.from('contractor_profiles')
-      .select('company_name,email,business_address,location').eq('user_id', user.id).maybeSingle();
+      .select('company_name,email,business_address,location').eq('user_id', await ownerUserId(admin, user.id)).maybeSingle();
     if (profileError) throw profileError;
     const companyName = tidy(profile?.company_name) || 'Your roofing company';
     const businessAddress = tidy(profile?.business_address);
