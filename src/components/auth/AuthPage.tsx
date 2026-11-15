@@ -1,17 +1,21 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowRight, CloudLightning, Eye, EyeOff, Loader2, ShieldAlert } from 'lucide-react';
 import { MIN_PASSWORD_LENGTH, useAuth } from '../../context/AuthContext';
+import { passwordProblem, passwordScore } from '../../lib/passwordRules';
+import { StrengthBar } from './AuthShell';
 import { navigate, safeNext } from '../../lib/router';
 import { Redirect } from '../Redirect';
 import { FullScreenSpinner } from '../Spinner';
 import { VerifyEmail } from './VerifyEmail';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const GOOGLE_ENABLED = import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === 'true';
 
 export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
-  const { user, loading, configured, emailVerified, signIn, signUp } = useAuth();
+  const { user, loading, configured, emailVerified, signIn, signUp, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,9 +32,12 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     e.preventDefault();
     setError(null);
     if (!EMAIL_RE.test(email.trim())) return setError('Enter a valid email address.');
-    if (isSignup && password.length < MIN_PASSWORD_LENGTH)
-      return setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
     if (!password) return setError('Enter your password.');
+    if (isSignup) {
+      const problem = passwordProblem(password);
+      if (problem) return setError(problem);
+      if (password !== confirm) return setError('The two passwords do not match.');
+    }
 
     setBusy(true);
     try {
@@ -48,6 +55,12 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onGoogle() {
+    setError(null);
+    const r = await signInWithGoogle();
+    if (r.error) setError(r.error);
   }
 
   const input =
@@ -111,7 +124,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
               <input id="password" type={showPw ? 'text' : 'password'} value={password}
                 autoComplete={isSignup ? 'new-password' : 'current-password'}
                 onChange={(e) => setPassword(e.target.value)} className={`${input} pr-12`}
-                placeholder={isSignup ? `At least ${MIN_PASSWORD_LENGTH} characters` : 'Your password'} />
+                placeholder={isSignup ? `At least ${MIN_PASSWORD_LENGTH} characters, with a number` : 'Your password'} />
               <button type="button" onClick={() => setShowPw((v) => !v)}
                 aria-label={showPw ? 'Hide password' : 'Show password'}
                 className="absolute right-1 top-1/2 -translate-y-1/2 grid h-10 w-10 place-items-center text-ink-mute hover:text-ink min-h-0">
@@ -120,6 +133,21 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             </div>
           </div>
 
+          {isSignup && (
+            <div>
+              <StrengthBar score={passwordScore(password)} />
+              <label htmlFor="confirm" className="block text-sm text-ink-soft mb-1.5 mt-3">Confirm password</label>
+              <input id="confirm" type={showPw ? 'text' : 'password'} value={confirm} autoComplete="new-password"
+                onChange={(e) => setConfirm(e.target.value)} className={input} placeholder="Repeat your password" />
+            </div>
+          )}
+          {!isSignup && (
+            <div className="text-right -mt-2">
+              <button type="button" onClick={() => navigate('/forgot-password')}
+                className="text-sm text-ink-mute hover:text-gold min-h-0">Forgot password?</button>
+            </div>
+          )}
+
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
           <button type="submit" disabled={busy || !configured}
@@ -127,6 +155,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             {busy ? 'Please wait…' : isSignup ? 'Start Free – No Credit Card' : 'Log in'}
           </button>
+
+          {GOOGLE_ENABLED && (
+            <button type="button" onClick={onGoogle} disabled={busy || !configured}
+              className="w-full rounded-xl border border-line bg-inset py-3 text-sm font-semibold text-ink hover:border-gold/60 disabled:opacity-50">
+              Continue with Google
+            </button>
+          )}
 
           <p className="text-sm text-ink-mute text-center">
             {isSignup ? 'Already have an account? ' : 'New here? '}
