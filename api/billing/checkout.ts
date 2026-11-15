@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { adminClient, userFromRequest } from '../_lib/supabaseAdmin.js';
-import { effectivePlan, getProfile } from '../_lib/billing.js';
+import { effectivePlan, getProfileStrict } from '../_lib/billing.js';
 import { normalizeRole } from '../_lib/team.js';
 import { checkoutUrlForPlan, isPlanId, paymentsActivated } from '../_lib/plans.js';
 
@@ -24,7 +24,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ ok: false, message: 'Choose the Starter or Pro plan.' });
   }
 
-  const profile = await getProfile(admin, user.id);
+  let profile: Awaited<ReturnType<typeof getProfileStrict>> = null;
+  try {
+    profile = await getProfileStrict(admin, user.id);
+  } catch {
+    // Fail closed: a storage hiccup must not read as "no profile" — an
+    // existing subscriber could otherwise check out a second time.
+    return res.status(503).json({
+      ok: false,
+      error: 'profile_unavailable',
+      message: 'Could not verify your subscription right now — try again in a moment.',
+    });
+  }
   if (normalizeRole(profile?.role) !== 'owner') {
     return res.status(200).json({ ok: false, message: 'Only the workspace owner can change the plan.' });
   }

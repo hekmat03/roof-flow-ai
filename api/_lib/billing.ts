@@ -39,6 +39,22 @@ export async function getProfile(
   return (data as ProfileRow | null) ?? null;
 }
 
+/** Strict read: throws on a failed DB fetch. A transient storage error must
+ *  never look like "no profile" — an existing subscriber could otherwise pass
+ *  the already-subscribed guard and check out a second time. */
+export async function getProfileStrict(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<ProfileRow | null> {
+  const { data, error } = await admin
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(`profiles_read_failed: ${error.message}`);
+  return (data as ProfileRow | null) ?? null;
+}
+
 /** The plan the user is entitled to right now. Never trusts the browser. */
 export function effectivePlan(
   p: Pick<ProfileRow, 'current_plan' | 'subscription_status' | 'current_period_end'> | null,
