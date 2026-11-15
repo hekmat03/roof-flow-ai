@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Ban, CheckCircle2, Copy, KeyRound, Shield, Trash2, UserPlus, Users } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { MIN_PASSWORD_LENGTH } from '../context/AuthContext';
+import { AccountSecurity } from './AccountSecurity';
 import {
   getAdminUsers, getMe, getMembers, inviteMember, removeMember, revokeInvite,
   saveFullName, setUserDisabled, updateMember,
@@ -46,6 +45,7 @@ export const TeamManagement: React.FC = () => {
   return (
     <div className="space-y-3">
       <ProfileCard me={me} onSaved={loadMe} />
+      <AccountSecurity />
       {me.canManage && <TeamCard me={me} />}
       {me.platformAdmin && <AdminCard />}
     </div>
@@ -56,7 +56,6 @@ export const TeamManagement: React.FC = () => {
 
 const ProfileCard: React.FC<{ me: TeamMe; onSaved: () => void }> = ({ me, onSaved }) => {
   const [name, setName] = useState(me.fullName ?? '');
-  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -68,19 +67,6 @@ const ProfileCard: React.FC<{ me: TeamMe; onSaved: () => void }> = ({ me, onSave
     if (r.ok) onSaved();
   };
 
-  const changePassword = async () => {
-    if (!supabase) return;
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setNote({ ok: false, text: `Use at least ${MIN_PASSWORD_LENGTH} characters.` });
-      return;
-    }
-    setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setNote(error ? { ok: false, text: error.message } : { ok: true, text: 'Password updated.' });
-    if (!error) setPassword('');
-    setBusy(false);
-  };
-
   return (
     <section className="glass rounded-xl p-4 space-y-3" aria-label="My profile">
       <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -89,15 +75,9 @@ const ProfileCard: React.FC<{ me: TeamMe; onSaved: () => void }> = ({ me, onSave
       <p className="text-xs text-slate-400">
         {me.email} · <Badge>{ROLE_LABEL[me.role]}</Badge>{me.companyName ? ` · ${me.companyName}` : ''}
       </p>
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="flex gap-2">
-          <input className={input} placeholder="Your name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} aria-label="Your name" />
-          <button className={primary} disabled={busy} onClick={saveName}>Save</button>
-        </div>
-        <div className="flex gap-2">
-          <input className={input} type="password" autoComplete="new-password" placeholder="New password" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="New password" />
-          <button className={ghost} disabled={busy || !supabase || !password} onClick={changePassword}>Change</button>
-        </div>
+      <div className="flex gap-2 md:max-w-md">
+        <input className={input} placeholder="Your name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} aria-label="Your name" />
+        <button className={primary} disabled={busy} onClick={saveName}>Save</button>
       </div>
       <Note note={note} />
     </section>
