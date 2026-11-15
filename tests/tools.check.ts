@@ -41,7 +41,7 @@ check('send: sms channel rejected', !validateToolArgs('send_message', { channel:
 check('send: bad channel rejected', !validateToolArgs('send_message', { channel: 'fax', to: '5551234567', body: 'hello there' }).ok);
 check('crm: needs phone or email', !validateToolArgs('update_crm', { note: 'hi' }).ok);
 check('crm: arbitrary status rejected', !validateToolArgs('update_crm', { phone: '5551234567', status: 'Closed-Won' }).ok);
-check('followup: hours bounded', !validateToolArgs('schedule_followup', { channel: 'email', contact: 'a@b.co', when_hours: 500 }).ok);
+check('followup: hours bounded', !validateToolArgs('schedule_followup', { channel: 'sms', contact: '5551234567', when_hours: 500 }).ok);
 check('unknown tool rejected', !validateToolArgs('drop_tables', {}).ok);
 
 console.log('\n[3] executors + guardrails');
@@ -52,7 +52,7 @@ check('book with DB: persisted', r.ok && r.persisted && !r.simulated && rows.at(
 r = await executeTool('book_inspection', goodBook, mkEnv({ allowedContacts: new Set() }));
 check('rejects contact the customer never provided', !r.ok && /not provided/.test(r.error || ''));
 r = await executeTool('send_message', { channel: 'sms', to: '5551234567', body: 'See you Tuesday' }, mkEnv());
-check('SMS channel is rejected and never sent', !r.ok && /channel must be email/.test(r.error || ''));
+check('SMS is not a channel and is never sent', !r.ok && /channel must be email/.test(r.error || ''));
 r = await executeTool('send_message', { channel: 'email', to: 'sam@gmail.com', body: 'See you Tuesday' }, mkEnv());
 check('email without provider key is recorded only', r.ok && r.simulated && r.status === 'recorded_only');
 
