@@ -22,11 +22,6 @@ import { Redirect } from './components/Redirect';
 import { LandingPage } from './components/public/LandingPage';
 import { usePath } from './lib/router';
 import OnboardingWizard from './components/OnboardingWizard';
-import { TeamManagement } from './components/TeamManagement';
-import { AcceptInvite } from './components/auth/AcceptInvite';
-import { ForgotPassword } from './components/auth/ForgotPassword';
-import { ResetPassword } from './components/auth/ResetPassword';
-import { pendingInvite } from './lib/teamApi';
 
 function MainAppContent() {
   const { activeTab, refreshTenant } = useApp();
@@ -55,8 +50,6 @@ function MainAppContent() {
         return <Agent4Estimate />;
       case 'crm':
         return <CRMLeadsBoard />;
-      case 'team':
-        return <TeamManagement />;
       case 'config':
         return <Configuration />;
       default:
@@ -85,27 +78,16 @@ function Routes() {
       return <AuthPage mode="login" />;
     case '/signup':
       return <AuthPage mode="signup" />;
-    case '/forgot-password':
-      return <ForgotPassword />;
-    case '/reset-password':
-      return <ResetPassword />;
     case '/auth/callback':
       return <AuthCallback />;
     case '/verify-email':
       return <VerifyEmail />;
-    case '/invite':
-      return <AcceptInvite />;
     case '/app':
       return (
         <ProtectedRoute>
-          {/* A signup that started from an invitation finishes joining the team first. */}
-          {pendingInvite() ? (
-            <Redirect to="/invite" />
-          ) : (
-            <AppProvider>
-              <MainAppContent />
-            </AppProvider>
-          )}
+          <AppProvider>
+            <MainAppContent />
+          </AppProvider>
         </ProtectedRoute>
       );
     default:
