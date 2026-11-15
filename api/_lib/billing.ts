@@ -8,6 +8,7 @@ import {
   paymentsActivated,
   type PlanId,
 } from './plans.js';
+import { normalizeRole, ownerUserId } from './team.js';
 
 export interface ProfileRow {
   user_id: string;
@@ -21,6 +22,8 @@ export interface ProfileRow {
   ls_variant_id: string | null;
   ls_portal_url: string | null;
   ls_updated_at: string | null;
+  /** owner | admin | member. Missing before migration 014 (treated as owner). */
+  role?: string | null;
 }
 
 export async function getProfile(
@@ -116,7 +119,14 @@ export async function statusPayload(
     };
   }
 
-  const profile = await getProfile(admin, user.id);
+  const own = await getProfile(admin, user.id);
+  const role = normalizeRole(own?.role);
+  // Team members use the plan the workspace owner pays for.
+  let profile = own;
+  if (role !== 'owner') {
+    const ownerId = await ownerUserId(admin, user.id);
+    if (ownerId !== user.id) profile = (await getProfile(admin, ownerId)) ?? own;
+  }
   const plan = effectivePlan(profile);
 
   return {
@@ -124,12 +134,13 @@ export async function statusPayload(
     authenticated: true,
     user: { id: user.id, email: user.email ?? '' },
     plan,
+    role,
     subscription: {
       status: profile?.subscription_status ?? 'none',
       currentPeriodStart: null,
       currentPeriodEnd: profile?.current_period_end ?? null,
       cancelAtPeriodEnd: Boolean(profile?.cancel_at_period_end),
-      hasCustomer: Boolean(profile?.ls_customer_id),
+      hasCustomer: role === 'owner' && Boolean(profile?.ls_customer_id),
       hasPrice: plan !== 'free',
     },
     usage: await usageFor(admin, user.id, plan),
