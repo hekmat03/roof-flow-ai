@@ -44,6 +44,17 @@ export async function userFromRequest(
 
   if (error || !data.user || !data.user.email_confirmed_at) return null;
 
+  // A user disabled by their workspace owner (or the platform admin) is locked out
+  // immediately, even while their access token is still valid. 42703 = migration
+  // 014 not applied yet, so there is no such column and nobody can be disabled.
+  const { data: row, error: rowError } = await admin
+    .from('profiles')
+    .select('disabled')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
+  if (rowError && rowError.code !== '42703') return null;
+  if (row?.disabled === true) return null;
+
   return {
     id: data.user.id,
     email: data.user.email ?? null,
