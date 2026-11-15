@@ -155,7 +155,7 @@ export function validateToolArgs(name: string, raw: unknown): Valid {
       const ch = a.channel, body = text(a.body, 5, 600);
       if (ch !== 'email') return bad('channel must be email');
       if (!body) return bad('body is required (5-600 chars)');
-      if (ch === 'email' && !isEmail(a.to)) return bad('a valid email is required');
+      if (!isEmail(a.to)) return bad('a valid email is required');
       const subject = text(a.subject, 3, 120) || 'Your roof inspection';
       return { ok: true, value: { channel: ch, to: normContact(String(a.to)), subject, body } };
     }
@@ -314,7 +314,7 @@ const SPECS: Record<ToolName, { description: string; properties: Record<string, 
   },
   send_message: {
     description: 'Send one email to a customer who gave their email in this conversation and agreed to a reply.',
-    properties: { channel: S('string', 'email', { enum: ['email'] }), to: S('string', 'Email address provided by the customer'), subject: S('string', 'Email subject'), body: S('string', 'Message text') },
+    properties: { channel: S('string', 'Always email', { enum: ['email'] }), to: S('string', 'Email address provided by the customer'), subject: S('string', 'Email subject'), body: S('string', 'Message text') },
     required: ['channel', 'to', 'body'],
   },
   update_crm: {
@@ -324,7 +324,7 @@ const SPECS: Record<ToolName, { description: string; properties: Record<string, 
   },
   schedule_followup: {
     description: 'Schedule one email follow-up to a consented lead who gave their email in this conversation (1-168 hours).',
-    properties: { channel: S('string', 'email', { enum: ['email'] }), contact: S('string', 'Lead email provided in conversation'), when_hours: S('integer', 'Hours from now, 1-168'), message_hint: S('string', 'Short context for the follow-up') },
+    properties: { channel: S('string', 'Always email', { enum: ['email'] }), contact: S('string', 'Lead email provided in conversation'), when_hours: S('integer', 'Hours from now, 1-168'), message_hint: S('string', 'Short context for the follow-up') },
     required: ['channel', 'contact', 'when_hours'],
   },
 };
@@ -368,4 +368,4 @@ export async function runToolLoop(o: {
   let reply = (final.content || '').trim();
   if (!reply && actions.length) reply = 'Thanks. I have noted your request and a team member will follow up to confirm.';
   return { reply, actions };
-             }
+}
