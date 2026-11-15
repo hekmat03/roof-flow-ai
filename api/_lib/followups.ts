@@ -1,5 +1,5 @@
 import { appOrigin, emailEnvelope, signUnsubscribeToken, type EmailProvider } from './email.js';
-import { EMAIL_DAILY_CAP, EMAIL_MONTHLY_CAPS } from './plans.js';
+import { EMAIL_DAILY_CAP, EMAIL_MONTHLY_CAP } from './limits.js';
 
 export const MAX_EMAIL_ATTEMPTS = 3;
 export const FOLLOWUP_DAYS = [1, 2, 4, 7] as const;
@@ -10,7 +10,7 @@ export interface ScheduledMessage {
   idempotency_key: string; sequence_key: string | null; step: number | null;
 }
 export interface SendContext {
-  plan: 'free' | 'starter' | 'pro'; leadStatus: string | null; leadEmail: string | null;
+  leadStatus: string | null; leadEmail: string | null;
   emailWasProvidedByLead: boolean; suppressed: boolean; companyName: string;
   businessAddress: string | null; contractorEmail: string | null;
 }
@@ -61,15 +61,15 @@ export async function processDueMessages(o: {
     let reserved = false;
     try {
       const context = await o.store.getContext(message);
-      const cap = context ? EMAIL_MONTHLY_CAPS[context.plan] : 0;
+      const cap = EMAIL_MONTHLY_CAP;
       const address = normalizedAddress(context?.businessAddress ?? null);
       const addressAllowed = address.length >= 10;
       const invalid = !context || !message.lead_id || !context.leadEmail || !EMAIL_RE.test(context.leadEmail) ||
         context.leadEmail.toLowerCase() !== message.to_email.toLowerCase() ||
         !context.emailWasProvidedByLead || context.suppressed ||
-        CLOSED_STATUSES.has(context.leadStatus ?? '') || cap === 0 || !addressAllowed;
+        CLOSED_STATUSES.has(context.leadStatus ?? '') || !addressAllowed;
       if (invalid) {
-        await o.store.update(message.id, { status: 'cancelled', last_error: 'recipient, consent, address, plan, or lead status check failed' });
+        await o.store.update(message.id, { status: 'cancelled', last_error: 'recipient, consent, address, or lead status check failed' });
         result.cancelled++;
         continue;
       }
