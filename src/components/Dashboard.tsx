@@ -1,6 +1,5 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { useBilling } from '../context/BillingContext';
 /** Maps a CRM status to the shared status badge class. */
 export function statusPillClass(status: string): string {
   switch (status) {
@@ -19,13 +18,11 @@ export function statusPillClass(status: string): string {
 
 export const Dashboard: React.FC = () => {
   const { leads, setActiveTab } = useApp();
-  const { status: billingStatus } = useBilling();
   const stats = [
     { label: 'Captured leads', value: leads.length },
     { label: 'Inspections scheduled', value: leads.filter(lead => lead.status === 'Inspection Scheduled').length },
     { label: 'Estimates sent', value: leads.filter(lead => lead.status === 'Estimate Sent').length },
   ];
-  const usage = billingStatus?.usage?.storage === 'ok' ? billingStatus.usage : null;
 
   return (
     <div className="space-y-4">
@@ -39,16 +36,6 @@ export const Dashboard: React.FC = () => {
           </article>
         ))}
       </section>
-
-      {usage && (
-        <section className="glass rounded-xl p-4" aria-label="Monthly chat usage">
-          <div className="flex items-center justify-between text-xs">
-            <h2 className="font-semibold text-ink">Chats used this month</h2>
-            <span className="font-mono text-ink-soft">{usage.used} / {usage.limit}</span>
-          </div>
-          <progress className="mt-2 h-2 w-full accent-orange-500" value={Math.min(usage.used, usage.limit)} max={usage.limit || 1} aria-label={`${usage.used} of ${usage.limit} chats used`} />
-        </section>
-      )}
 
       {leads.length === 0 ? (
         <p className="glass rounded-xl p-4 text-sm text-ink-soft">No leads yet. Open Agent 1 and try a conversation.</p>
