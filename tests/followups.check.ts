@@ -6,7 +6,7 @@ import { applyUnsubscribe } from '../api/_lib/unsubscribe.ts';
 import { hasBusinessAddress, normalizeBusinessAddress } from '../src/lib/businessAddress.ts';
 import { makeFollowupEmailTemplates } from '../src/lib/followupTemplates.ts';
 import { createEmailActions, type EmailActionStore } from '../api/_lib/emailActions.ts';
-import { EMAIL_DAILY_CAP, EMAIL_MONTHLY_CAPS } from '../api/_lib/plans.ts';
+import { EMAIL_DAILY_CAP, EMAIL_MONTHLY_CAP } from '../api/_lib/limits.ts';
 
 let passed = 0, failed = 0;
 const check = (name: string, ok: boolean) => { ok ? passed++ : failed++; console.log(`  ${ok ? '✅' : '❌'} ${name}`); };
@@ -18,7 +18,7 @@ const baseMessage = (over: Partial<ScheduledMessage> = {}): ScheduledMessage => 
   attempts: 0, idempotency_key: 'idem-1', sequence_key: 'seq-1', step: 1, ...over,
 });
 const baseContext = (over: Partial<SendContext> = {}): SendContext => ({
-  plan: 'starter', leadStatus: 'New Lead', leadEmail: 'homeowner@example.com',
+  leadStatus: 'New Lead', leadEmail: 'homeowner@example.com',
   emailWasProvidedByLead: true, suppressed: false, companyName: 'Acme Roofing',
   businessAddress: '100 Main Street, Austin, TX 78701', contractorEmail: 'owner@acme.example', ...over,
 });
@@ -55,7 +55,7 @@ check('editable email drafts use the homeowner, company, city, and free inspecti
   return body.includes('Sam Lee') && body.includes('Acme Roofing') && body.includes('Austin') && /free .*inspection/i.test(body);
 }));
 check('email drafts contain no invented storm date or insurance deadline', !Object.values(editableTemplates).some(draft => /storm|12 months|filing deadline|insurance deadline/i.test(`${draft.subject}\n${draft.body}`)));
-check('plan caps are Free 0, Starter 200, Pro 1000 monthly and 100 daily', EMAIL_MONTHLY_CAPS.free === 0 && EMAIL_MONTHLY_CAPS.starter === 200 && EMAIL_MONTHLY_CAPS.pro === 1000 && EMAIL_DAILY_CAP === 100);
+check('email safety caps are 1000 monthly and 100 daily', EMAIL_MONTHLY_CAP === 1000 && EMAIL_DAILY_CAP === 100);
 
 console.log('\n[2] queue worker policy and atomic claims');
 {
@@ -70,11 +70,6 @@ console.log('\n[2] queue worker policy and atomic claims');
   const opts = { store: db.store, provider, from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', now: () => new Date(BASE_TIME) };
   const [a, b] = await Promise.all([processDueMessages(opts), processDueMessages(opts)]);
   check('one concurrent worker claims and sends a due message once', sent === 1 && a.sent + b.sent === 1 && db.messages[0].status === 'sent');
-}
-{
-  const db = fakeStore([baseMessage()], baseContext({ plan: 'free' }));
-  const result = await processDueMessages({ store: db.store, provider: { send: async () => ({ ok: true }) }, from: 'a@b.example', baseUrl: 'https://roof.example', sessionSecret: 'secret', now: () => new Date(BASE_TIME) });
-  check('Free plan is blocked', result.cancelled === 1 && db.messages[0].status === 'cancelled');
 }
 {
   const db = fakeStore([baseMessage()], baseContext({ leadStatus: 'Do Not Contact' }));
@@ -139,12 +134,12 @@ type EmailMessageCapture = { to: string; replyTo?: string; text: string; headers
 console.log('\n[3b] address-required bulk scheduling and address-optional single replies');
 {
   const missing = fakeEmailActionStore(null);
-  const failedSchedule = createEmailActions({ store: missing.store, provider: { send: async () => ({ ok: true }) }, from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's1', plan: 'starter', now: () => new Date(BASE_TIME) });
+  const failedSchedule = createEmailActions({ store: missing.store, provider: { send: async () => ({ ok: true }) }, from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's1', now: () => new Date(BASE_TIME) });
   const blocked = await failedSchedule.scheduleEmail({ contact: 'homeowner@example.com', whenHours: 24, hint: '' });
   check('bulk schedule is blocked without a business mailing address', !blocked.ok && missing.scheduled.length === 0);
 
   const valid = fakeEmailActionStore('100 Main Street, Austin, TX 78701');
-  const scheduled = createEmailActions({ store: valid.store, provider: { send: async () => ({ ok: true }) }, from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's2', plan: 'starter', now: () => new Date(BASE_TIME) });
+  const scheduled = createEmailActions({ store: valid.store, provider: { send: async () => ({ ok: true }) }, from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's2', now: () => new Date(BASE_TIME) });
   const queued = await scheduled.scheduleEmail({ contact: 'homeowner@example.com', whenHours: 24, hint: '' });
   check('bulk schedule is allowed with a trimmed valid business address', queued.ok && queued.status === 'scheduled' && valid.scheduled.length === 1);
 
@@ -153,7 +148,7 @@ console.log('\n[3b] address-required bulk scheduling and address-optional single
   const single = createEmailActions({
     store: singleStore.store,
     provider: { async send(message) { captured.push(message); return { ok: true, id: 'single-1' }; } },
-    from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's3', plan: 'starter', now: () => new Date(BASE_TIME),
+    from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's3', now: () => new Date(BASE_TIME),
   });
   const sent = await single.sendEmail({ to: 'homeowner@example.com', subject: 'Reply', body: 'Here is the information you requested.' });
   check('single reply is allowed without a business address and uses contractor Reply-To', sent.ok && sent.status === 'sent' && captured[0]?.replyTo === 'owner@acme.example' && /Acme Roofing/.test(captured[0]?.text ?? ''));
@@ -166,7 +161,7 @@ console.log('\n[3b] address-required bulk scheduling and address-optional single
 }
 {
   const testStore = fakeEmailActionStore('100 Main Street, Austin, TX 78701');
-  const actions = createEmailActions({ store: testStore.store, provider: null, from: undefined, baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's4', plan: 'starter', now: () => new Date(BASE_TIME) });
+  const actions = createEmailActions({ store: testStore.store, provider: null, from: undefined, baseUrl: 'https://roof.example', sessionSecret: 'secret', tenantId: TENANT, sessionId: 's4', now: () => new Date(BASE_TIME) });
   const result = await actions.sendEmail({ to: 'homeowner@example.com', subject: 'Reply', body: 'A reply.' });
   check('missing provider config records a single email intent without sending', result.ok && result.status === 'recorded_only' && testStore.recorded.length === 1 && testStore.sent.length === 0);
 }
