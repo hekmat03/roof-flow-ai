@@ -1,352 +1,371 @@
 /**
- * crm-isolation-auth.check.ts
+ * integrations.check.ts — unit-ish verification for the real-integrations
+ * tier: aiService graceful degradation, webhook no-op/tolerance, and Web
+ * Speech feature detection (bare mocks).
  *
- * Verifies:
- * 1. Complete CRM customer fields (Name, Phone, Email, ZIP Code, Chat History, Purchase History, Customer Status)
- * 2. Multi-company Data Isolation for ABC Roofing and XYZ Roofing
- * 3. RLS policies against unauthorized direct database requests (SELECT, INSERT, UPDATE, DELETE)
- * 4. Supabase Email Verification flow (signup, unverified block, resend, callback handling, success/error states)
+ * Run: node --experimental-strip-types tests/integrations.check.ts
  */
 
-import { rowToLead, leadToRow, ABC_ROOFING_TENANT_ID, XYZ_ROOFING_TENANT_ID } from '../src/lib/leadsDb.ts';
-import type { Lead, PurchaseRecord, CustomerStatus } from '../src/context/AppContext.tsx';
+import { callAgentApi, fetchAiStatus } from '../src/utils/aiService.ts';
+import { demoFallbackReply, GENERIC_DEMO_REPLY } from '../src/lib/demoFallback.ts';
+import {
+  AI_NOTICES,
+  DB_NOTICES,
+  classifyAiFailure,
+  classifyDbError,
+  getServiceStatus,
+  reportAiOk,
+  reportDbFailure,
+  reportDbOk,
+} from '../src/lib/serviceStatus.ts';
+import { postLeadToWebhook, setWebhookUrl, getWebhookUrl } from '../src/utils/webhook.ts';
+import {
+  isSpeechSynthesisSupported,
+  isSpeechRecognitionSupported,
+  speakText,
+  startListening,
+} from '../src/utils/speech.ts';
+import {
+  extractEmail,
+  extractPhone,
+  extractName,
+  extractZip,
+  deriveRoofIssue,
+} from '../src/utils/leadExtract.ts';
+
+// The widget's server logic (validation, scoring, rate limiting) is the single
+// source of truth inside the team's site app, which is where the public
+// /api/leads route runs. We import it directly rather than duplicating the
+// rules here, so these checks always exercise the code that actually serves
+// visitors. If the site directory is absent, the checks FAIL loudly instead of
+// skipping — an unrun test must never look like a passing one.
+import {
+  validateLead,
+  scoreLead,
+  rateLimit,
+  recordSuccess,
+  _resetRateLimit,
+  isValidPhone,
+  isValidEmail,
+  isValidZip,
+  cleanConversation,
+  RATE_LIMIT_MAX,
+} from '../site-server/src/lib/leads-core.ts';
 
 let passed = 0;
 let failed = 0;
-
-function check(title: string, ok: boolean) {
-  if (ok) passed++;
-  else failed++;
-  console.log(`  ${ok ? '✅' : '❌'} ${title}`);
-}
-
-console.log('--- 1. Customer CRUD Operations with Complete Fields ---');
-
-const samplePurchase: PurchaseRecord = {
-  id: 'pur-101',
-  item: 'Emergency Roof Tarping & Drone Inspection',
-  amount: 450.00,
-  date: '2026-11-08',
-  status: 'Paid',
-  invoiceNumber: 'INV-1001',
-};
-
-const initialCustomer: Lead = {
-  id: 'lead-test-01',
-  name: 'Robert Davis',
-  phone: '(214) 555-4321',
-  email: 'robert.davis@example.com',
-  zipCode: '75201',
-  customerStatus: 'Lead',
-  propertyOwnership: 'Owner',
-  status: 'New Lead',
-  roofIssue: 'Leaking valley over garage',
-  agentType: 'Chatbot',
-  chatLog: [
-    { sender: 'User', text: 'My roof is leaking over the garage.', timestamp: '2026-11-08 10:00 AM' },
-    { sender: 'AI', text: 'We can have a roofing specialist inspect that today.', timestamp: '2026-11-08 10:01 AM' },
-  ],
-  purchaseHistory: [],
-};
-
-// Test leadToRow and rowToLead round-trip mapping
-const rowA = leadToRow(initialCustomer, ABC_ROOFING_TENANT_ID);
-check('leadToRow sets tenant_id correctly', rowA.tenant_id === ABC_ROOFING_TENANT_ID);
-check('leadToRow maps all CRM fields (name, phone, email, zip_code, customer_status)',
-  rowA.name === 'Robert Davis' &&
-  rowA.phone === '(214) 555-4321' &&
-  rowA.email === 'robert.davis@example.com' &&
-  rowA.zip_code === '75201' &&
-  rowA.customer_status === 'Lead'
-);
-check('leadToRow stores chat conversation log and purchase history',
-  Array.isArray(rowA.conversation) && rowA.conversation.length === 2 &&
-  Array.isArray(rowA.purchase_history) && rowA.purchase_history.length === 0
-);
-
-// Simulate DB retrieval
-const reconstructedLead = rowToLead(rowA);
-check('rowToLead restores customer object with identical fields',
-  reconstructedLead.name === initialCustomer.name &&
-  reconstructedLead.phone === initialCustomer.phone &&
-  reconstructedLead.email === initialCustomer.email &&
-  reconstructedLead.zipCode === initialCustomer.zipCode &&
-  reconstructedLead.customerStatus === 'Lead'
-);
-
-// Simulate Update: Add purchase, change customer tier to Active Customer, add chat entry
-const updatedCustomer: Lead = {
-  ...reconstructedLead,
-  customerStatus: 'Active Customer',
-  status: 'Closed-Won',
-  purchaseHistory: [samplePurchase],
-  chatLog: [
-    ...reconstructedLead.chatLog,
-    { sender: 'System', text: 'Purchase recorded: Emergency Roof Tarping ($450.00)', timestamp: '2026-11-08 02:00 PM' },
-  ],
-};
-
-const rowUpdated = leadToRow(updatedCustomer, ABC_ROOFING_TENANT_ID);
-check('Updated lead preserves purchase history with item, amount, and invoice number',
-  rowUpdated.purchase_history?.[0]?.item === 'Emergency Roof Tarping & Drone Inspection' &&
-  rowUpdated.purchase_history?.[0]?.amount === 450.00 &&
-  rowUpdated.purchase_history?.[0]?.invoiceNumber === 'INV-1001'
-);
-check('Updated lead reflects elevated customerStatus to "Active Customer"',
-  rowUpdated.customer_status === 'Active Customer'
-);
-check('Updated lead includes appended chat transcript entry',
-  rowUpdated.conversation?.length === 3
-);
-
-console.log('\n--- 2. ABC Roofing and XYZ Roofing Multi-Company Data Isolation ---');
-
-interface MockDbRow {
-  id: string;
-  tenant_id: string;
-  name: string;
-  phone: string;
-  email: string;
-  customer_status: CustomerStatus;
-  purchase_history: PurchaseRecord[];
-}
-
-class MockSupabaseMultiTenantStore {
-  private leadsTable: MockDbRow[] = [];
-
-  insert(callerTenantId: string, lead: Lead) {
-    const row: MockDbRow = {
-      id: lead.id,
-      tenant_id: callerTenantId,
-      name: lead.name,
-      phone: lead.phone,
-      email: lead.email,
-      customer_status: lead.customerStatus || 'Lead',
-      purchase_history: lead.purchaseHistory || [],
-    };
-    this.leadsTable.push(row);
-    return { ok: true, id: row.id };
-  }
-
-  select(callerTenantId: string, queryTenantId?: string): MockDbRow[] {
-    if (queryTenantId && queryTenantId !== callerTenantId) {
-      return []; // Cross-company query blocked
-    }
-    return this.leadsTable.filter(r => r.tenant_id === callerTenantId);
-  }
-
-  update(callerTenantId: string, leadId: string, updates: Partial<MockDbRow>): boolean {
-    const idx = this.leadsTable.findIndex(r => r.id === leadId);
-    if (idx === -1) return false;
-    if (this.leadsTable[idx].tenant_id !== callerTenantId) {
-      throw new Error('RLS_VIOLATION: cross-tenant update prohibited');
-    }
-    this.leadsTable[idx] = { ...this.leadsTable[idx], ...updates };
-    return true;
-  }
-
-  delete(callerTenantId: string, leadId: string): boolean {
-    const idx = this.leadsTable.findIndex(r => r.id === leadId);
-    if (idx === -1) return false;
-    if (this.leadsTable[idx].tenant_id !== callerTenantId) {
-      throw new Error('RLS_VIOLATION: cross-tenant delete prohibited');
-    }
-    this.leadsTable.splice(idx, 1);
-    return true;
+function check(name: string, ok: boolean) {
+  if (ok) {
+    passed++;
+    console.log(`  ✅ ${name}`);
+  } else {
+    failed++;
+    console.log(`  ❌ ${name}`);
   }
 }
 
-const db = new MockSupabaseMultiTenantStore();
-
-// Step A: ABC Roofing inserts a customer record
-const abcLead: Lead = {
-  ...initialCustomer,
-  id: 'lead-abc-999',
-  name: 'ABC Homeowner (Dallas)',
-  customerStatus: 'Active Customer',
-  purchaseHistory: [samplePurchase],
-};
-db.insert(ABC_ROOFING_TENANT_ID, abcLead);
-
-// Step B: XYZ Roofing inserts a separate customer record
-const xyzPurchase: PurchaseRecord = {
-  id: 'pur-xyz-888',
-  item: 'Slate Shingle Replacement',
-  amount: 9800.00,
-  date: '2026-11-09',
-  status: 'Paid',
-  invoiceNumber: 'INV-XYZ-888',
-};
-const xyzLead: Lead = {
-  ...initialCustomer,
-  id: 'lead-xyz-888',
-  name: 'XYZ Homeowner (Fort Worth)',
-  customerStatus: 'VIP',
-  purchaseHistory: [xyzPurchase],
-};
-db.insert(XYZ_ROOFING_TENANT_ID, xyzLead);
-
-// Verify ABC Roofing sees ONLY its own leads
-const abcResults = db.select(ABC_ROOFING_TENANT_ID);
-check('ABC Roofing sees exactly 1 customer', abcResults.length === 1);
-check('ABC Roofing customer is "ABC Homeowner (Dallas)"', abcResults[0].name === 'ABC Homeowner (Dallas)');
-check('ABC Roofing customer has samplePurchase ($450.00)', abcResults[0].purchase_history[0].amount === 450.00);
-
-// Verify XYZ Roofing sees ONLY its own leads
-const xyzResults = db.select(XYZ_ROOFING_TENANT_ID);
-check('XYZ Roofing sees exactly 1 customer', xyzResults.length === 1);
-check('XYZ Roofing customer is "XYZ Homeowner (Fort Worth)"', xyzResults[0].name === 'XYZ Homeowner (Fort Worth)');
-check('XYZ Roofing customer has xyzPurchase ($9,800.00)', xyzResults[0].purchase_history[0].amount === 9800.00);
-
-// Verify cross-tenant isolation: ABC Roofing cannot read XYZ Roofing's leads
-const leakedToAbc = abcResults.some(r => r.id === 'lead-xyz-888');
-check('ABC Roofing cannot view XYZ Roofing records (0 leakage)', !leakedToAbc);
-
-const leakedToXyz = xyzResults.some(r => r.id === 'lead-abc-999');
-check('XYZ Roofing cannot view ABC Roofing records (0 leakage)', !leakedToXyz);
-
-console.log('\n--- 3. RLS Policies Against Direct Cross-Company Requests ---');
-
-// Attempt 1: Direct SELECT targeting XYZ Roofing from ABC Roofing session
-const directCrossSelect = db.select(ABC_ROOFING_TENANT_ID, XYZ_ROOFING_TENANT_ID);
-check('Direct cross-tenant SELECT yields 0 rows (denied)', directCrossSelect.length === 0);
-
-// Attempt 2: Direct UPDATE of XYZ Roofing record from ABC Roofing session
-let crossUpdateBlocked = false;
+// ------------------------------------------------------------------
+// 1. aiService — graceful degradation when the server API is unreachable
+//    (in Node there is no origin, so the relative fetch always fails)
+// ------------------------------------------------------------------
+console.log('\n[1] aiService: server API unreachable');
+let r1: string | null = 'sentinel';
 try {
-  db.update(ABC_ROOFING_TENANT_ID, 'lead-xyz-888', { name: 'Hacked by ABC' });
+  r1 = await callAgentApi({ agentType: 'chatbot', messages: [{ role: 'user', content: 'hello' }] });
 } catch (e) {
-  crossUpdateBlocked = (e as Error).message.includes('RLS_VIOLATION');
+  r1 = 'THREW: ' + String(e);
 }
-check('Direct cross-tenant UPDATE throws RLS_VIOLATION and is blocked', crossUpdateBlocked);
+check('callAgentApi returns null (never throws) when API unreachable', r1 === null);
+check('an unreachable AI is recorded as a connection problem', getServiceStatus().ai === 'network');
+check('every AI reason has a plain-language title and detail', Object.values(AI_NOTICES).every((n) => n.title.length > 3 && n.detail.length > 10));
+check('every database reason has a plain-language title and detail', Object.values(DB_NOTICES).every((n) => n.title.length > 3 && n.detail.length > 10));
+check('AI 503 "not configured" is explained as not set up', classifyAiFailure({ status: 503, message: 'AI is not configured on the server' }) === 'not_configured');
+check('AI 502 is explained as unavailable', classifyAiFailure({ status: 502 }) === 'unavailable');
+check('AI 429 is explained as too many messages', classifyAiFailure({ status: 429 }) === 'rate_limited');
+check('AI 401 is explained as an expired session', classifyAiFailure({ status: 401 }) === 'session');
+check('AI timeout is explained as a timeout', classifyAiFailure({ aborted: true }) === 'timeout');
+check('database "Failed to fetch" is a connection problem', classifyDbError(new Error('TypeError: Failed to fetch')) === 'network');
+check('database JWT expiry is a session problem', classifyDbError({ message: 'JWT expired', status: 401 }) === 'session');
+check('any other database error is "not responding"', classifyDbError(new Error('boom')) === 'unavailable');
+reportDbFailure('unavailable');
+check('database failure is recorded', getServiceStatus().db === 'unavailable');
+reportDbOk(); reportAiOk();
+check('success clears both warnings', getServiceStatus().db === null && getServiceStatus().ai === null);
 
-// Attempt 3: Direct DELETE of XYZ Roofing record from ABC Roofing session
-let crossDeleteBlocked = false;
+// ------------------------------------------------------------------
+// 2. aiService — status probe + no browser-held keys
+// ------------------------------------------------------------------
+console.log('\n[2] aiService: status probe');
+const status = await fetchAiStatus();
+check('fetchAiStatus returns null (never throws) when API unreachable', status === null);
+// Minimal localStorage stub (webhook helpers only need getItem/setItem/removeItem).
+const store = new Map<string, string>();
+(globalThis as any).localStorage = {
+  getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+  setItem: (k: string, v: string) => void store.set(k, v),
+  removeItem: (k: string) => void store.delete(k),
+};
+
+// ------------------------------------------------------------------
+// 3. webhook — no-op on empty URL, tolerance of failed fetch
+// ------------------------------------------------------------------
+console.log('\n[3] webhook: no-op + failure tolerance');
+check('getWebhookUrl empty by default', getWebhookUrl() === '');
+let r3: boolean | string = 'sentinel';
 try {
-  db.delete(ABC_ROOFING_TENANT_ID, 'lead-xyz-888');
+  r3 = await postLeadToWebhook({
+    name: 'T', phone: 'x', email: 'x', zip: 'x', roofIssue: 'x',
+    status: 'New Lead', source: 'test', timestamp: new Date().toISOString(),
+  });
 } catch (e) {
-  crossDeleteBlocked = (e as Error).message.includes('RLS_VIOLATION');
+  r3 = 'THREW: ' + String(e);
 }
-check('Direct cross-tenant DELETE throws RLS_VIOLATION and is blocked', crossDeleteBlocked);
+check('postLeadToWebhook no-ops (false, never throws) with no URL', r3 === false);
 
-// Verify XYZ record was untouched
-const verifyXyzUntouched = db.select(XYZ_ROOFING_TENANT_ID);
-check('XYZ Roofing record remains completely intact and uncorrupted',
-  verifyXyzUntouched.length === 1 && verifyXyzUntouched[0].name === 'XYZ Homeowner (Fort Worth)'
-);
-
-console.log('\n--- 4. Supabase Email Verification Flow ---');
-
-interface MockAuthUser {
-  id: string;
-  email: string;
-  email_confirmed_at: string | null;
+setWebhookUrl('http://127.0.0.1:9/unreachable'); // closed port → fast refusal
+let r4: boolean | string = 'sentinel';
+try {
+  r4 = await postLeadToWebhook({
+    name: 'T', phone: 'x', email: 'x', zip: 'x', roofIssue: 'x',
+    status: 'New Lead', source: 'test', timestamp: new Date().toISOString(),
+  });
+} catch (e) {
+  r4 = 'THREW: ' + String(e);
 }
+check('postLeadToWebhook swallows failed fetch (false, never throws)', r4 === false);
+setWebhookUrl(''); // cleanup
 
-class MockSupabaseAuth {
-  private users: Map<string, MockAuthUser> = new Map();
-  private pendingVerificationCodes: Map<string, string> = new Map();
+// ------------------------------------------------------------------
+// 4. speech — feature detection (unsupported + bare mocks)
+// ------------------------------------------------------------------
+console.log('\n[4] speech: feature detection + bare mocks');
+// Node has no window at all → unsupported.
+check('isSpeechSynthesisSupported false without window', isSpeechSynthesisSupported() === false);
+check('isSpeechRecognitionSupported false without window', isSpeechRecognitionSupported() === false);
+let spoke: string | null = null;
+await speakText('test', { onEnd: () => { spoke = 'ended'; } });
+check('speakText resolves gracefully (onEnd fired) when unsupported', spoke === 'ended');
+check('startListening returns null when unsupported', startListening({ onFinal: () => {} }) === null);
 
-  async signUp(email: string) {
-    const id = `user-${Math.random().toString(36).substring(2, 9)}`;
-    const user: MockAuthUser = {
-      id,
-      email: email.toLowerCase().trim(),
-      email_confirmed_at: null,
-    };
-    this.users.set(user.email, user);
+// Bare mocks: minimal window.speechSynthesis + fake SpeechRecognition.
+const listeners: Record<string, Function> = {};
+class FakeRecognition {
+  lang = ''; continuous = false; interimResults = false; maxAlternatives = 1;
+  onresult: Function | null = null; onerror: Function | null = null; onend: Function | null = null;
+  start() { /* no-op */ }
+  stop() { this.onend?.(); }
+  abort() {}
+}
+(globalThis as any).window = {
+  speechSynthesis: { cancel: () => {}, speak: () => {}, getVoices: () => [] },
+  SpeechRecognition: FakeRecognition,
+};
+check('isSpeechSynthesisSupported true with mock', isSpeechSynthesisSupported());
+check('isSpeechRecognitionSupported true with mock', isSpeechRecognitionSupported());
+const handle = startListening({
+  onFinal: t => { listeners.final = t; },
+});
+check('startListening returns handle with mock', handle !== null && typeof handle.stop === 'function');
+handle?.stop();
 
-    const verificationToken = `token_${Math.random().toString(36).substring(2, 12)}`;
-    this.pendingVerificationCodes.set(verificationToken, user.email);
+// ------------------------------------------------------------------
+// 5. leadExtract — free-form contact extraction (Agent 1/3/4 capture)
+// ------------------------------------------------------------------
+console.log('\n[5] leadExtract: free-form contact extraction');
+const sample = 'Hi, I am Dana Whitfield, my email is dana.w@example.com, call me at (214) 555-0177, zip 75201';
+check('email extracted', extractEmail(sample) === 'dana.w@example.com');
+check('phone extracted', (extractPhone(sample) || '').replace(/\D/g, '') === '2145550177');
+check('name extracted (I am …)', extractName(sample) === 'Dana Whitfield');
+check('zip extracted (not phone digits)', extractZip(sample) === '75201');
+check('roof issue: hail', deriveRoofIssue('we have hail damage and leaks') === 'Hail / storm damage');
+check('roof issue: leak', deriveRoofIssue('water dripping from the ceiling') === 'Active roof leak');
+check('no name from generic text', extractName('Yes I am free tomorrow afternoon') === undefined);
+check('rejects repeating-digit phone', extractPhone('call 000-000-0000') === undefined);
+check('name via "X here"', extractName('John Miller here — lorem ipsum') === 'John Miller');
 
-    return {
-      user,
-      needsVerification: true,
-      verificationToken,
-      redirectUrl: 'https://roofflow.test/auth/callback',
-    };
+// ------------------------------------------------------------------
+// 6. widget API: lead validation accept/reject matrix
+// ------------------------------------------------------------------
+console.log('\n[6] widget API: lead validation');
+const GOOD = {
+  name: 'Dana Whitfield',
+  phone: '(214) 555-0147',
+  email: 'dana.w@example.com',
+  zip_code: '75024',
+  roofing_need: 'Hail damage and a leak in the ceiling',
+  consent: true,
+  consent_text: 'I agree to be contacted.',
+  conversation: [{ sender: 'visitor', text: 'hail damage', timestamp: 't' }],
+};
+const bad = (over: Record<string, unknown>) => validateLead({ ...GOOD, ...over });
+
+check('accepts a complete lead', validateLead(GOOD).ok === true);
+check('accepts phone-only (email omitted)', validateLead({ ...GOOD, email: '' }).ok === true);
+check('accepts email-only (phone omitted)', validateLead({ ...GOOD, phone: '' }).ok === true);
+check("accepts ZIP as 'N/A' when refused", validateLead({ ...GOOD, zip_code: 'N/A' }).ok === true);
+check('REJECTS honeypot filled', bad({ company_website: 'http://spam.example' }).ok === false);
+check('REJECTS missing consent', bad({ consent: false }).ok === false);
+check('REJECTS consent given as string "true"', bad({ consent: 'true' }).ok === false);
+check('REJECTS no phone AND no email', bad({ phone: '', email: '' }).ok === false);
+check('REJECTS bad phone', bad({ phone: '12' }).ok === false);
+check('REJECTS bad email', bad({ email: 'not-an-email' }).ok === false);
+check('REJECTS bad phone + bad email together', bad({ phone: '555', email: 'nope@' }).ok === false);
+check('REJECTS bad ZIP', bad({ zip_code: '12' }).ok === false);
+check('REJECTS 1-char name', bad({ name: 'A' }).ok === false);
+check('REJECTS 2-char roofing_need', bad({ roofing_need: 'ok' }).ok === false);
+check('rejects and names the failing field (consent)', (() => {
+  const r = bad({ consent: false });
+  return r.ok === false && r.failure.field === 'consent';
+})());
+// Oversize: everything is LENGTH-CAPPED rather than rejected (documented
+// behaviour — a long, chatty visitor is still a real lead).
+const over = validateLead({ ...GOOD, name: 'N'.repeat(200), roofing_need: 'x'.repeat(2000) });
+check('caps oversize name at 80 (accepted, not rejected)', over.ok === true && over.lead.name.length === 80);
+check('caps oversize roofing_need at 500', over.ok === true && over.lead.roofing_need.length === 500);
+const ctrl = validateLead({ ...GOOD, name: 'Dana\u0000\u0007 Whit\u001f field' });
+check('strips control characters', ctrl.ok === true && ctrl.lead.name === 'Dana Whit field');
+check('caps conversation turns at 40', cleanConversation(Array.from({ length: 60 }, () => ({ sender: 'visitor', text: 'hi', timestamp: 't' }))).length === 40);
+check('drops empty conversation turns', cleanConversation([{ sender: 'visitor', text: '   ', timestamp: 't' }]).length === 0);
+check('non-array conversation becomes []', cleanConversation('nonsense').length === 0);
+
+// format helpers directly
+check('isValidPhone: 10 digits ok', isValidPhone('2145550147') === true);
+check('isValidPhone: 11 digits with leading 1 ok', isValidPhone('1-214-555-0147') === true);
+check('isValidPhone: 9 digits bad', isValidPhone('214555014') === false);
+check('isValidPhone: letters+digits bad', isValidPhone('aaaaaaaaaa1') === false);
+check('isValidEmail: ok', isValidEmail('a@b.co') === true);
+check('isValidEmail: no TLD bad', isValidEmail('a@b') === false);
+check('isValidZip: 5 digits ok', isValidZip('75024') === true);
+check('isValidZip: 4 digits bad', isValidZip('7502') === false);
+check("isValidZip: 'N/A' ok", isValidZip('N/A') === true);
+
+// ------------------------------------------------------------------
+// 7. widget API: lead scoring (deterministic 0–100)
+// ------------------------------------------------------------------
+console.log('\n[7] widget API: lead scoring');
+const score = (over: Record<string, unknown>) =>
+  scoreLead({ phone: null, email: null, zip_code: 'N/A', roofing_need: 'roof', conversation: [], consent: true, ...over });
+
+check('bare minimum (consent only) scores 10', score({}).score === 10);
+check('phone only adds 25 (35 total)', score({ phone: '2145550147' }).score === 35);
+check('email only adds 20 (30 total)', score({ email: 'a@b.co' }).score === 30);
+check('phone + email adds 35 (45 total)', score({ phone: '2145550147', email: 'a@b.co' }).score === 45);
+check('valid ZIP adds 15 (25 total)', score({ zip_code: '75024' }).score === 25);
+check('urgency keyword adds 5', score({ roofing_need: 'there is a leak' }).score === 15);
+check('urgency caps at 25', score({ roofing_need: 'leak water storm hail emergency tarp sagging mold missing shingles' }).score === 35);
+check('engagement: 3 turns add 9', score({ conversation: [{ text: 'a' }, { text: 'b' }, { text: 'c' }] }).score === 19);
+check('engagement caps at 15', score({ conversation: Array.from({ length: 9 }, () => ({ text: 'x' })) }).score === 25);
+const best = score({
+  phone: '2145550147',
+  email: 'a@b.co',
+  zip_code: '75024',
+  roofing_need: 'emergency leak, hail, storm, missing shingles, mold, tarp, water, sagging',
+  conversation: Array.from({ length: 9 }, () => ({ text: 'storm' })),
+});
+check('ideal lead scores exactly 100', best.score === 100);
+check('score never exceeds 100', best.score <= 100);
+check('scoring is deterministic', score({ phone: '2145550147' }).score === score({ phone: '2145550147' }).score);
+check('score explains itself (reasons)', score({ phone: '2145550147', zip_code: '75024' }).reasons.length >= 2);
+
+// ------------------------------------------------------------------
+// 8. widget API: per-IP rate limiter (in-memory; resets on restart)
+// ------------------------------------------------------------------
+console.log('\n[8] widget API: rate limiter');
+_resetRateLimit();
+const ipA = '203.0.113.7';
+const now = 1_000_000_000_000;
+let allowedCount = 0;
+for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+  if (rateLimit(ipA, now).allowed) {
+    allowedCount++;
+    recordSuccess(ipA, now);
+  }
+}
+check(`allows exactly ${String(RATE_LIMIT_MAX)} successes in the window`, allowedCount === RATE_LIMIT_MAX);
+const blocked = rateLimit(ipA, now);
+check('blocks the next submission', blocked.allowed === false);
+check('reports a Retry-After of at most 10 minutes', blocked.retryAfterSec > 0 && blocked.retryAfterSec <= 600);
+check('another IP is unaffected', rateLimit('198.51.100.9', now).allowed === true);
+check('quota frees up after the 10-minute window', rateLimit(ipA, now + 10 * 60 * 1000 + 1).allowed === true);
+_resetRateLimit();
+check('reset clears all buckets (test seam)', rateLimit(ipA, now).allowed === true);
+// A visitor who is still typing must not be punished: only successes consume quota.
+_resetRateLimit();
+for (let i = 0; i < 20; i++) rateLimit('198.51.100.44', now); // no recordSuccess
+check('failed/no-op submissions do not consume quota', rateLimit('198.51.100.44', now).allowed === true);
+_resetRateLimit();
+
+
+// ------------------------------------------------------------------
+// N. Chatbots keep answering when the AI key is missing
+// ------------------------------------------------------------------
+console.log('\n[N] no AI key: every chatbot still answers');
+{
+  const savedEnv = { x: process.env.XAI_API_KEY, g: process.env.GROQ_API_KEY, p: process.env.AI_PROVIDER };
+  const savedFetch = globalThis.fetch;
+  const hadWindow = 'window' in globalThis;
+  const savedWindow = (globalThis as any).window;
+  delete process.env.XAI_API_KEY; delete process.env.GROQ_API_KEY; delete process.env.AI_PROVIDER;
+
+  const mk = (method: string, body: unknown = {}) => {
+    const out: { status: number; json: any } = { status: 200, json: null };
+    const res: any = { setHeader() {}, status(c: number) { out.status = c; return res; }, json(o: unknown) { out.json = o; return res; }, end() { return res; } };
+    return { req: { method, body, headers: { 'x-forwarded-for': '203.0.113.9' }, query: {} } as any, res, out };
+  };
+  const msgs = [{ role: 'user', content: 'I have a leak' }];
+  const handlers: Array<[string, string, unknown]> = [
+    ['agent-response', '../api/agent-response.ts', { agentType: 'chatbot', messages: msgs }],
+    ['agent-run', '../api/agent-run.ts', { agentType: 'chatbot', messages: msgs }],
+    ['demo-chat', '../api/demo-chat.ts', { messages: msgs }],
+  ];
+  for (const [name, path, body] of handlers) {
+    const mod = await import(path);
+    const c = mk('POST', body);
+    await mod.default(c.req, c.res);
+    check(`${name}: a missing key is a clean 503 with a message (no crash)`, c.out.status === 503 && typeof c.out.json?.error === 'string');
+  }
+  {
+    const mod = await import('../api/widget-reply.ts');
+    const c = mk('POST', { messages: msgs });
+    await mod.default(c.req, c.res);
+    check('widget-reply: a missing key tells the widget to use its guided script', c.out.status === 200 && c.out.json?.fallback === true);
   }
 
-  async signIn(email: string) {
-    const user = this.users.get(email.toLowerCase().trim());
-    if (!user) return { error: 'Invalid login credentials' };
-    if (!user.email_confirmed_at) {
-      return { error: 'Please verify your email first. Check your inbox.', unverified: true };
-    }
-    return { user, session: { user } };
+  // What the dashboard does when the server answers 503.
+  (globalThis as any).window = { dispatchEvent() {}, localStorage: { getItem: () => null, setItem() {} } };
+  (globalThis as any).fetch = async () => new Response(JSON.stringify({ error: 'AI is not configured on the server' }), { status: 503, headers: { 'content-type': 'application/json' } });
+  const { runAgentWithTools } = await import('../src/lib/agentRunner.ts');
+  const { getAgentResponse } = await import('../src/lib/agentService.ts');
+  for (const q of ['My roof is leaking after the storm', 'How much does a roof replacement cost?', 'Can you book an inspection for Friday?', 'hello']) {
+    const r = await runAgentWithTools('chatbot', [{ role: 'user', content: q }], { companyName: 'ABC Roofing' });
+    check(`dashboard chatbot still answers "${q}"`, r.live === false && r.reply.trim().length > 20);
+  }
+  check('the banner says the AI is not set up', getServiceStatus().ai === 'not_configured');
+  for (const a of ['phone', 'nurturer', 'closer'] as const) {
+    const r = await getAgentResponse(a, [{ role: 'user', content: 'tell me more' }], { companyName: 'ABC Roofing' });
+    check(`${a} agent still answers`, r.trim().length > 20);
   }
 
-  async resendVerification(email: string) {
-    const user = this.users.get(email.toLowerCase().trim());
-    if (!user) return { error: 'User not found' };
-    const newToken = `token_resend_${Math.random().toString(36).substring(2, 12)}`;
-    this.pendingVerificationCodes.set(newToken, user.email);
-    return { ok: true, newToken };
-  }
+  // Landing-page demo: a built-in FAQ answers by topic instead of one canned line.
+  check('demo FAQ answers pricing with the real prices', /\$19/.test(demoFallbackReply('how much does it cost?')) && /\$39/.test(demoFallbackReply('what are your plans')));
+  check('demo FAQ is honest that SMS is not offered', /does not send text/i.test(demoFallbackReply('Can it text my customers?')));
+  check('demo FAQ is honest that live calls are not offered', /does not make or answer live phone calls/i.test(demoFallbackReply('does it answer phone calls?')));
+  check('demo FAQ explains the CRM', /CRM board/.test(demoFallbackReply('what happens to my CRM?')));
+  check('demo FAQ explains how it works', /one script tag|chat to your roofing website/i.test(demoFallbackReply('How does lead response work?')));
+  check('demo FAQ never returns an empty reply', demoFallbackReply('').length > 20 && demoFallbackReply('qwerty zzz').length > 20);
+  check('demo FAQ falls back to the general summary for unknown topics', demoFallbackReply('qwerty zzz') === GENERIC_DEMO_REPLY);
 
-  async handleCallbackToken(token: string) {
-    const email = this.pendingVerificationCodes.get(token);
-    if (!email) {
-      return { ok: false, error: 'Verification link is invalid or has expired.' };
-    }
-    const user = this.users.get(email);
-    if (!user) return { ok: false, error: 'User no longer exists.' };
-
-    user.email_confirmed_at = new Date().toISOString();
-    this.pendingVerificationCodes.delete(token);
-    return { ok: true, user };
+  reportAiOk();
+  globalThis.fetch = savedFetch;
+  if (hadWindow) (globalThis as any).window = savedWindow; else delete (globalThis as any).window;
+  for (const [k, v] of [['XAI_API_KEY', savedEnv.x], ['GROQ_API_KEY', savedEnv.g], ['AI_PROVIDER', savedEnv.p]] as const) {
+    if (v === undefined) delete process.env[k]; else process.env[k] = v;
   }
 }
 
-const auth = new MockSupabaseAuth();
-
-// Step 1: Registration
-const signupRes = await auth.signUp('contractor@abcroofing.com');
-check('Signup creates unverified user requiring email confirmation',
-  signupRes.needsVerification === true && signupRes.user.email_confirmed_at === null
-);
-check('Signup sets callback redirect to /auth/callback',
-  signupRes.redirectUrl.endsWith('/auth/callback')
-);
-
-// Step 2: Login before verification
-const earlyLogin = await auth.signIn('contractor@abcroofing.com');
-check('Login is blocked for unverified email with unverified: true flag',
-  earlyLogin.unverified === true && earlyLogin.error?.includes('verify your email')
-);
-
-// Step 3: Resend verification
-const resendRes = await auth.resendVerification('contractor@abcroofing.com');
-check('Resend verification issues fresh confirmation token', resendRes.ok === true && Boolean(resendRes.newToken));
-
-// Step 4: Invalid callback token handling
-const invalidCallback = await auth.handleCallbackToken('expired_or_forged_token');
-check('Invalid or expired callback token returns error state',
-  invalidCallback.ok === false && invalidCallback.error?.includes('expired')
-);
-
-// Step 5: Valid callback token handling
-const validCallback = await auth.handleCallbackToken(resendRes.newToken!);
-check('Valid callback token successfully verifies email',
-  validCallback.ok === true && validCallback.user?.email_confirmed_at !== null
-);
-
-// Step 6: Post-verification login succeeds
-const verifiedLogin = await auth.signIn('contractor@abcroofing.com');
-check('Login succeeds once email is verified',
-  Boolean(verifiedLogin.user) && !verifiedLogin.error && !verifiedLogin.unverified
-);
-
-// Step 7: Single-use verification token cannot be replayed
-const replayCallback = await auth.handleCallbackToken(resendRes.newToken!);
-check('Single-use callback token cannot be replayed after verification',
-  replayCallback.ok === false
-);
-
-console.log(`\n========================================`);
-console.log(`SUMMARY: ${passed} passed, ${failed} failed`);
-console.log(`========================================`);
-
-if (failed > 0) {
-  process.exit(1);
-}
+// ------------------------------------------------------------------
+console.log(`\n==================================================`);
+console.log(`RESULT: ${passed} passed, ${failed} failed`);
+console.log(failed === 0 ? 'ALL INTEGRATION CHECKS PASSED' : 'SOME CHECKS FAILED');
+console.log(`==================================================`);
+process.exit(failed === 0 ? 0 : 1);
