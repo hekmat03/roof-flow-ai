@@ -18,11 +18,14 @@ export interface ProfileReader { from: (table: string) => any }
 export async function lookupTenant(admin: ProfileReader, userId: string): Promise<TenantLookup> {
   const { data, error } = await admin
     .from('profiles')
-    .select('tenant_id')
+    .select('*')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) {
     return { ok: false, status: 503, code: 'workspace_unavailable', error: 'Your workspace is unavailable, try again shortly' };
+  }
+  if (data?.disabled === true) {
+    return { ok: false, status: 403, code: 'no_workspace', error: 'Your account has been disabled' };
   }
   const tenantId = data?.tenant_id;
   if (!isUuid(tenantId)) {
