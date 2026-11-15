@@ -23,12 +23,15 @@ export async function authenticateRequest(req: VercelRequest) {
 
   const { data: profile, error: profileError } = await admin
     .from('profiles')
-    .select('tenant_id,email')
+    .select('*')
     .eq('user_id', user.id)
     .maybeSingle();
   if (profileError) {
     console.error('Could not load workspace profile:', profileError.message);
     return { ok: false as const, status: 503, error: 'Your workspace profile is unavailable.' };
+  }
+  if (profile?.disabled === true) {
+    return { ok: false as const, status: 403, error: 'Your account has been disabled. Contact your workspace owner.' };
   }
   if (!profile?.tenant_id) {
     return { ok: false as const, status: 403, error: 'Your workspace has not been created yet.' };
