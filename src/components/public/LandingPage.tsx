@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Bot, Calendar, Check, Code, CloudLightning, LayoutDashboard, Lock, Mail, Send, ShieldCheck, Users, X } from 'lucide-react';
+import { demoFallbackReply } from '../../lib/demoFallback';
 import './public.css';
 
 /* ---------------------------------------------------------------------------
@@ -16,9 +17,6 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 const openingMessage =
   'Hi there! Ask me how RoofFlow AI handles a homeowner asking about a roof issue. This demo is for product questions only, so please do not share personal details.';
 const quickQuestions = ['How does lead response work?', 'Can it help request inspections?', 'What happens to my CRM?'];
-const fallbackReply =
-  'RoofFlow AI helps roofing teams answer homeowner inquiries quickly, capture consented leads, manage them in a CRM, and request inspections. This public demo does not collect contact details or save anything.';
-
 /** Fades sections in as they scroll into view (skipped for reduced motion / old browsers). */
 function useReveal() {
   useEffect(() => {
@@ -70,7 +68,7 @@ const DemoChat: React.FC = () => {
         body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
       });
       if (res.status === 429) {
-        setMessages((current) => [...current, { role: 'assistant', content: fallbackReply }]);
+        setMessages((current) => [...current, { role: 'assistant', content: demoFallbackReply(text) }]);
         setDemoError('You have reached the demo limit for now. Create a free account to keep going.');
         return;
       }
@@ -78,8 +76,8 @@ const DemoChat: React.FC = () => {
       if (!res.ok || !data?.reply) throw new Error('demo unavailable');
       setMessages((current) => [...current, { role: 'assistant', content: data.reply as string }]);
     } catch {
-      setMessages((current) => [...current, { role: 'assistant', content: fallbackReply }]);
-      setDemoError('The live assistant is unavailable right now. A short product summary was shown instead.');
+      setMessages((current) => [...current, { role: 'assistant', content: demoFallbackReply(text) }]);
+      setDemoError('The live AI is unavailable right now, so this answer comes from a short built-in FAQ. Try again in a minute for a live reply.');
     } finally {
       setBusy(false);
     }
