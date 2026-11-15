@@ -24,6 +24,8 @@ import { usePath } from './lib/router';
 import OnboardingWizard from './components/OnboardingWizard';
 import { TeamManagement } from './components/TeamManagement';
 import { AcceptInvite } from './components/auth/AcceptInvite';
+import { ForgotPassword } from './components/auth/ForgotPassword';
+import { ResetPassword } from './components/auth/ResetPassword';
 import { pendingInvite } from './lib/teamApi';
 
 function MainAppContent() {
@@ -83,6 +85,10 @@ function Routes() {
       return <AuthPage mode="login" />;
     case '/signup':
       return <AuthPage mode="signup" />;
+    case '/forgot-password':
+      return <ForgotPassword />;
+    case '/reset-password':
+      return <ResetPassword />;
     case '/auth/callback':
       return <AuthCallback />;
     case '/verify-email':
