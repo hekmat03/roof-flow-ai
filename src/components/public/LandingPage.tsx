@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Bot, Calendar, Check, CloudLightning, CreditCard, LayoutDashboard, Lock, MessageSquare, Send, ShieldCheck, Users } from 'lucide-react';
+import { ArrowRight, Bot, Calendar, Check, CloudLightning, LayoutDashboard, Lock, MessageSquare, Send, ShieldCheck, Users } from 'lucide-react';
 import './public.css';
 
 /* ---------------------------------------------------------------------------
@@ -152,7 +152,6 @@ export const LandingPage: React.FC = () => {
               <a href="#features">Features</a>
               <a href="#how-it-works">How it works</a>
               <a href="#demo">Demo</a>
-              <a href="#pricing">Pricing</a>
             </nav>
             <div className="lp-nav-cta">
               <a className="lp-signin" href="/login">Sign in</a>
@@ -174,7 +173,7 @@ export const LandingPage: React.FC = () => {
                 <a className="lp-btn lp-btn--ghost" href="#how-it-works">See how it works</a>
               </div>
               <div className="lp-fine">
-                <span><Check size={15} aria-hidden /> 20 chats a month on the free plan</span>
+                <span><Check size={15} aria-hidden /> No credit card needed</span>
                 <span><Check size={15} aria-hidden /> Set up in minutes</span>
               </div>
             </div>
@@ -188,7 +187,6 @@ export const LandingPage: React.FC = () => {
                     <span><MessageSquare size={15} aria-hidden /> Chatbot</span>
                     <span><Users size={15} aria-hidden /> CRM Leads</span>
                     <span><Calendar size={15} aria-hidden /> Calendar</span>
-                    <span><CreditCard size={15} aria-hidden /> Billing</span>
                   </div>
                 </aside>
                 <div className="lp-dash-main">
@@ -302,54 +300,6 @@ export const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="lp-section" id="pricing">
-          <div className="lp-wrap lp-center">
-            <div className="lp-reveal">
-              <span className="lp-eyebrow">Pricing</span>
-              <h2>Simple pricing. <span className="lp-muted">Start free.</span></h2>
-              <p className="lp-lead">Pick the plan that fits your monthly chat volume. No credit card to start.</p>
-            </div>
-            <div className="lp-prices">
-              <article className="lp-price lp-reveal">
-                <h3>Free</h3>
-                <div className="lp-amount">$0<small>/month</small></div>
-                <div className="lp-chats">20 chats / month</div>
-                <ul>
-                  <li><Check size={18} aria-hidden /> Embeddable lead-capture widget</li>
-                  <li><Check size={18} aria-hidden /> Phone and email validation</li>
-                  <li><Check size={18} aria-hidden /> Lead capture</li>
-                </ul>
-                <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Start Free <ArrowRight size={16} aria-hidden /></a>
-              </article>
-              <article className="lp-price lp-price--pop lp-reveal">
-                <span className="lp-pop">MOST POPULAR</span>
-                <h3>Starter</h3>
-                <div className="lp-amount">$19<small>/month</small></div>
-                <div className="lp-chats">250 chats / month</div>
-                <ul>
-                  <li><Check size={18} aria-hidden /> Everything in Free</li>
-                  <li><Check size={18} aria-hidden /> CRM leads board</li>
-                  <li><Check size={18} aria-hidden /> Dashboard and lead reporting</li>
-                </ul>
-                <a className="lp-btn lp-btn--primary lp-btn--block" href="/signup">Get Started <ArrowRight size={16} aria-hidden /></a>
-              </article>
-              <article className="lp-price lp-reveal">
-                <h3>Pro</h3>
-                <div className="lp-amount">$39<small>/month</small></div>
-                <div className="lp-chats">1,000 chats / month</div>
-                <ul>
-                  <li><Check size={18} aria-hidden /> Everything in Starter</li>
-                  <li><Check size={18} aria-hidden /> All features unlocked</li>
-                  <li><Check size={18} aria-hidden /> Agents 2-4 (simulation preview)</li>
-                  <li><Check size={18} aria-hidden /> Highest chat volume</li>
-                </ul>
-                <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Get Started <ArrowRight size={16} aria-hidden /></a>
-              </article>
-            </div>
-            <p className="lp-price-note lp-reveal">No credit card to start. Upgrade or cancel any time from your account.</p>
-          </div>
-        </section>
-
         <section className="lp-section">
           <div className="lp-wrap">
             <div className="lp-cta lp-reveal">
@@ -368,7 +318,6 @@ export const LandingPage: React.FC = () => {
           <a className="lp-brand" href="/"><span className="lp-mark"><CloudLightning size={19} aria-hidden /></span><span>RoofFlow <b>AI</b></span></a>
           <nav aria-label="Footer navigation">
             <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
             <a href="/login">Sign in</a>
           </nav>
           <span>&copy; 2026 RoofFlow AI</span>
