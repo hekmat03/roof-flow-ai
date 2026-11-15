@@ -17,11 +17,11 @@ Real delivery is optional. Until configured, the API records outbound intent and
 
 ## Safety rules implemented
 
-- Free has no email sends; Starter is capped at 200 per month; Pro at 1,000 per month; all plans share a 100-per-day cap.
+- Each company is capped at 1,000 follow-up emails per month and 100 per day (safety limits, not billing).
 - A scheduled sequence requires a tenant-owned lead, a consented lead whose conversation contains that email address, an eligible lead status, no suppression record, and a business mailing address of at least 10 trimmed characters.
 - Single replies do not require a mailing address. They still require the email to be present in the current conversation and include an unsubscribe link.
 - Messages include the contractor profile email as Reply-To, contractor name/address in the footer, and one-click unsubscribe headers/link.
-- Only the email channel is supported. The worker rechecks plan, lead, suppression and address immediately before send.
+- The worker rechecks lead, suppression and address immediately before send.
 - Queue claims use `FOR UPDATE SKIP LOCKED`; retries use the same provider idempotency key and stop after three attempts.
 
 ## Manual verification checklist
