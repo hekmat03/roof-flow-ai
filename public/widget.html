@@ -342,7 +342,12 @@
             }),
           })
             .then(function (r) {
-              return r.json().then(function (body) { return { status: r.status, body: body }; });
+              // An error page (not JSON) must still reach the right message below.
+              return r.text().then(function (text) {
+                var body = {};
+                try { body = JSON.parse(text) || {}; } catch (e) { body = {}; }
+                return { status: r.status, body: body };
+              });
             })
             .then(function (res) {
               submitBtn.disabled = false;
@@ -364,16 +369,16 @@
             })
             .catch(function () {
               submitBtn.disabled = false;
-              showRetry("We couldn't send that \u2014 the connection dropped. Your answers are still here.");
+              showRetry("We couldn't reach the server, so your request was NOT sent. Check your internet connection and tap Retry. Your answers are still here.");
             });
         }
 
         function retryMessage(res) {
-          if (res.status === 503) return "Lead capture is temporarily unavailable \u2014 please try again later.";
           if (res.body && res.body.error === "invalid_widget" && res.body.message) return res.body.message;
           if (res.status === 429) return "That's a lot of requests \u2014 please try again in a few minutes.";
           if (res.status === 400 && res.body && res.body.message) return res.body.message;
-          return "Something went wrong on our side \u2014 please try again.";
+          if (res.status >= 500) return "Our system is temporarily unavailable, so your request was NOT sent. Please tap Retry in a minute. Your answers are still here.";
+          return "Something went wrong, so your request was NOT sent. Please tap Retry. Your answers are still here.";
         }
 
         function showRetry(message) {
