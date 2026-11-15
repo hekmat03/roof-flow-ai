@@ -10,6 +10,7 @@ import {
   Settings,
   CreditCard,
   Wallet,
+  UserCog,
   CloudLightning,
   Menu,
   X,
@@ -50,6 +51,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'crm', label: 'CRM Leads Board', icon: Users },
     { id: 'pricing', label: 'Plans & Pricing', icon: Wallet },
     { id: 'billing', label: 'Billing & Account', icon: CreditCard },
+    { id: 'team', label: 'Team & Users', icon: UserCog },
     { id: 'config', label: 'Configuration', icon: Settings },
   ];
 
