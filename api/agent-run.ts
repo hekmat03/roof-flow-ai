@@ -30,6 +30,7 @@ import { enforceRateLimit } from './_lib/rateLimit.js';
 import { adminClient } from './_lib/supabaseAdmin.js';
 import { appOrigin, createResendProvider } from './_lib/email.js';
 import { createEmailActions, type EmailActionStore } from './_lib/emailActions.js';
+import { getProfile, effectivePlan } from './_lib/billing.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ai = aiConfig();
@@ -171,10 +172,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return { id: typeof data?.id === 'string' ? data.id : undefined };
     },
   } : null;
+  // The tenant's real entitlement, read server-side (never trusted from the browser).
+  // Without a storage client there is no profile to read, so fail closed to 'free'.
+  const plan = admin ? effectivePlan(await getProfile(admin, guard.user.id)) : 'free';
   const emailActions = createEmailActions({
     store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM,
     baseUrl: process.env.APP_BASE_URL, sessionSecret: process.env.SESSION_SECRET,
     tenantId: guard.tenantId, sessionId: scopedSessionId(guard.tenantId, sessionId),
+    plan,
   });
 
   const chat: ChatFn = async (msgs, tools) => {
