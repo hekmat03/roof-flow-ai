@@ -24,7 +24,7 @@ function setup(lead: OutreachLead | null, opts: { suppressed?: boolean; reserve?
   const actions = createEmailActions({
     store, provider: { async send() { log.providerCalls++; return { ok: true, id: 'p1' }; } },
     from: 'Acme <mail@acme.example>', baseUrl: 'https://roof.example', sessionSecret: 'secret',
-    tenantId: TENANT, sessionId: `${TENANT}:s1`, plan: 'starter',
+    tenantId: TENANT, sessionId: `${TENANT}:s1`,
   });
   return { actions, log };
 }
