@@ -40,24 +40,27 @@
 
   var OPEN_W = 380;
   var OPEN_H = 560;
+  // Phones (narrow screens, or landscape phones) get a full-screen sheet instead of a
+  // floating card, so the on-screen keyboard never hides the form.
+  var mq = window.matchMedia ? window.matchMedia("(max-width: 480px), (max-height: 480px)") : null;
+  function isSheet() {
+    return !!(mq && mq.matches);
+  }
+
+  var FONT = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
+  // All styles inline + namespaced: the host page's CSS cannot leak in.
+  var ROOT_BASE = "position:fixed;z-index:2147483000;" + FONT;
+  var ROOT_CORNER =
+    "right:20px;bottom:20px;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));";
+  var ROOT_SHEET = "left:0;top:0;right:0;bottom:0;width:100%;height:100%;";
 
   var root = document.createElement("div");
   root.setAttribute("data-roofflow-widget", "");
-  // All styles inline + namespaced: the host page's CSS cannot leak in.
-  root.style.cssText =
-    "position:fixed;z-index:2147483000;right:20px;bottom:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
 
   var frame = document.createElement("iframe");
   frame.title = "Roof inspection chat";
   frame.src =
     base + "/widget.html?color=" + encodeURIComponent(color) + "&key=" + encodeURIComponent(key) + "&embed=1";
-  frame.style.cssText =
-    "display:none;border:0;width:" +
-    OPEN_W +
-    "px;height:" +
-    OPEN_H +
-    "px;max-width:calc(100vw - 32px);max-height:calc(100vh - 120px);" +
-    "border-radius:16px;box-shadow:0 18px 50px rgba(2,6,23,.45);background:#0f172a;color-scheme:normal;";
   frame.setAttribute("allow", "clipboard-write");
 
   var button = document.createElement("button");
@@ -66,6 +69,7 @@
   button.setAttribute("aria-expanded", "false");
   button.style.cssText =
     "display:flex;align-items:center;gap:9px;margin:12px 0 0 auto;border:0;cursor:pointer;" +
+    "max-width:calc(100vw - 32px);min-height:46px;" +
     "padding:14px 18px;border-radius:999px;background:" +
     color +
     ";color:#0b1220;font-weight:800;font-size:14px;line-height:1;" +
@@ -78,15 +82,65 @@
     "</span>";
 
   var open = false;
+  var cardHeight = OPEN_H;
+  var savedOverflow = null;
+
+  function lockScroll(on) {
+    var el = document.documentElement;
+    if (on && savedOverflow === null) {
+      savedOverflow = el.style.overflow;
+      el.style.overflow = "hidden";
+    } else if (!on && savedOverflow !== null) {
+      el.style.overflow = savedOverflow;
+      savedOverflow = null;
+    }
+  }
+
+  // With the keyboard open the visible area is smaller than the screen: follow it.
+  function fitKeyboard() {
+    var vv = window.visualViewport;
+    if (!(open && isSheet() && vv)) return;
+    root.style.top = Math.round(vv.offsetTop) + "px";
+    root.style.bottom = "auto";
+    root.style.height = Math.round(vv.height) + "px";
+  }
+
+  function layout() {
+    var sheet = open && isSheet();
+    root.style.cssText = ROOT_BASE + (sheet ? ROOT_SHEET : ROOT_CORNER);
+    frame.style.cssText =
+      "border:0;background:#0f172a;color-scheme:normal;display:" +
+      (open ? "block" : "none") +
+      ";" +
+      (sheet
+        ? "width:100%;height:100%;max-width:none;max-height:none;border-radius:0;box-shadow:none;"
+        : "width:" +
+          OPEN_W +
+          "px;height:" +
+          cardHeight +
+          "px;max-width:calc(100vw - 32px);max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);" +
+          "border-radius:16px;box-shadow:0 18px 50px rgba(2,6,23,.45);");
+    button.style.display = sheet ? "none" : "flex";
+    lockScroll(sheet);
+    fitKeyboard();
+  }
+
   function setOpen(next) {
+    var wasOpen = open;
     open = next;
-    frame.style.display = open ? "block" : "none";
     button.setAttribute("aria-expanded", open ? "true" : "false");
+    layout();
     if (open) {
       try {
         frame.contentWindow.postMessage({ type: "roofflow:open" }, base);
       } catch (e) {
         /* frame not ready yet — the iframe asks for state on load instead */
+      }
+    } else if (wasOpen) {
+      try {
+        button.focus();
+      } catch (e) {
+        /* ignore */
       }
     }
   }
@@ -95,14 +149,28 @@
     setOpen(!open);
   });
 
+  document.addEventListener("keydown", function (event) {
+    if (open && event.key === "Escape") setOpen(false);
+  });
+  window.addEventListener("resize", layout);
+  window.addEventListener("orientationchange", layout);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", fitKeyboard);
+    window.visualViewport.addEventListener("scroll", fitKeyboard);
+  }
+  if (mq) {
+    if (mq.addEventListener) mq.addEventListener("change", layout);
+    else if (mq.addListener) mq.addListener(layout);
+  }
+
   // The iframe tells us its content height and when the visitor closes it.
   window.addEventListener("message", function (event) {
     if (event.origin !== base) return;
     var data = event.data || {};
     if (data.type === "roofflow:close") setOpen(false);
-    if (data.type === "roofflow:height" && typeof data.height === "number") {
-      var h = Math.max(320, Math.min(Math.round(data.height), window.innerHeight - 140));
-      frame.style.height = h + "px";
+    if (data.type === "roofflow:height" && typeof data.height === "number" && !(open && isSheet())) {
+      cardHeight = Math.max(320, Math.min(Math.round(data.height), window.innerHeight - 140));
+      layout();
     }
     if (data.type === "roofflow:ready" && open) {
       try {
@@ -113,6 +181,7 @@
     }
   });
 
+  layout();
   root.appendChild(frame);
   root.appendChild(button);
 
