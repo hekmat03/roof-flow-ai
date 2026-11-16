@@ -16,6 +16,10 @@ import { useOnboardingStatus } from './lib/useOnboardingStatus';
 import { AuthPage } from './components/auth/AuthPage';
 import { AuthCallback } from './components/auth/AuthCallback';
 import { VerifyEmail } from './components/auth/VerifyEmail';
+import { ForgotPassword } from './components/auth/ForgotPassword';
+import { ResetPassword } from './components/auth/ResetPassword';
+import { AcceptInvite } from './components/auth/AcceptInvite';
+import { TeamManagement } from './components/TeamManagement';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Redirect } from './components/Redirect';
@@ -50,6 +54,8 @@ function MainAppContent() {
         return <Agent4Estimate />;
       case 'crm':
         return <CRMLeadsBoard />;
+      case 'team':
+        return <TeamManagement />;
       case 'config':
         return <Configuration />;
       default:
@@ -82,6 +88,12 @@ function Routes() {
       return <AuthCallback />;
     case '/verify-email':
       return <VerifyEmail />;
+    case '/forgot-password':
+      return <ForgotPassword />;
+    case '/reset-password':
+      return <ResetPassword />;
+    case '/invite':
+      return <AcceptInvite />;
     case '/app':
       return (
         <ProtectedRoute>
