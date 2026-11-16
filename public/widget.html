@@ -33,16 +33,16 @@
       header h1 { font-size: 14px; margin: 0; font-weight: 800; }
       header p { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
       .close { margin-left: auto; background: transparent; border: 0; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; }
-      #log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+      #log { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
       .msg { max-width: 88%; padding: 10px 12px; border-radius: 14px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
       .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
       .user { align-self: flex-end; background: var(--accent); color: #0b1220; font-weight: 600; border-bottom-right-radius: 4px; }
       .sys { align-self: center; font-size: 11px; color: var(--muted); text-align: center; }
-      form { border-top: 1px solid var(--line); padding: 12px; background: #131c2e; }
+      form { border-top: 1px solid var(--line); padding: 12px; background: #131c2e; max-height: 62%; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
       label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; font-weight: 700; }
       input[type="text"], input[type="tel"], input[type="email"] {
         width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
-        background: #0b1220; color: var(--text); font-size: 14px; font-family: inherit;
+        background: #0b1220; color: var(--text); font-size: 16px; font-family: inherit;
       }
       input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
       .row { display: flex; gap: 8px; }
@@ -57,13 +57,28 @@
         background: transparent; color: var(--text); font-weight: 700; cursor: pointer; font-family: inherit;
       }
       .err { color: #fca5a5; font-size: 12px; margin-top: 6px; min-height: 15px; }
-      .consent { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--text); line-height: 1.4; }
-      .consent input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); }
+      label.consent { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); line-height: 1.4; margin: 0; cursor: pointer; }
+      .consent input { flex: none; margin: 1px 0 0; width: 24px; height: 24px; accent-color: var(--accent); }
       footer { padding: 8px 14px 12px; font-size: 10px; color: #64748b; text-align: center; line-height: 1.4; }
       .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
       .ok { align-self: flex-start; background: rgba(16,185,129,.14); border: 1px solid rgba(16,185,129,.45); color: #6ee7b7; }
       .bad { align-self: flex-start; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.45); color: #fca5a5; }
       .typing { color: var(--muted); font-size: 12px; font-style: italic; }
+    
+      @media (max-width: 480px), (max-height: 560px) {
+        header { padding: 10px 12px; }
+        .close { min-width: 44px; min-height: 44px; font-size: 26px; }
+        #log { padding: 10px; }
+        form { padding: 10px 12px; }
+        button.primary { padding: 14px; font-size: 16px; }
+        button.ghost { min-height: 44px; }
+      }
+      @media (max-height: 520px) {
+        footer, header p { display: none; }
+        .dot { width: 28px; height: 28px; }
+        form { max-height: 72%; }
+      }
+      footer { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
     </style>
   </head>
   <body>
@@ -164,7 +179,7 @@
             render: function () {
               stepEl.innerHTML =
                 '<label for="f_need">What\u2019s happening with your roof?</label>' +
-                '<input id="f_need" type="text" maxlength="500" placeholder="e.g. hail damage, leak in the ceiling" value="' +
+                '<input id="f_need" type="text" enterkeyhint="next" maxlength="500" placeholder="e.g. hail damage, leak in the ceiling" value="' +
                 esc(state.need) +
                 '" />';
             },
@@ -179,7 +194,7 @@
             render: function () {
               stepEl.innerHTML =
                 '<label for="f_zip">Property ZIP code</label>' +
-                '<div class="row"><input id="f_zip" class="grow" type="text" inputmode="numeric" maxlength="5" placeholder="75024" value="' +
+                '<div class="row"><input id="f_zip" class="grow" type="text" inputmode="numeric" autocomplete="postal-code" enterkeyhint="next" maxlength="5" placeholder="75024" value="' +
                 esc(state.zip) +
                 '" />' +
                 '<button type="button" class="ghost" id="f_nozip" style="width:auto;margin:0;padding:0 12px">Prefer not to say</button></div>';
@@ -200,7 +215,7 @@
             render: function () {
               stepEl.innerHTML =
                 '<label for="f_name">Your name</label>' +
-                '<input id="f_name" type="text" maxlength="80" autocomplete="name" value="' + esc(state.name) + '" />';
+                '<input id="f_name" type="text" maxlength="80" autocomplete="name" enterkeyhint="next" value="' + esc(state.name) + '" />';
             },
             read: function () {
               state.name = (document.getElementById("f_name").value || "").trim().slice(0, 80);
@@ -234,9 +249,8 @@
             prompt: "Last step \u2014 your permission, in writing.",
             render: function () {
               stepEl.innerHTML =
-                '<label>Consent</label>' +
-                '<div class="consent"><input id="f_consent" type="checkbox"' + (state.consent ? " checked" : "") + " />" +
-                '<span for="f_consent">' + esc(CONSENT_TEXT) + "</span></div>";
+                '<label class="consent" for="f_consent"><input id="f_consent" type="checkbox"' + (state.consent ? " checked" : "") + " />" +
+                "<span>" + esc(CONSENT_TEXT) + "</span></label>";
             },
             read: function () {
               state.consent = document.getElementById("f_consent").checked;
@@ -256,7 +270,8 @@
           submitBtn.textContent = step === "consent" ? "Request my free inspection" : "Send";
           STEPS[step].render();
           var input = stepEl.querySelector("input[type=text],input[type=tel],input[type=email]");
-          if (input) input.focus();
+          var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+          if (input && !touch) input.focus();
           height();
         }
 
