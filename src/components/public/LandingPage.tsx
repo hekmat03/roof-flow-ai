@@ -6,8 +6,7 @@ import './public.css';
 /* ---------------------------------------------------------------------------
  * Public marketing page. Rule for every line below: it must describe something
  * the product really does today. No testimonials, customer logos, ratings,
- * "trusted by" counts or sample statistics. Prices and limits mirror
- * api/_lib/plans.ts, so change both together.
+ * "trusted by" counts or sample statistics.
  * The demo chat talks to /api/demo-chat (public, tightly rate-limited, no tools,
  * never collects personal details or saves anything).
  * ------------------------------------------------------------------------- */
@@ -155,7 +154,6 @@ export const LandingPage: React.FC = () => {
               <a href="#features">Features</a>
               <a href="#how-it-works">How it works</a>
               <a href="#demo">Demo</a>
-              <a href="#pricing">Pricing</a>
               <a href="#faq">FAQ</a>
             </nav>
             <div className="lp-nav-cta">
@@ -178,7 +176,7 @@ export const LandingPage: React.FC = () => {
                 <a className="lp-btn lp-btn--ghost" href="#how-it-works">See how it works</a>
               </div>
               <div className="lp-fine">
-                <span><Check size={15} aria-hidden /> Free plan: 20 chats a month</span>
+                <span><Check size={15} aria-hidden /> No credit card needed</span>
                 <span><Check size={15} aria-hidden /> Added to your site with one script tag</span>
               </div>
             </div>
@@ -257,7 +255,7 @@ export const LandingPage: React.FC = () => {
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><LayoutDashboard size={22} aria-hidden /></span>
                 <h3>CRM leads board</h3>
-                <p>Move leads from New Lead through Inspection Scheduled and Estimate Sent to Closed-Won, with the whole conversation on each lead. Starter and Pro.</p>
+                <p>Move leads from New Lead through Inspection Scheduled and Estimate Sent to Closed-Won, with the whole conversation on each lead.</p>
               </article>
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><Calendar size={22} aria-hidden /></span>
@@ -267,12 +265,12 @@ export const LandingPage: React.FC = () => {
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><Mail size={22} aria-hidden /></span>
                 <h3>Email follow-up sequences</h3>
-                <p>Schedule a follow-up series for leads who agreed to be contacted. Every email has an unsubscribe link and your business mailing address. Starter and Pro.</p>
+                <p>Schedule a follow-up series for leads who agreed to be contacted. Every email has an unsubscribe link and your business mailing address.</p>
               </article>
               <article className="lp-card lp-reveal">
                 <span className="lp-card-ico"><Users size={22} aria-hidden /></span>
                 <h3>Team workspace</h3>
-                <p>Invite up to 10 people as admins or members. Everyone shares your leads; only the owner changes the plan and billing. Each company&apos;s data stays separate from other companies.</p>
+                <p>Invite up to 10 people as admins or members. Everyone shares your leads; only the owner manages the workspace. Each company&apos;s data stays separate from other companies.</p>
               </article>
             </div>
           </div>
@@ -370,52 +368,6 @@ export const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="lp-section" id="pricing">
-          <div className="lp-wrap lp-center">
-            <div className="lp-reveal">
-              <span className="lp-eyebrow">Pricing</span>
-              <h2>Simple pricing. <span className="lp-muted">Start free.</span></h2>
-              <p className="lp-lead">Pick the plan that fits your monthly chat volume. No credit card to start. One chat is one visitor conversation. Prices are in US dollars.</p>
-            </div>
-            <div className="lp-prices">
-              <article className="lp-price lp-reveal">
-                <h3>Free</h3>
-                <div className="lp-amount">$0<small>/month</small></div>
-                <div className="lp-chats">20 chats / month</div>
-                <ul>
-                  <li><Check size={18} aria-hidden /> AI website chat widget</li>
-                  <li><Check size={18} aria-hidden /> Lead capture with phone and email validation</li>
-                </ul>
-                <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Start free <ArrowRight size={16} aria-hidden /></a>
-              </article>
-              <article className="lp-price lp-price--pop lp-reveal">
-                <span className="lp-pop">ADDS THE CRM</span>
-                <h3>Starter</h3>
-                <div className="lp-amount">$19<small>/month</small></div>
-                <div className="lp-chats">250 chats / month</div>
-                <ul>
-                  <li><Check size={18} aria-hidden /> Everything in Free</li>
-                  <li><Check size={18} aria-hidden /> CRM leads board</li>
-                  <li><Check size={18} aria-hidden /> Scheduled email follow-ups (200 per month)</li>
-                </ul>
-                <a className="lp-btn lp-btn--primary lp-btn--block" href="/signup">Get started <ArrowRight size={16} aria-hidden /></a>
-              </article>
-              <article className="lp-price lp-reveal">
-                <h3>Pro</h3>
-                <div className="lp-amount">$39<small>/month</small></div>
-                <div className="lp-chats">1,000 chats / month</div>
-                <ul>
-                  <li><Check size={18} aria-hidden /> Everything in Starter</li>
-                  <li><Check size={18} aria-hidden /> All agents and features (the voice agent is a preview)</li>
-                  <li><Check size={18} aria-hidden /> Scheduled email follow-ups (1,000 per month)</li>
-                </ul>
-                <a className="lp-btn lp-btn--ghost lp-btn--block" href="/signup">Get started <ArrowRight size={16} aria-hidden /></a>
-              </article>
-            </div>
-            <p className="lp-price-note lp-reveal">Upgrade or cancel any time from your account.</p>
-          </div>
-        </section>
-
         <section className="lp-section" id="faq">
           <div className="lp-wrap lp-faq-wrap">
             <div className="lp-head lp-reveal">
@@ -428,7 +380,7 @@ export const LandingPage: React.FC = () => {
               </details>
               <details>
                 <summary>Does RoofFlow call or text homeowners?</summary>
-                <p>No. The chat happens on your website and you follow up yourself. On Starter and Pro you can also schedule follow-up emails. Text messages are not offered, and the voice agent is a browser simulator with no phone line behind it.</p>
+                <p>No. The chat happens on your website and you follow up yourself. You can also schedule follow-up emails. Text messages are not offered, and the voice agent is a browser simulator with no phone line behind it.</p>
               </details>
               <details>
                 <summary>What does the homeowner agree to?</summary>
@@ -444,7 +396,7 @@ export const LandingPage: React.FC = () => {
               </details>
               <details>
                 <summary>Do I need a credit card to start?</summary>
-                <p>No. The Free plan includes 20 chats a month with no card. You can upgrade or cancel any time from your account.</p>
+                <p>No. You can create an account without a card.</p>
               </details>
               <details>
                 <summary>Does the demo on this page save my messages?</summary>
@@ -472,7 +424,6 @@ export const LandingPage: React.FC = () => {
           <a className="lp-brand" href="/"><span className="lp-mark"><CloudLightning size={19} aria-hidden /></span><span>RoofFlow <b>AI</b></span></a>
           <nav aria-label="Footer navigation">
             <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
             <a href="/login">Sign in</a>
           </nav>
