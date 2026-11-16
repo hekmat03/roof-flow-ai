@@ -6,8 +6,9 @@
     <title>Roof inspection chat</title>
     <!--
       widget.html — the conversation the visitor completes inside the embed
-      iframe. It POSTs to /api/leads on THIS origin. It loads no third-party
-      scripts and stores nothing locally except the visitor's own typed answers
+      iframe. It POSTs to /api/leads on THIS origin. The only third-party script
+      is Cloudflare Turnstile (bot check), loaded only when a site key is set
+      via ?ts=SITE_KEY. It stores nothing locally except the visitor's own typed answers
       (kept in memory only, so a failed submit can be retried without retyping).
     -->
     <style>
@@ -100,6 +101,7 @@
         <input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off" />
       </div>
       <div id="step"></div>
+      <div id="ts-box"></div>
       <div class="err" id="err" role="alert"></div>
       <button class="primary" type="submit" id="submit">Send</button>
     </form>
@@ -127,6 +129,25 @@
         // Which contractor this widget belongs to (public identifier). The server
         // maps it to a company; a tenant id is never sent or trusted from here.
         var WIDGET_KEY = params.get("key") || "";
+
+        // ---- Bot check (Cloudflare Turnstile), only when a site key is given ----
+        var TS_SITE_KEY = params.get("ts") || "";
+        var tsToken = "";
+        var tsWidgetId = null;
+        if (/^[0-9A-Za-z_-]{10,64}$/.test(TS_SITE_KEY)) {
+          window.onTurnstileLoad = function () {
+            tsWidgetId = window.turnstile.render("#ts-box", {
+              sitekey: TS_SITE_KEY,
+              callback: function (t) { tsToken = t; },
+              "expired-callback": function () { tsToken = ""; },
+              "error-callback": function () { tsToken = ""; },
+            });
+          };
+          var tsScript = document.createElement("script");
+          tsScript.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad";
+          tsScript.async = true;
+          document.head.appendChild(tsScript);
+        }
 
         // ---- Conversation state (in memory: a failed submit can be retried) --
         var state = {
@@ -337,6 +358,10 @@
 
         // ---- Submit --------------------------------------------------------
         function submitLead() {
+          if (TS_SITE_KEY && !tsToken) {
+            showRetry("Please wait for the security check to finish, then tap Retry.");
+            return;
+          }
           submitBtn.disabled = true;
           submitBtn.textContent = "Sending\u2026";
           errEl.textContent = "";
@@ -354,6 +379,7 @@
               conversation: state.conversation,
               widget_key: WIDGET_KEY,
               company_website: document.getElementById("company_website").value || "",
+              turnstile_token: tsToken,
             }),
           })
             .then(function (r) {
@@ -366,6 +392,8 @@
             })
             .then(function (res) {
               submitBtn.disabled = false;
+              // A Turnstile token works once; get a fresh one for any retry.
+              if (tsWidgetId !== null && window.turnstile) { tsToken = ""; window.turnstile.reset(tsWidgetId); }
               if (res.status === 201 || (res.body && res.body.ok)) {
                 step = "done";
                 push("msg done", "");
