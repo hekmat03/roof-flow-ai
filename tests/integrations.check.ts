@@ -7,6 +7,8 @@
  */
 
 import { callAgentApi, fetchAiStatus } from '../src/utils/aiService.ts';
+import { demoFallbackReply, GENERIC_DEMO_REPLY } from '../src/lib/demoFallback.ts';
+import { ENV_CATALOG, evaluateEnv } from '../api/_lib/envCheck.ts';
 import {
   AI_NOTICES,
   DB_NOTICES,
@@ -293,6 +295,122 @@ _resetRateLimit();
 for (let i = 0; i < 20; i++) rateLimit('198.51.100.44', now); // no recordSuccess
 check('failed/no-op submissions do not consume quota', rateLimit('198.51.100.44', now).allowed === true);
 _resetRateLimit();
+
+
+// ------------------------------------------------------------------
+// N. Chatbots keep answering when the AI key is missing
+// ------------------------------------------------------------------
+console.log('\n[N] no AI key: every chatbot still answers');
+{
+  const savedEnv = { x: process.env.XAI_API_KEY, g: process.env.GROQ_API_KEY, p: process.env.AI_PROVIDER };
+  const savedFetch = globalThis.fetch;
+  const hadWindow = 'window' in globalThis;
+  const savedWindow = (globalThis as any).window;
+  delete process.env.XAI_API_KEY; delete process.env.GROQ_API_KEY; delete process.env.AI_PROVIDER;
+
+  const mk = (method: string, body: unknown = {}) => {
+    const out: { status: number; json: any } = { status: 200, json: null };
+    const res: any = { setHeader() {}, status(c: number) { out.status = c; return res; }, json(o: unknown) { out.json = o; return res; }, end() { return res; } };
+    return { req: { method, body, headers: { 'x-forwarded-for': '203.0.113.9' }, query: {} } as any, res, out };
+  };
+  const msgs = [{ role: 'user', content: 'I have a leak' }];
+  const handlers: Array<[string, string, unknown]> = [
+    ['agent-response', '../api/agent-response.ts', { agentType: 'chatbot', messages: msgs }],
+    ['agent-run', '../api/agent-run.ts', { agentType: 'chatbot', messages: msgs }],
+    ['demo-chat', '../api/demo-chat.ts', { messages: msgs }],
+  ];
+  for (const [name, path, body] of handlers) {
+    const mod = await import(path);
+    const c = mk('POST', body);
+    await mod.default(c.req, c.res);
+    check(`${name}: a missing key is a clean 503 with a message (no crash)`, c.out.status === 503 && typeof c.out.json?.error === 'string');
+  }
+  {
+    const mod = await import('../api/widget-reply.ts');
+    const c = mk('POST', { messages: msgs });
+    await mod.default(c.req, c.res);
+    check('widget-reply: a missing key tells the widget to use its guided script', c.out.status === 200 && c.out.json?.fallback === true);
+  }
+
+  // What the dashboard does when the server answers 503.
+  (globalThis as any).window = { dispatchEvent() {}, localStorage: { getItem: () => null, setItem() {} } };
+  (globalThis as any).fetch = async () => new Response(JSON.stringify({ error: 'AI is not configured on the server' }), { status: 503, headers: { 'content-type': 'application/json' } });
+  const { runAgentWithTools } = await import('../src/lib/agentRunner.ts');
+  const { getAgentResponse } = await import('../src/lib/agentService.ts');
+  for (const q of ['My roof is leaking after the storm', 'How much does a roof replacement cost?', 'Can you book an inspection for Friday?', 'hello']) {
+    const r = await runAgentWithTools('chatbot', [{ role: 'user', content: q }], { companyName: 'ABC Roofing' });
+    check(`dashboard chatbot still answers "${q}"`, r.live === false && r.reply.trim().length > 20);
+  }
+  check('the banner says the AI is not set up', getServiceStatus().ai === 'not_configured');
+  for (const a of ['phone', 'nurturer', 'closer'] as const) {
+    const r = await getAgentResponse(a, [{ role: 'user', content: 'tell me more' }], { companyName: 'ABC Roofing' });
+    check(`${a} agent still answers`, r.trim().length > 20);
+  }
+
+  // Landing-page demo: a built-in FAQ answers by topic instead of one canned line.
+  check('demo FAQ answers pricing with the real prices', /\$19/.test(demoFallbackReply('how much does it cost?')) && /\$39/.test(demoFallbackReply('what are your plans')));
+  check('demo FAQ is honest that SMS is not offered', /does not send text/i.test(demoFallbackReply('Can it text my customers?')));
+  check('demo FAQ is honest that live calls are not offered', /does not make or answer live phone calls/i.test(demoFallbackReply('does it answer phone calls?')));
+  check('demo FAQ explains the CRM', /CRM board/.test(demoFallbackReply('what happens to my CRM?')));
+  check('demo FAQ explains how it works', /one script tag|chat to your roofing website/i.test(demoFallbackReply('How does lead response work?')));
+  check('demo FAQ never returns an empty reply', demoFallbackReply('').length > 20 && demoFallbackReply('qwerty zzz').length > 20);
+  check('demo FAQ falls back to the general summary for unknown topics', demoFallbackReply('qwerty zzz') === GENERIC_DEMO_REPLY);
+
+  reportAiOk();
+  globalThis.fetch = savedFetch;
+  if (hadWindow) (globalThis as any).window = savedWindow; else delete (globalThis as any).window;
+  for (const [k, v] of [['XAI_API_KEY', savedEnv.x], ['GROQ_API_KEY', savedEnv.g], ['AI_PROVIDER', savedEnv.p]] as const) {
+    if (v === undefined) delete process.env[k]; else process.env[k] = v;
+  }
+}
+
+
+// ------------------------------------------------------------------
+// O. Environment checker: catches wrong URLs, swapped keys and half-set-up features
+// ------------------------------------------------------------------
+console.log('\n[O] environment variable checker');
+{
+  const jwt = (claims: Record<string, unknown>) =>
+    `${Buffer.from('{"alg":"HS256"}').toString('base64url')}.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.sig`;
+  const exp = Math.floor(Date.now() / 1000) + 3600;
+  const good: Record<string, string> = {
+    SUPABASE_URL: 'https://abcdwxyz.supabase.co',
+    VITE_SUPABASE_URL: 'https://abcdwxyz.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: jwt({ role: 'service_role', ref: 'abcdwxyz', exp }),
+    VITE_SUPABASE_ANON_KEY: jwt({ role: 'anon', ref: 'abcdwxyz', exp }),
+    SESSION_SECRET: 'a'.repeat(40),
+    APP_BASE_URL: 'https://my-roofing-app.vercel.app',
+    XAI_API_KEY: 'xai-abc123',
+    CRON_SECRET: 'c'.repeat(24),
+  };
+  const run = (over: Record<string, string | undefined> = {}) => evaluateEnv({ ...good, ...over });
+  const status = (r: ReturnType<typeof evaluateEnv>, name: string) => r.results.find((x) => x.name === name)!.status;
+
+  check('a correct setup has no problems', run().requiredOk === true && run().problems.length === 0);
+  check('an empty environment fails every required variable', evaluateEnv({}).requiredOk === false && evaluateEnv({}).problems.length >= 6);
+  check('the anon key pasted into the service role slot is caught', status(run({ SUPABASE_SERVICE_ROLE_KEY: good.VITE_SUPABASE_ANON_KEY }), 'SUPABASE_SERVICE_ROLE_KEY') === 'invalid');
+  check('the SERVICE key in the public VITE_ slot is caught', status(run({ VITE_SUPABASE_ANON_KEY: good.SUPABASE_SERVICE_ROLE_KEY }), 'VITE_SUPABASE_ANON_KEY') === 'invalid');
+  check('a different project in the browser URL is caught', status(run({ VITE_SUPABASE_URL: 'https://other.supabase.co' }), 'VITE_SUPABASE_URL') === 'invalid');
+  check('a key from another Supabase project is caught', status(run({ SUPABASE_SERVICE_ROLE_KEY: jwt({ role: 'service_role', ref: 'zzzz', exp }) }), 'SUPABASE_SERVICE_ROLE_KEY') === 'invalid');
+  check('an expired key is caught', status(run({ SUPABASE_SERVICE_ROLE_KEY: jwt({ role: 'service_role', ref: 'abcdwxyz', exp: 1000 }) }), 'SUPABASE_SERVICE_ROLE_KEY') === 'invalid');
+  check('a trailing slash on a URL is caught', status(run({ APP_BASE_URL: 'https://my-roofing-app.vercel.app/' }), 'APP_BASE_URL') === 'invalid');
+  check('http:// (not https) is caught', status(run({ APP_BASE_URL: 'http://my-roofing-app.vercel.app' }), 'APP_BASE_URL') === 'invalid');
+  check('a short SESSION_SECRET is caught', status(run({ SESSION_SECRET: 'short' }), 'SESSION_SECRET') === 'invalid');
+  check('.env.example placeholders are caught', status(run({ APP_BASE_URL: 'https://YOUR-DOMAIN' }), 'APP_BASE_URL') === 'placeholder');
+  check('the new-style sb_secret_ key works as a service key', status(run({ SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_abcdefghijklmnop' }), 'SUPABASE_SERVICE_ROLE_KEY') === 'ok');
+  check('an sb_secret_ key in the public slot is caught', status(run({ VITE_SUPABASE_ANON_KEY: 'sb_secret_abcdefghijklmnop' }), 'VITE_SUPABASE_ANON_KEY') === 'invalid');
+  check('a half-configured payments group is reported', run({ LS_API_KEY: undefined, LS_WEBHOOK_SECRET: 'whsec_12345678' }).problems.some((p) => /payments is half set up/.test(p)));
+  check('a half-configured email group is reported', run({ EMAIL_PROVIDER_API_KEY: 're_abc' }).problems.some((p) => /email is half set up/.test(p)));
+  check('unset optional features are not problems', run().problems.length === 0);
+  check('no result ever contains a secret value', JSON.stringify(run().results).indexOf(good.SESSION_SECRET) === -1 && JSON.stringify(run().results).indexOf('service_role') === -1);
+
+  // The standalone script carries its own copy of the catalog: the two must list the same variables.
+  const { readFileSync } = await import('node:fs');
+  const script = readFileSync(new URL('../scripts/verify-env.mjs', import.meta.url), 'utf8');
+  const fromScript = [...script.matchAll(/\['([A-Z0-9_]+)', '(required|recommended|optional)', '([a-z-]+)'\]/g)].map((m) => `${m[1]}:${m[2]}:${m[3]}`);
+  const fromServer = ENV_CATALOG.map((e) => `${e.name}:${e.level}:${e.group}`);
+  check('scripts/verify-env.mjs and api/_lib/envCheck.ts list the same variables', JSON.stringify(fromScript) === JSON.stringify(fromServer));
+}
 
 // ------------------------------------------------------------------
 console.log(`\n==================================================`);
