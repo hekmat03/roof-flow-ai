@@ -8,6 +8,7 @@ import {
   FileText,
   Users,
   Settings,
+  ShieldCheck,
   CloudLightning,
   Menu,
   X,
@@ -40,6 +41,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'agent3', label: 'Agent 3: Email Follow-ups', icon: MessageSquarePlus },
     { id: 'agent4', label: 'Agent 4: Estimate Follow-up', icon: FileText },
     { id: 'crm', label: 'CRM Leads Board', icon: Users },
+    { id: 'team', label: 'Team & Users', icon: ShieldCheck },
     { id: 'config', label: 'Configuration', icon: Settings },
   ];
 
