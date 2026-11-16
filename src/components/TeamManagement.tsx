@@ -234,14 +234,13 @@ const AdminCard: React.FC = () => {
       <Note note={note} />
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="text-slate-500"><tr><th className="py-1 pr-3">User</th><th className="pr-3">Workspace</th><th className="pr-3">Role</th><th className="pr-3">Plan</th><th className="pr-3">Status</th><th /></tr></thead>
+          <thead className="text-slate-500"><tr><th className="py-1 pr-3">User</th><th className="pr-3">Workspace</th><th className="pr-3">Role</th><th className="pr-3">Status</th><th /></tr></thead>
           <tbody className="text-slate-200">
             {users.map((u) => (
               <tr key={u.user_id} className="border-t border-slate-800">
                 <td className="py-2 pr-3">{u.email}</td>
                 <td className="pr-3">{tenantName(u)}</td>
                 <td className="pr-3">{ROLE_LABEL[u.role]}</td>
-                <td className="pr-3">{u.current_plan ?? 'free'}</td>
                 <td className="pr-3">{u.disabled ? <Badge tone="bad">Disabled</Badge> : <Badge tone="ok">Active</Badge>}</td>
                 <td className="py-2 text-right">
                   <button className={ghost} disabled={busy} onClick={() => toggle(u)}>{u.disabled ? 'Enable' : 'Disable'}</button>
