@@ -41,14 +41,11 @@ const CATALOG = [
   ['APP_BASE_URL', 'required', 'security'],
   ['XAI_API_KEY', 'recommended', 'ai'],
   ['AI_MODEL', 'optional', 'ai-model'],
+  ['AI_PROVIDER', 'optional', 'ai-provider'],
+  ['GROQ_API_KEY', 'optional', 'ai-groq'],
   ['CRON_SECRET', 'recommended', 'cron'],
   ['EMAIL_PROVIDER_API_KEY', 'optional', 'email'],
   ['EMAIL_FROM', 'optional', 'email'],
-  ['LS_WEBHOOK_SECRET', 'optional', 'payments'],
-  ['LS_VARIANT_STARTER', 'optional', 'payments'],
-  ['LS_VARIANT_PRO', 'optional', 'payments'],
-  ['LS_CHECKOUT_URL_STARTER', 'optional', 'payments'],
-  ['LS_CHECKOUT_URL_PRO', 'optional', 'payments'],
   ['GOOGLE_CLIENT_ID', 'optional', 'calendar'],
   ['GOOGLE_CLIENT_SECRET', 'optional', 'calendar'],
   ['GOOGLE_REDIRECT_URI', 'optional', 'calendar'],
@@ -56,7 +53,7 @@ const CATALOG = [
   ['ADMIN_EMAILS', 'optional', 'admin'],
   ['VITE_ENABLE_GOOGLE_LOGIN', 'optional', 'google-login'],
 ];
-const ALL_OR_NONE = ['payments', 'calendar', 'email'];
+const ALL_OR_NONE = ['calendar', 'email'];
 const PLACEHOLDER = /(YOUR[-_ ]|yourdomain|example\.com|changeme|xxxx|<[^>]*>)/i;
 
 const claims = (t) => { const p = t.split('.'); if (p.length !== 3) return null; try { return JSON.parse(Buffer.from(p[1], 'base64url').toString('utf8')); } catch { return null; } };
@@ -72,14 +69,11 @@ const VALIDATE = {
   SESSION_SECRET: min(32),
   APP_BASE_URL: origin,
   XAI_API_KEY: (v) => (v.startsWith('xai-') ? null : 'should start with xai-'),
+  AI_PROVIDER: (v) => (v === 'xai' || v === 'groq' ? null : 'must be xai or groq'),
+  GROQ_API_KEY: (v) => (v.startsWith('gsk_') ? null : 'should start with gsk_'),
   CRON_SECRET: min(16),
   EMAIL_PROVIDER_API_KEY: (v) => (v.startsWith('re_') ? null : 'should start with re_'),
   EMAIL_FROM: (v) => (/<?[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>?/.test(v) ? null : 'must contain an email address'),
-  LS_WEBHOOK_SECRET: min(8),
-  LS_VARIANT_STARTER: (v) => (/^\d+$/.test(v) ? null : 'must be a number'),
-  LS_VARIANT_PRO: (v) => (/^\d+$/.test(v) ? null : 'must be a number'),
-  LS_CHECKOUT_URL_STARTER: httpsUrl,
-  LS_CHECKOUT_URL_PRO: httpsUrl,
   GOOGLE_CLIENT_ID: (v) => (v.endsWith('.apps.googleusercontent.com') ? null : 'should end with .apps.googleusercontent.com'),
   GOOGLE_REDIRECT_URI: (v) => httpsUrl(v) ?? (v.endsWith('/api/google/callback') ? null : 'should end with /api/google/callback'),
   GOOGLE_TOKEN_ENCRYPTION_KEY: min(32),
