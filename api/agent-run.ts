@@ -30,6 +30,7 @@ import { enforceRateLimit } from './_lib/rateLimit.js';
 import { adminClient } from './_lib/supabaseAdmin.js';
 import { appOrigin, createResendProvider } from './_lib/email.js';
 import { ownerUserId } from './_lib/team.js';
+import { effectivePlan, getProfile } from './_lib/billing.js';
 import { createEmailActions, type EmailActionStore } from './_lib/emailActions.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -172,8 +173,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return { id: typeof data?.id === 'string' ? data.id : undefined };
     },
   } : null;
+  // Email follow-ups follow the workspace OWNER's plan. If the plan cannot be read, treat it as Free (no emails).
+  const emailPlan = admin
+    ? effectivePlan(await getProfile(admin, await ownerUserId(admin, guard.user.id)).catch(() => null))
+    : 'free';
   const emailActions = createEmailActions({
-    store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM,
+    store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM, plan: emailPlan,
     baseUrl: process.env.APP_BASE_URL, sessionSecret: process.env.SESSION_SECRET,
     tenantId: guard.tenantId, sessionId: scopedSessionId(guard.tenantId, sessionId),
   });
