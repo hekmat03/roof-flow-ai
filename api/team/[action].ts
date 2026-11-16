@@ -22,6 +22,8 @@ import {
   newInviteToken,
   type Membership,
 } from '../_lib/team.js';
+import { evaluateEnv } from '../_lib/envCheck.js';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const SETUP_ERROR = 'User management is not set up yet. Run supabase/014_user_management.sql in Supabase.';
@@ -74,6 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     switch (action) {
+      case 'health': return isGet ? await health(req, res) : methodNotAllowed(res);
       case 'me': return isGet ? await me(req, res) : methodNotAllowed(res);
       case 'members': return isGet ? await members(req, res) : methodNotAllowed(res);
       case 'admin-users': return isGet ? await adminUsers(req, res) : methodNotAllowed(res);
@@ -93,6 +96,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 const methodNotAllowed = (res: VercelResponse) => res.status(405).json({ ok: false, error: 'Method not allowed' });
+
+// ---------------------------------------------------------------- health
+
+const sameSecret = (a: string, b: string): boolean =>
+  timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest());
+
+/**
+ * GET /api/team/health — "is this deployment set up correctly?"
+ * Public answer: only { ok }. With HEALTH_TOKEN set in the server environment and sent as
+ * ?token=... (or the x-health-token header), it also lists each variable's verdict. It
+ * never returns a value, only names and plain-language verdicts.
+ */
+async function health(req: VercelRequest, res: VercelResponse) {
+  const report = evaluateEnv(process.env);
+  let database: 'ok' | 'not_configured' | 'schema_missing' | 'unreachable' = 'not_configured';
+  const admin = adminClient();
+  if (admin) {
+    try {
+      const { error } = await admin.from('tenants').select('id', { head: true, count: 'exact' }).limit(1);
+      database = !error ? 'ok' : error.code === '42P01' || error.code === 'PGRST205' ? 'schema_missing' : 'unreachable';
+    } catch {
+      database = 'unreachable';
+    }
+  }
+  const ok = report.requiredOk && database === 'ok';
+
+  const expected = (process.env.HEALTH_TOKEN ?? '').trim();
+  const supplied = (typeof req.query.token === 'string' ? req.query.token : '') || (typeof req.headers['x-health-token'] === 'string' ? req.headers['x-health-token'] : '');
+  const detailed = expected.length >= 12 && supplied.length > 0 && sameSecret(supplied, expected);
+  const status = ok ? 200 : 503;
+  if (!detailed) return res.status(status).json({ ok });
+  return res.status(status).json({
+    ok,
+    database,
+    requiredOk: report.requiredOk,
+    problems: report.problems,
+    variables: report.results.map(({ name, level, status: s, message }) => ({ name, level, status: s, message })),
+  });
+}
 
 // ---------------------------------------------------------------- reads
 
