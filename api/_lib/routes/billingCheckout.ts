@@ -1,0 +1,62 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { enforceRateLimit } from '../rateLimit.js';
+import { adminClient, userFromRequest } from '../supabaseAdmin.js';
+import { effectivePlan, getProfileStrict } from '../billing.js';
+import { normalizeRole } from '../team.js';
+import { checkoutUrlForPlan, isPlanId, paymentsActivated } from '../plans.js';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method !== 'POST') return res.status(405).json({ ok: false, message: 'Method not allowed' });
+
+  if (!(await enforceRateLimit(req, res, 'billing', 30))) return;
+  const admin = adminClient();
+  const user = admin ? await userFromRequest(req) : null;
+  if (!admin || !user) return res.status(401).json({ ok: false, message: 'Please log in first.' });
+
+  if (!paymentsActivated()) {
+    return res.status(200).json({ ok: false, paymentsActivated: false, message: 'Payments are not set up yet.' });
+  }
+
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>;
+  const plan = body.plan;
+  if (!isPlanId(plan) || plan === 'free') {
+    return res.status(400).json({ ok: false, message: 'Choose the Starter or Pro plan.' });
+  }
+
+  let profile: Awaited<ReturnType<typeof getProfileStrict>> = null;
+  try {
+    profile = await getProfileStrict(admin, user.id);
+  } catch {
+    // Fail closed: a storage hiccup must not read as "no profile" — an
+    // existing subscriber could otherwise check out a second time.
+    return res.status(503).json({
+      ok: false,
+      error: 'profile_unavailable',
+      message: 'Could not verify your subscription right now — try again in a moment.',
+    });
+  }
+  if (normalizeRole(profile?.role) !== 'owner') {
+    return res.status(200).json({ ok: false, message: 'Only the workspace owner can change the plan.' });
+  }
+  const current = effectivePlan(profile);
+
+  if (current !== 'free') {
+    return res.status(200).json({
+      ok: false,
+      paymentsActivated: true,
+      message: current === plan
+        ? `You are already on the ${current} plan.`
+        : 'You already have a subscription. Use "Manage billing" to change plans.',
+    });
+  }
+
+  const base = checkoutUrlForPlan(plan);
+  if (!base) return res.status(200).json({ ok: false, message: 'That plan is not available yet.' });
+
+  const url = new URL(base);
+  if (user.email) url.searchParams.set('checkout[email]', user.email);
+  url.searchParams.set('checkout[custom][user_id]', user.id);
+
+  return res.status(200).json({ ok: true, paymentsActivated: true, url: url.toString() });
+}
