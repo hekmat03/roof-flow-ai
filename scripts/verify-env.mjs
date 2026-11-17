@@ -46,6 +46,11 @@ const CATALOG = [
   ['CRON_SECRET', 'recommended', 'cron'],
   ['EMAIL_PROVIDER_API_KEY', 'optional', 'email'],
   ['EMAIL_FROM', 'optional', 'email'],
+  ['LS_WEBHOOK_SECRET', 'optional', 'payments'],
+  ['LS_VARIANT_STARTER', 'optional', 'payments'],
+  ['LS_VARIANT_PRO', 'optional', 'payments'],
+  ['LS_CHECKOUT_URL_STARTER', 'optional', 'payments'],
+  ['LS_CHECKOUT_URL_PRO', 'optional', 'payments'],
   ['GOOGLE_CLIENT_ID', 'optional', 'calendar'],
   ['GOOGLE_CLIENT_SECRET', 'optional', 'calendar'],
   ['GOOGLE_REDIRECT_URI', 'optional', 'calendar'],
@@ -53,7 +58,7 @@ const CATALOG = [
   ['ADMIN_EMAILS', 'optional', 'admin'],
   ['VITE_ENABLE_GOOGLE_LOGIN', 'optional', 'google-login'],
 ];
-const ALL_OR_NONE = ['calendar', 'email'];
+const ALL_OR_NONE = ['payments', 'calendar', 'email'];
 const PLACEHOLDER = /(YOUR[-_ ]|yourdomain|example\.com|changeme|xxxx|<[^>]*>)/i;
 
 const claims = (t) => { const p = t.split('.'); if (p.length !== 3) return null; try { return JSON.parse(Buffer.from(p[1], 'base64url').toString('utf8')); } catch { return null; } };
@@ -74,6 +79,11 @@ const VALIDATE = {
   CRON_SECRET: min(16),
   EMAIL_PROVIDER_API_KEY: (v) => (v.startsWith('re_') ? null : 'should start with re_'),
   EMAIL_FROM: (v) => (/<?[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>?/.test(v) ? null : 'must contain an email address'),
+  LS_WEBHOOK_SECRET: min(8),
+  LS_VARIANT_STARTER: (v) => (/^\d+$/.test(v) ? null : 'must be a number'),
+  LS_VARIANT_PRO: (v) => (/^\d+$/.test(v) ? null : 'must be a number'),
+  LS_CHECKOUT_URL_STARTER: httpsUrl,
+  LS_CHECKOUT_URL_PRO: httpsUrl,
   GOOGLE_CLIENT_ID: (v) => (v.endsWith('.apps.googleusercontent.com') ? null : 'should end with .apps.googleusercontent.com'),
   GOOGLE_REDIRECT_URI: (v) => httpsUrl(v) ?? (v.endsWith('/api/google/callback') ? null : 'should end with /api/google/callback'),
   GOOGLE_TOKEN_ENCRYPTION_KEY: min(32),
@@ -187,7 +197,7 @@ if (SITE) {
         for (const p of data.problems ?? []) if (/half set up/.test(p)) warn(`on Vercel, ${p}`);
       } else if (!data.ok) note('For the details, set HEALTH_TOKEN (12+ random characters) in Vercel, redeploy, and run this again with --token THAT_VALUE.');
     }
-    const ai = await body(await fetch(`${SITE}/api/agent-response`));
+    const ai = await body(await fetch(`${SITE}/api/agent/response`));
     if (ai?.live === true) pass('the server has an AI key (live AI is on)'); else note('the server reports no AI key: the built-in answers are used.');
 
     const html = await (await fetch(`${SITE}/`)).text();
