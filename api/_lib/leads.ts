@@ -1,5 +1,9 @@
 import { validateEmail, validateName, validatePhone } from './validators.js';
 import { isUuid } from './tenant.js';
+import {
+  bodyTooLarge, checkWidgetKeyLimits, findDuplicate, verifyTurnstile, DUPLICATE_WINDOW_HOURS,
+  type Limiter, type RecentLead,
+} from './leadGuards.js';
 
 export const LEAD_COLUMNS =
   'id,tenant_id,name,phone,email,zip_code,roofing_need,consent,consent_text,' +
@@ -110,6 +114,16 @@ export interface LeadsApiDependencies {
   store: LeadStore;
   /** Best-effort hook after a widget lead is saved (e.g. send the email confirmation). Never fails the request. */
   afterInsert?(info: { tenantId: string; leadId: string; email: string | null }): Promise<void>;
+  /** Abuse guards for the public POST. Each part is optional so tests and local runs keep working. */
+  guards?: {
+    /** Per-widget-key hourly/daily caps (stops a flood aimed at one contractor from many IPs). */
+    limiter?: Limiter;
+    /** TURNSTILE_SECRET_KEY. When set, every widget POST must carry a valid `turnstile_token`. */
+    turnstileSecret?: string;
+    remoteIp?: string;
+    /** A tenant's leads created since `sinceIso`, used to drop repeat submissions. */
+    recentLeads?(tenantId: string, sinceIso: string): Promise<RecentLead[]>;
+  };
 }
 
 const json = (body: unknown, status: number, headers: Record<string, string> = {}): Response =>
@@ -140,14 +154,45 @@ export async function handleLeadsRequest(request: Request, deps: LeadsApiDepende
 
   if (request.method === 'POST') {
     let body: unknown;
-    try { body = await request.json(); }
+    let rawText: string;
+    try { rawText = await request.text(); }
+    catch { return json({ ok: false, error: 'bad_json' }, 400, PUBLIC_HEADERS); }
+    if (bodyTooLarge(rawText, request.headers.get('content-length') ?? undefined)) {
+      return json({ ok: false, error: 'too_large', message: 'That request is too large.' }, 413, PUBLIC_HEADERS);
+    }
+    try { body = JSON.parse(rawText); }
     catch { return json({ ok: false, error: 'bad_json' }, 400, PUBLIC_HEADERS); }
     const parsed = parseWidgetLead(body);
     if (parsed.ok === false) return json({ ok: false, error: 'validation', field: parsed.field, message: parsed.message }, 400, PUBLIC_HEADERS);
     if (!deps.configured) return json({ ok: false, error: 'database_not_configured' }, 503, PUBLIC_HEADERS);
+
+    const guards = deps.guards;
+    if (guards) {
+      // Bot check first: it is cheap and keeps bots away from the database.
+      const bot = await verifyTurnstile({
+        secret: guards.turnstileSecret,
+        token: (body as Record<string, unknown>).turnstile_token,
+        remoteIp: guards.remoteIp,
+      });
+      if (bot.ok === false) return json({ ok: false, error: bot.code, message: bot.message }, bot.status, PUBLIC_HEADERS);
+    }
     try {
       const tenantId = await deps.store.resolveWidgetKey(parsed.widgetKey);
       if (!isUuid(tenantId)) return json({ ok: false, error: 'invalid_widget' }, 404, PUBLIC_HEADERS);
+
+      if (guards?.limiter) {
+        const cap = await checkWidgetKeyLimits(parsed.widgetKey, guards.limiter);
+        if (cap.ok === false) return json({ ok: false, error: cap.code, message: cap.message }, cap.status, PUBLIC_HEADERS);
+      }
+      if (guards?.recentLeads) {
+        // Best effort: if the lookup fails we save the lead rather than lose a real customer.
+        try {
+          const since = new Date(Date.now() - DUPLICATE_WINDOW_HOURS * 3600_000).toISOString();
+          const dup = findDuplicate(await guards.recentLeads(tenantId, since), parsed.lead);
+          // Same answer as a real save, so a spammer cannot tell it was dropped. No insert, no email.
+          if (dup) return json({ ok: true, id: dup, duplicate: true }, 201, PUBLIC_HEADERS);
+        } catch { /* fall through and save */ }
+      }
       const userAgent = clean(request.headers.get('user-agent'), 300) || null;
       const row = await deps.store.insert(tenantId, parsed.lead, userAgent, scoreLead(parsed.lead));
       if (deps.afterInsert) {
