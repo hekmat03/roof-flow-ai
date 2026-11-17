@@ -2,7 +2,7 @@
  * agentService.ts — Central AI response router for all 4 agents.
  *
  * LIVE TIER:
- * Uses /api/agent-response. The provider key stays on the server.
+ * Uses /api/agent/response. The provider key stays on the server.
  *
  * LOCAL TIER:
  * Uses a deterministic in-browser generator when the live call fails.
