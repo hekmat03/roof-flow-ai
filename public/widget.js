@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * Zero dependencies, no secrets, no third-party scripts. The contractor pastes:
  *
- *   <script src="https://<our-site>/widget.js" data-key="wk_…" data-color="#f59e0b" async></script>
+ *   <script src="https://<our-site>/widget.js" data-key="wk_…" data-color="#f59e0b" data-ts="TURNSTILE_SITE_KEY (optional)" async></script>
  *
  * data-key is the contractor's PUBLIC widget key (shown in their CRM). It tells
  * the server which company a lead belongs to. It is an identifier, not a
@@ -37,6 +37,8 @@
   var key = script.getAttribute("data-key") || "";
   var color = script.getAttribute("data-color") || "#f59e0b";
   var label = script.getAttribute("data-label") || "Chat with us";
+  // Optional Cloudflare Turnstile SITE key (public). Needed when the server has TURNSTILE_SECRET_KEY set.
+  var ts = script.getAttribute("data-ts") || "";
 
   var OPEN_W = 380;
   var OPEN_H = 560;
@@ -60,7 +62,7 @@
   var frame = document.createElement("iframe");
   frame.title = "Roof inspection chat";
   frame.src =
-    base + "/widget.html?color=" + encodeURIComponent(color) + "&key=" + encodeURIComponent(key) + "&embed=1";
+    base + "/widget.html?color=" + encodeURIComponent(color) + "&key=" + encodeURIComponent(key) + (ts ? "&ts=" + encodeURIComponent(ts) : "") + "&embed=1";
   frame.setAttribute("allow", "clipboard-write");
 
   var button = document.createElement("button");
