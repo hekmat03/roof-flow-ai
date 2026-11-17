@@ -3,6 +3,10 @@
     { "path": "/api/cron/send-followups", "schedule": "0 3 * * *" }
   ],
   "rewrites": [
+    { "source": "/api/agent-response", "destination": "/api/agent/response" },
+    { "source": "/api/agent-run", "destination": "/api/agent/run" },
+    { "source": "/api/confirm-email", "destination": "/api/email/confirm" },
+    { "source": "/api/unsubscribe", "destination": "/api/email/unsubscribe" },
     {
       "source": "/((?!api/|assets/|favicon.svg|icons.svg|widget\\.js|widget\\.html).*)",
       "destination": "/index.html"
