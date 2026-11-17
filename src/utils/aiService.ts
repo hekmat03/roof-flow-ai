@@ -2,7 +2,7 @@ import { authHeaders } from '../lib/authFetch';
 import { notifyLimit } from '../lib/limitEvents';
 import { classifyAiFailure, reportAiFailure, reportAiOk, type AiReason } from '../lib/serviceStatus';
 
-export const AGENT_API_ENDPOINT = '/api/agent-response';
+export const AGENT_API_ENDPOINT = '/api/agent/response';
 export const REQUEST_TIMEOUT_MS = 15000;
 
 export type ApiAgentType = 'chatbot' | 'phone' | 'nurturer' | 'closer';
@@ -94,7 +94,7 @@ export interface AgentCapabilities extends AiStatus {
 /** What the server can do right now (AI / database / real email). Null if unreachable. */
 export async function fetchCapabilities(): Promise<AgentCapabilities | null> {
   try {
-    const res = await fetch('/api/agent-run', { method: 'GET' });
+    const res = await fetch('/api/agent/run', { method: 'GET' });
     if (!res.ok) return null;
     const d = await res.json();
     return { live: Boolean(d?.live), model: d?.model, tools: Boolean(d?.tools), storage: Boolean(d?.storage), email: Boolean(d?.email) };
