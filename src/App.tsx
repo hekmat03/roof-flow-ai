@@ -24,6 +24,8 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Redirect } from './components/Redirect';
 import { LandingPage } from './components/public/LandingPage';
+import { PrivacyPolicy } from './components/public/PrivacyPolicy';
+import { TermsOfService } from './components/public/TermsOfService';
 import { usePath } from './lib/router';
 import OnboardingWizard from './components/OnboardingWizard';
 
@@ -80,6 +82,10 @@ function Routes() {
   switch (path) {
     case '/':
       return <LandingPage />;
+    case '/privacy':
+      return <PrivacyPolicy />;
+    case '/terms':
+      return <TermsOfService />;
     case '/login':
       return <AuthPage mode="login" />;
     case '/signup':
