@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard,
@@ -12,7 +12,8 @@ import {
   CloudLightning,
   Menu,
   X,
-  LogOut
+  LogOut,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../lib/router';
@@ -22,11 +23,58 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+type NavIcon = React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+
+interface NavItem {
+  id: string;
+  label: string;
+  /** Shorter label for the mobile bottom bar. */
+  short: string;
+  icon: NavIcon;
+}
+
+// Tab ids are unchanged; only the grouping and labels are new.
+const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
+  {
+    label: 'Overview',
+    items: [{ id: 'dashboard', label: 'Dashboard', short: 'Home', icon: LayoutDashboard }],
+  },
+  {
+    label: 'AI agents',
+    items: [
+      { id: 'agent1', label: 'Chatbot', short: 'Chat', icon: MessageSquare },
+      { id: 'agent2', label: 'Phone call', short: 'Phone', icon: PhoneCall },
+      { id: 'agent3', label: 'Email follow-ups', short: 'Email', icon: MessageSquarePlus },
+      { id: 'agent4', label: 'Estimate follow-up', short: 'Estimate', icon: FileText },
+    ],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { id: 'crm', label: 'CRM leads board', short: 'Leads', icon: Users },
+      { id: 'team', label: 'Team & users', short: 'Team', icon: ShieldCheck },
+      { id: 'config', label: 'Configuration', short: 'Settings', icon: Settings },
+    ],
+  },
+];
+
+const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+const BOTTOM_TABS = ['dashboard', 'crm', 'agent1'];
+
+function initialsOf(value: string | undefined | null): string {
+  const base = (value ?? '').split('@')[0].replace(/[^a-zA-Z0-9 ._-]/g, '');
+  const parts = base.split(/[ ._-]+/).filter(Boolean);
+  const letters = (parts.length > 1 ? parts[0][0] + parts[1][0] : base.slice(0, 2)) || 'RF';
+  return letters.toUpperCase();
+}
+
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { companySettings, activeTab, setActiveTab, activeCompany, availableCompanies, switchCompany } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const drawerRef = useRef<HTMLElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -34,161 +82,246 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login', true);
   }
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'agent1', label: 'Agent 1: Chatbot', icon: MessageSquare },
-    { id: 'agent2', label: 'Agent 2: Phone Call', icon: PhoneCall },
-    { id: 'agent3', label: 'Agent 3: Email Follow-ups', icon: MessageSquarePlus },
-    { id: 'agent4', label: 'Agent 4: Estimate Follow-up', icon: FileText },
-    { id: 'crm', label: 'CRM Leads Board', icon: Users },
-    { id: 'team', label: 'Team & Users', icon: ShieldCheck },
-    { id: 'config', label: 'Configuration', icon: Settings },
-  ];
-
   function handleTabSelect(id: string) {
     setActiveTab(id);
     setMobileMenuOpen(false);
   }
 
+  // Drawer: Escape closes it, focus moves in, and returns to the menu button on close.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const first = drawerRef.current?.querySelector<HTMLElement>('button');
+    first?.focus();
+    const button = menuButtonRef.current;
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      button?.focus();
+    };
+  }, [mobileMenuOpen]);
+
+  const current = ALL_ITEMS.find((item) => item.id === activeTab) ?? ALL_ITEMS[0];
+  const companyName = activeCompany?.name ?? companySettings.companyName ?? '';
+  const bottomItems = BOTTOM_TABS.map((id) => ALL_ITEMS.find((item) => item.id === id)).filter(
+    (item): item is NavItem => Boolean(item),
+  );
+  const bottomHasActive = bottomItems.some((item) => item.id === activeTab);
+
   return (
     <div className="roofflow-shell flex h-screen bg-page text-ink overflow-hidden font-sans relative panel-bg">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-page/70 backdrop-blur-sm z-30 md:hidden animate-fade-in"
+          className="fixed inset-0 bg-black/55 backdrop-blur-sm z-30 md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
 
+      {/* ------------------------------------------------------------ Sidebar */}
       <aside
+        ref={drawerRef}
+        aria-label="Primary"
         className={`
-          fixed md:static z-40 h-full w-72 md:w-80
-          bg-page/95 md:bg-page backdrop-blur-xl
-          border-r border-line/80 flex flex-col justify-between shrink-0
-          transition-transform duration-300 ease-out
-          ${mobileMenuOpen ? 'translate-x-0 drawer-in' : '-translate-x-full'}
-          md:translate-x-0
+          fixed md:static z-40 h-full w-[17.5rem]
+          bg-[#201f1c] md:bg-[#1e1d1b]
+          border-r border-line flex flex-col shrink-0
+          transition-[transform,visibility] duration-300 ease-out
+          ${mobileMenuOpen ? 'translate-x-0 drawer-in shadow-2xl shadow-black/50' : '-translate-x-full max-md:invisible'}
+          md:translate-x-0 md:shadow-none
         `}
       >
-        <div>
-          <div className="p-4 md:p-4 border-b border-line/80 flex items-center justify-between bg-gradient-to-r from-page via-card/70 to-card/20">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-accent-400 to-accent-600 p-2.5 rounded-xl shadow-lg shadow-accent-500/30 animate-glow-breathe">
-                <CloudLightning className="h-6 w-6 text-gold-ink stroke-[2.5]" />
-              </div>
-
-              <div>
-                <h1 className="text-lg md:text-xl font-black tracking-tight text-ink flex items-center gap-1">
-                  Roof<span className="text-accent-400">Flow</span>
-                  <span className="text-[10px] bg-accent-500/10 text-accent-300 px-1.5 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider border border-accent-500/20">
-                    AI
-                  </span>
-                </h1>
-                <p className="text-xs text-ink-mute font-medium">
-                  Contractor Sales Suite
-                </p>
-              </div>
+        {/* Brand */}
+        <div className="flex items-center justify-between gap-3 px-5 h-[4.5rem] border-b border-line shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="grid place-items-center h-10 w-10 rounded-xl bg-gradient-to-br from-accent-300 to-accent-600 shadow-lg shadow-accent-500/25">
+              <CloudLightning className="h-5 w-5 text-gold-ink stroke-[2.5]" aria-hidden="true" />
             </div>
-
-            <button
-              className="md:hidden text-ink-soft hover:text-ink transition min-h-0"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-label="Close menu"
-            >
-              <X className="h-6 w-6" />
-            </button>
+            <div className="min-w-0">
+              <p className="text-[1.05rem] leading-tight font-extrabold tracking-tight text-ink flex items-center gap-1.5">
+                <span>
+                  Roof<span className="text-accent-400">Flow</span>
+                </span>
+                <span className="text-[9px] bg-accent-500/15 text-accent-300 px-1.5 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider border border-accent-500/25">
+                  AI
+                </span>
+              </p>
+              <p className="text-[11px] text-ink-mute font-medium">Contractor sales suite</p>
+            </div>
           </div>
-
-          <nav className="p-3 md:p-4 space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleTabSelect(item.id)}
-                  className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
-                >
-                  <Icon
-                    className={`h-5 w-5 shrink-0 ${
-                      isActive ? 'text-accent-400' : 'text-ink-mute'
-                    }`}
-                  />
-
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
+          <button
+            type="button"
+            className="md:hidden grid place-items-center h-10 w-10 rounded-lg text-ink-soft hover:text-ink hover:bg-white/5 transition min-h-0"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
 
-        <div className="p-4 border-t border-line/80 bg-card/40 text-xs text-ink-mute space-y-3">
-          <CalendarConnection />
-          <div className="truncate" title={user?.email ?? ''}>
-            {user?.email}
-          </div>
+        {/* Navigation */}
+        <nav aria-label="Main" className="flex-1 overflow-y-auto premium-scroll px-3 pb-3">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="nav-group-label">{group.label}</p>
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleTabSelect(item.id)}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
+                      >
+                        <Icon
+                          className={`h-[1.15rem] w-[1.15rem] shrink-0 ${isActive ? 'text-accent-400' : 'text-ink-mute'}`}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
 
-          <button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="w-full flex items-center justify-center gap-2 border border-line hover:border-accent-500 hover:text-ink disabled:opacity-60 rounded-lg py-2 font-semibold transition"
-          >
-            <LogOut className="h-4 w-4" />
-            {signingOut ? 'Signing out…' : 'Sign out'}
-          </button>
+        {/* Account */}
+        <div className="shrink-0 border-t border-line bg-black/10 p-3 space-y-3">
+          <CalendarConnection />
+          <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] border border-line px-3 py-2.5">
+            <div
+              className="grid place-items-center h-9 w-9 shrink-0 rounded-full bg-accent-500/15 text-accent-300 text-xs font-extrabold border border-accent-500/30"
+              aria-hidden="true"
+            >
+              {initialsOf(user?.email)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-ink truncate" title={user?.email ?? ''}>
+                {user?.email ?? 'Signed in'}
+              </p>
+              <p className="text-[11px] text-ink-mute truncate">{companyName || 'Your workspace'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              aria-label={signingOut ? 'Signing out' : 'Sign out'}
+              title="Sign out"
+              className="grid place-items-center h-9 w-9 shrink-0 rounded-lg text-ink-soft hover:text-ink hover:bg-white/10 disabled:opacity-60 transition min-h-0"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="relative z-20 h-auto md:h-20 glass-strong flex items-center justify-between px-4 md:px-8 py-3 md:py-0 shrink-0 gap-4">
+      {/* ------------------------------------------------------- Main column */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <header className="relative z-20 glass-strong flex items-center gap-3 px-4 sm:px-6 lg:px-8 h-16 md:h-[4.5rem] shrink-0">
           <button
-            className="md:hidden text-ink shrink-0 bg-inset/70 border border-line/70 rounded-xl px-3 flex items-center justify-center hover:bg-line-strong/70 transition active:scale-95"
+            ref={menuButtonRef}
+            type="button"
+            className="md:hidden grid place-items-center h-10 w-10 shrink-0 rounded-xl bg-white/[0.06] border border-line text-ink hover:bg-white/10 transition active:scale-95 min-h-0"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Open menu"
+            aria-expanded={mobileMenuOpen}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          <div className="flex items-center space-x-6 text-sm overflow-x-auto no-scrollbar">
-            <div className="shrink-0 flex items-center gap-2">
-              <div>
-                <span className="text-ink-mute font-medium text-[10px] block uppercase tracking-wider">
-                  Company Workspace
-                </span>
-                <select
-                  value={activeCompany?.id ?? ''}
-                  onChange={(e) => void switchCompany(e.target.value)}
-                  className="bg-transparent text-ink font-bold text-sm sm:text-base cursor-pointer outline-none border-b border-dashed border-accent-500/50 hover:border-accent-400 py-0.5"
-                  aria-label="Active Company"
-                >
-                  {availableCompanies.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+          <div className="min-w-0">
+            <p className="eyebrow hidden sm:block">{companyName || 'RoofFlow AI'}</p>
+            <h1 className="text-base sm:text-lg font-extrabold text-ink leading-tight truncate">{current.label}</h1>
+          </div>
 
-            <div className="h-8 w-[1px] bg-line-strong/70 hidden sm:block shrink-0"></div>
-
-            <div className="shrink-0 hidden sm:block">
-              <span className="text-ink-mute font-medium text-[10px] block uppercase tracking-wider">
-                Service Market
-              </span>
-              <span className="text-ink font-semibold text-xs sm:text-sm">
+          <div className="ml-auto flex items-center gap-3 sm:gap-5 min-w-0">
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-ink-soft">
+              <MapPin className="h-3.5 w-3.5 text-accent-400" aria-hidden="true" />
+              <span className="font-semibold truncate max-w-[14rem]">
                 {companySettings.city || 'Dallas-Fort Worth, TX'}
               </span>
             </div>
 
+            <div className="hidden lg:block h-7 w-px bg-line-strong/70" aria-hidden="true" />
+
+            <div className="min-w-0">
+              <label htmlFor="workspace-select" className="sr-only-text">
+                Active company workspace
+              </label>
+              <select
+                id="workspace-select"
+                value={activeCompany?.id ?? ''}
+                onChange={(e) => void switchCompany(e.target.value)}
+                className="max-w-[10.5rem] sm:max-w-[16rem] truncate rounded-lg bg-white/[0.06] border border-line hover:border-accent-500/50 text-ink font-semibold text-xs sm:text-sm px-3 py-2 cursor-pointer outline-none transition focus-visible:border-accent-400 min-h-0"
+              >
+                {availableCompanies.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-slate-900 text-white">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-5 premium-scroll">
-          <div className="max-w-7xl mx-auto h-full">
-            {children}
-          </div>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto premium-scroll px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-24 md:pb-8 outline-none"
+        >
+          <div className="max-w-7xl mx-auto h-full">{children}</div>
         </main>
+
+        {/* ------------------------------------------- Mobile bottom tab bar */}
+        <nav
+          aria-label="Quick navigation"
+          className="md:hidden fixed bottom-0 inset-x-0 z-20 border-t border-line bg-[#201f1c]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
+        >
+          <ul className="grid grid-cols-4">
+            {bottomItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleTabSelect(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold transition min-h-[3.5rem] ${
+                      isActive ? 'text-accent-300' : 'text-ink-mute hover:text-ink'
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 ${isActive ? 'drop-shadow-[0_0_6px_rgb(236_211_138/0.5)]' : ''}`} aria-hidden="true" />
+                    {item.short}
+                  </button>
+                </li>
+              );
+            })}
+            <li>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className={`w-full flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold transition min-h-[3.5rem] ${
+                  !bottomHasActive ? 'text-accent-300' : 'text-ink-mute hover:text-ink'
+                }`}
+              >
+                <Menu className="h-5 w-5" aria-hidden="true" />
+                More
+              </button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
   );
