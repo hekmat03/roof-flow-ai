@@ -1,5 +1,5 @@
 /**
- * api.check.ts — verifies the server-side helpers used by /api/agent-response:
+ * api.check.ts — verifies the server-side helpers used by /api/agent/response:
  * input sanitising, system-prompt policy (AI disclosure, no invented actions)
  * and the rate limiter.
  *
