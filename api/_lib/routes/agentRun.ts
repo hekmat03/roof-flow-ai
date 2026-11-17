@@ -105,6 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(403).json({ error: 'Your workspace has not been created yet', code: 'no_workspace' });
   }
 
+  // Resolved once, after the check above. Every write below is stamped with this value,
+  // overriding whatever the caller-supplied row contains.
+  const tenantId: string = guard.tenantId;
+
   const systemPrompt = buildSystemPrompt(agentType, ctx) + '\n' + TOOL_POLICY;
 
   const allowedContacts = collectAllowedContacts(
@@ -121,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return { companyName: typeof data?.company_name === 'string' ? data.company_name : 'Your roofing company', contractorEmail: typeof data?.email === 'string' ? data.email : null, businessAddress: typeof data?.business_address === 'string' ? data.business_address : null };
     },
     async findLead(email) {
-      const { data, error } = await admin.from('leads').select('id,email,status,consent,conversation,email_verified_at').eq('tenant_id', guard.tenantId).eq('email', email.toLowerCase()).limit(1).maybeSingle();
+      const { data, error } = await admin.from('leads').select('id,email,status,consent,conversation,email_verified_at').eq('tenant_id', tenantId).eq('email', email.toLowerCase()).limit(1).maybeSingle();
       if (error) throw error;
       const turns = Array.isArray(data?.conversation) ? data.conversation : [];
       const emailWasProvidedByLead = data?.email_verified_at != null && turns.some((turn: unknown) => {
@@ -134,41 +138,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : null;
     },
     async isSuppressed(email) {
-      const { data: suppressed, error } = await admin.from('email_suppressions').select('email').eq('tenant_id', guard.tenantId).eq('email', email.toLowerCase()).maybeSingle();
+      const { data: suppressed, error } = await admin.from('email_suppressions').select('email').eq('tenant_id', tenantId).eq('email', email.toLowerCase()).maybeSingle();
       if (error) throw error;
       if (suppressed) return true;
-      const { data: legacy, error: legacyError } = await admin.from('contact_optouts').select('contact').eq('contact', email.toLowerCase()).or(`tenant_id.eq.${guard.tenantId},tenant_id.is.null`).limit(1).maybeSingle();
+      const { data: legacy, error: legacyError } = await admin.from('contact_optouts').select('contact').eq('contact', email.toLowerCase()).or(`tenant_id.eq.${tenantId},tenant_id.is.null`).limit(1).maybeSingle();
       if (legacyError) throw legacyError;
       return Boolean(legacy);
     },
     async reserveUsage(monthlyCap, dailyCap) {
-      const { data, error } = await admin.rpc('reserve_email_usage', { p_tenant: guard.tenantId, p_monthly_cap: monthlyCap, p_daily_cap: dailyCap });
+      const { data, error } = await admin.rpc('reserve_email_usage', { p_tenant: tenantId, p_monthly_cap: monthlyCap, p_daily_cap: dailyCap });
       if (error) throw error;
       return data === true;
     },
     async releaseUsage() {
-      const { error } = await admin.rpc('release_email_usage', { p_tenant: guard.tenantId });
+      const { error } = await admin.rpc('release_email_usage', { p_tenant: tenantId });
       if (error) throw error;
     },
     async insertMessage(row) {
-      const { data, error } = await admin.from('messages').insert(row).select('id').maybeSingle();
+      const { data, error } = await admin.from('messages').insert({ ...row, tenant_id: tenantId }).select('id').maybeSingle();
       if (error) throw error;
       return { id: typeof data?.id === 'string' ? data.id : undefined };
     },
     async insertScheduled(row) {
-      const { data, error } = await admin.from('scheduled_messages').insert(row).select('id').maybeSingle();
+      const { data, error } = await admin.from('scheduled_messages').insert({ ...row, tenant_id: tenantId }).select('id').maybeSingle();
       if (error) throw error;
       return { id: typeof data?.id === 'string' ? data.id : undefined };
     },
     async updateLeadNote(leadId, note) {
-      const { data, error } = await admin.from('leads').select('note').eq('id', leadId).eq('tenant_id', guard.tenantId).maybeSingle();
+      const { data, error } = await admin.from('leads').select('note').eq('id', leadId).eq('tenant_id', tenantId).maybeSingle();
       if (error) throw error;
       const prior = typeof data?.note === 'string' ? `${data.note}\n` : '';
-      const { error: updateError } = await admin.from('leads').update({ note: `${prior}${note}`.slice(-2000) }).eq('id', leadId).eq('tenant_id', guard.tenantId);
+      const { error: updateError } = await admin.from('leads').update({ note: `${prior}${note}`.slice(-2000) }).eq('id', leadId).eq('tenant_id', tenantId);
       if (updateError) throw updateError;
     },
     async recordOnly(table, row) {
-      const { data, error } = await admin.from(table).insert(row).select('id').maybeSingle();
+      const { data, error } = await admin.from(table).insert({ ...row, tenant_id: tenantId }).select('id').maybeSingle();
       if (error) throw error;
       return { id: typeof data?.id === 'string' ? data.id : undefined };
     },
@@ -180,7 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const emailActions = createEmailActions({
     store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM, plan: emailPlan,
     baseUrl: process.env.APP_BASE_URL, sessionSecret: process.env.SESSION_SECRET,
-    tenantId: guard.tenantId, sessionId: scopedSessionId(guard.tenantId, sessionId),
+    tenantId, sessionId: scopedSessionId(tenantId, sessionId),
   });
 
   const chat: ChatFn = async (msgs, tools) => {
@@ -222,9 +226,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       chat,
       env: {
         db,
-        tenantId: guard.tenantId,
+        tenantId,
         // Namespaced by company: a guessed/foreign session id can never touch another company's rows.
-        sessionId: scopedSessionId(guard.tenantId, sessionId),
+        sessionId: scopedSessionId(tenantId, sessionId),
         allowedContacts,
         customerProvidedContacts,
         // Per-request only. Durable opt-outs live in the database (per company).
