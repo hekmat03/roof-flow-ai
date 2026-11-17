@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { handleLeadsRequest, LEAD_COLUMNS, type LeadStore } from './_lib/leads.js';
 import { adminClient } from './_lib/supabaseAdmin.js';
 import { lookupTenant } from './_lib/tenant.js';
-import { enforceRateLimit, rateLimitRpcAllowed } from './_lib/rateLimit.js';
+import { enforceRateLimit, rateLimitRpcAllowed, clientIp } from './_lib/rateLimit.js';
 import { createResendProvider } from './_lib/email.js';
 import { ownerIdForTenant } from './_lib/team.js';
 import { sendLeadConfirmation } from './_lib/emailConfirm.js';
@@ -98,6 +98,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await admin.auth.getUser(token);
       if (error || !data.user?.email_confirmed_at) return null;
       return { id: data.user.id };
+    },
+    guards: {
+      turnstileSecret: process.env.TURNSTILE_SECRET_KEY,
+      remoteIp: clientIp(req),
+      limiter: {
+        async allow(key, limit, windowSeconds) {
+          const admin = adminClient();
+          if (!admin) return false;
+          const { data, error } = await admin.rpc('consume_rate_limit', { p_key: key, p_limit: limit, p_window_seconds: windowSeconds });
+          const allowed = rateLimitRpcAllowed(data, error);
+          if (allowed === null) throw new Error('rate_limit_unavailable');
+          return allowed;
+        },
+      },
+      async recentLeads(tenantId, sinceIso) {
+        const admin = adminClient();
+        if (!admin) return [];
+        const { data, error } = await admin.from('leads').select('id,email,phone')
+          .eq('tenant_id', tenantId).gte('created_at', sinceIso).limit(500);
+        if (error) throw error;
+        return (data ?? []) as Array<{ id: string; email: string | null; phone: string | null }>;
+      },
     },
     afterInsert: async ({ tenantId, leadId, email }) => {
       const admin = adminClient();
