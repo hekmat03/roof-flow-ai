@@ -315,8 +315,8 @@ console.log('\n[N] no AI key: every chatbot still answers');
   };
   const msgs = [{ role: 'user', content: 'I have a leak' }];
   const handlers: Array<[string, string, unknown]> = [
-    ['agent-response', '../api/agent-response.ts', { agentType: 'chatbot', messages: msgs }],
-    ['agent-run', '../api/agent-run.ts', { agentType: 'chatbot', messages: msgs }],
+        ['agent-response', '../api/_lib/routes/agentResponse.ts', { agentType: 'chatbot', messages: msgs }],
+    ['agent-run', '../api/_lib/routes/agentRun.ts', { agentType: 'chatbot', messages: msgs }],
     ['demo-chat', '../api/demo-chat.ts', { messages: msgs }],
   ];
   for (const [name, path, body] of handlers) {
