@@ -1,12 +1,15 @@
 // api/_lib/rateLimit.ts — per-IP rate limit shared by every API route.
 // Counts live in Postgres (consume_rate_limit, see supabase/003_ratelimit.sql) so the
-// limit holds across serverless instances. If the database is unreachable it
-// falls back to the in-memory limiter, so a database outage never opens the door.
+// limit holds across serverless instances. If the database is configured but does not
+// answer, the request is REFUSED (503): a per-instance memory counter would multiply the
+// real limit across instances. The in-memory limiter is used only when no database is
+// configured at all (local development).
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { adminClient } from './supabaseAdmin.js';
 import { rateLimited } from './agent.js';
 
 export const RATE_LIMIT_PER_MINUTE = 10;
+
 /** Extracts the allow decision from Supabase's table-valued RPC response. */
 export function rateLimitRpcAllowed(data: unknown, error: unknown): boolean | null {
   if (error) return null;
@@ -21,7 +24,7 @@ export function clientIp(req: VercelRequest): string {
   return pick(req.headers['x-real-ip']) || pick(req.headers['x-forwarded-for']) || 'unknown';
 }
 
-/** Returns true when the request may continue. Otherwise it has already answered 429. */
+/** Returns true when the request may continue. Otherwise it has already answered 429 or 503. */
 export async function enforceRateLimit(
   req: VercelRequest,
   res: VercelResponse,
@@ -38,13 +41,20 @@ export async function enforceRateLimit(
   if (admin) {
     try {
       const { data, error } = await admin.rpc('consume_rate_limit', { p_key: key, p_limit: max, p_window_seconds: windowSeconds });
-      const rpcAllowed = rateLimitRpcAllowed(data, error);
-      if (rpcAllowed !== null) allowed = rpcAllowed;
+      allowed = rateLimitRpcAllowed(data, error);
     } catch {
-      /* fall through to memory */
+      allowed = null;
     }
+    if (allowed === null) {
+      // Database configured but not answering: fail CLOSED.
+      res.setHeader('Retry-After', '30');
+      res.status(503).json({ error: 'Service temporarily unavailable. Please try again shortly.', code: 'rate_limit_unavailable' });
+      return false;
+    }
+  } else {
+    // No database configured (local development only).
+    allowed = !rateLimited(key, max, windowSeconds * 1000);
   }
-  if (allowed === null) allowed = !rateLimited(key, max, windowSeconds * 1000);
 
   if (!allowed) {
     res.setHeader('Retry-After', String(Math.min(windowSeconds, 3600)));
