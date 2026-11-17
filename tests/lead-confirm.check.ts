@@ -118,7 +118,7 @@ console.log('\n[5] migration + gating sources');
   check('SQL adds column, guard trigger, and verified-only queue policy', /add column if not exists email_verified_at/.test(sql) && /leads_guard_email_verified/.test(sql) && /l\.email_verified_at is not null/.test(sql));
   check('SQL: only service_role can set it, email change clears it, no ilike wildcard test', /service_role/.test(sql) && /new\.email_verified_at := null/.test(sql) && !/ilike/.test(sql.replace(/--.*$/gm, '')));
   const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
-  check('agent tool path requires verification', /data\?\.email_verified_at != null && turns\.some/.test(read('../api/agent-run.ts')));
+  check('agent tool path requires verification', /data\?\.email_verified_at != null && turns\.some/.test(read('../api/_lib/routes/agentRun.ts')));
   check('cron worker requires verification', /lead\.email_verified_at != null/.test(read('../api/cron/send-followups.ts')));
   check('sequence endpoint requires verification', /code: 'email_not_verified'/.test(read('../api/followups.ts')));
 }
