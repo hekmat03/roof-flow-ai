@@ -1,5 +1,5 @@
 /**
- * agentRunner.ts — runs an agent turn WITH tools via /api/agent-run.
+ * agentRunner.ts — runs an agent turn WITH tools via /api/agent/run.
  * Falls back to the offline engine (no tools, no actions) on network/server
  * failure so the app never breaks. A plan limit is NOT a failure: it opens the
  * upgrade modal and returns the server's message (no free offline replies).
@@ -11,7 +11,7 @@ import { conversationIdFor } from './conversation';
 import { notifyLimit } from './limitEvents';
 import { classifyAiFailure, reportAiFailure, reportAiOk, type AiReason } from './serviceStatus';
 
-export const AGENT_RUN_ENDPOINT = '/api/agent-run';
+export const AGENT_RUN_ENDPOINT = '/api/agent/run';
 const TIMEOUT_MS = 25000;
 
 export interface AgentRunResult {
