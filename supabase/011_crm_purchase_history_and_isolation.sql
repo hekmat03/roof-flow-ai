@@ -6,9 +6,9 @@
 --   1. Adds customer_status and purchase_history to public.leads.
 --   2. Creates public.purchase_history table for relational integrity and auditing.
 --   3. Creates public.organization_memberships table for multi-company access.
---   4. Seeds initial companies: ABC Roofing and XYZ Roofing.
+--   4. (No longer seeds demo companies; see the optional seed_demo.sql.)
 --   5. Creates strict RLS policies for SELECT, INSERT, UPDATE, DELETE to prevent
---      any cross-company data access (ABC Roofing vs XYZ Roofing isolation).
+--      any cross-company data access.
 --   6. Enforces administrative privilege checks for organization membership mutations.
 -- ============================================================================
 
@@ -47,14 +47,8 @@ create index if not exists purchase_history_tenant_idx on public.purchase_histor
 create index if not exists purchase_history_lead_idx   on public.purchase_history (lead_id);
 create index if not exists purchase_history_tenant_created_idx on public.purchase_history (tenant_id, created_at desc);
 
--- 4. Seed ABC Roofing and XYZ Roofing tenants
-insert into public.tenants (id, name, settings, widget_key)
-values
-  ('11111111-aaaa-4111-8111-111111111111', 'ABC Roofing', '{"companyName": "ABC Roofing", "city": "Dallas", "agentTone": "Professional"}'::jsonb, 'wk_abcroofing00000000000000000001'),
-  ('22222222-bbbb-4222-8222-222222222222', 'XYZ Roofing', '{"companyName": "XYZ Roofing", "city": "Fort Worth", "agentTone": "Friendly"}'::jsonb, 'wk_xyzroofing00000000000000000002')
-on conflict (id) do update set
-  name = excluded.name,
-  settings = excluded.settings;
+-- 4. (Demo companies are no longer created here. For a demo/dev database only,
+--     run the optional supabase/seed_demo.sql after this file.)
 
 -- 5. Helper functions: verify caller tenant access and administrative privileges
 create or replace function public.user_has_tenant(tid uuid)
