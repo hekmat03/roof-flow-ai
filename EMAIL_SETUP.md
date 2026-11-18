@@ -12,7 +12,7 @@ Real delivery is optional. Until configured, the API records outbound intent and
    - `CRON_SECRET` — long random secret used to authorize the scheduled worker.
    - `APP_BASE_URL` — public HTTPS origin, for example `https://app.example.com`.
    - `SESSION_SECRET` — existing server-only signing key; also signs unsubscribe links.
-4. Apply the migrations in order. Existing project history has two 008 files; apply both before `supabase/009_followups.sql`, then apply `supabase/010_followup_schedule_days.sql`. Do not run these against production without the project's normal database approval and backup process.
+4. Apply the migrations in the order given in `supabase/MIGRATIONS.md` (the email follow-up tables come from `009` and `010`). Do not run these against production without the project's normal database approval and a backup.
 5. Vercel Hobby only allows one cron run per day, so `vercel.json` runs `/api/cron/send-followups` once daily (03:00 UTC) as a backstop. For follow-ups every 15 minutes, add a free external scheduler (e.g. cron-job.org) that sends a GET or POST to `/api/cron/send-followups` every 15 minutes with the header `Authorization: Bearer <CRON_SECRET>`. Keep `CRON_SECRET` set in the deployment environment; requests without its bearer value are rejected. On Vercel Pro you can set the schedule in `vercel.json` back to `*/15 * * * *`.
 
 ## Safety rules implemented
