@@ -1,3 +1,8 @@
+-- ============================================================================
+-- LEGACY — DO NOT RUN. Replaced by 001_multitenant.sql and 002_billing.sql.
+-- Kept for history only. The current setup order is in supabase/MIGRATIONS.md.
+-- ============================================================================
+
 
 -- supabase/tenants.sql — multi-tenancy + RLS
 -- Run in the Supabase SQL Editor.
