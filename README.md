@@ -29,21 +29,9 @@ The widget guides a visitor through a roof concern, property ZIP, name, contact 
 
 ## Supabase migrations
 
-Apply these SQL files in the listed order in the intended Supabase environment:
+The full, ordered list (including `schema.sql` and every numbered file), what each one does, how to check a database you already have, and how to test a fresh install is in **[`supabase/MIGRATIONS.md`](supabase/MIGRATIONS.md)**. That file is the single source of truth; do not copy its list elsewhere.
 
-1. `supabase/001_multitenant.sql` — tenant tables, user profiles and row-level security.
-2. `supabase/002_billing.sql` — chat usage tracking (the old subscription columns are unused now).
-3. `supabase/003_ratelimit.sql` — shared API rate-limit storage and RPC.
-4. `supabase/004_calendar.sql` — tenant calendar connection storage.
-5. `supabase/005_onboarding.sql` — contractor onboarding profiles.
-6. `supabase/006_lead_tenant_isolation.sql` — tenant-scoped widget lead capture and widget keys.
-7. `supabase/007_agent_tenant_isolation.sql` — tenant ownership for agent-written data.
-8. `supabase/008_rate_limit_service_role.sql` — permission for the service role to call the rate-limit RPC.
-9. `supabase/008_spend_limits.sql` — atomic spend limits.
-10. `supabase/009_followups.sql` — business mailing address, scheduled email queue, suppression and usage caps.
-11. `supabase/010_followup_schedule_days.sql` — permits the Day 1/2/4/7 sequence and retains historic Day 3 rows.
-
-Review each migration and back up the target database before applying changes. This README does not apply migrations automatically.
+In short: run the files in the SQL Editor, one at a time, in the order given there, then run `supabase/verify_setup.sql`. Back up the target database first. This repository never applies migrations automatically. The legacy scripts `migration.sql` and `tenants.sql` must not be run, and the sample companies live in the optional `seed_demo.sql` (demo databases only).
 
 ## Environment variables
 
@@ -81,5 +69,5 @@ Supabase browser credentials are required for authenticated tenant storage. Goog
 | `public/widget.js` | Embeds the contractor lead-capture widget. |
 | `public/widget.html` | Guided widget conversation and consent flow. |
 | `api/` | Vercel serverless routes for chatbot, lead capture, follow-up email and Calendar operations. |
-| `supabase/001_*.sql` – `supabase/009_*.sql` | Ordered database migrations (two existing 008 migrations precede 009). |
+| `supabase/` | Database migrations, `MIGRATIONS.md` (the order), `verify_setup.sql`, optional `seed_demo.sql`. |
 | `tests/` | Offline checks for generators, API helpers, integrations and validation. |
