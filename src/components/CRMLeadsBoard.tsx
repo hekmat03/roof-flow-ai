@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Lead } from '../context/AppContext';
+import { WebsiteEmbedCard } from './WebsiteEmbedCard';
 import {
   Users,
   Search,
@@ -233,7 +234,7 @@ export const CRMLeadsBoard: React.FC = () => {
           Add lead
         </button>
       </div>
-
+            <WebsiteEmbedCard />
       {/* Add lead */}
       {isAddOpen && (
         <form onSubmit={handleCreateLead} className="glass rounded-2xl p-5 max-w-3xl animate-slideDown space-y-4">
