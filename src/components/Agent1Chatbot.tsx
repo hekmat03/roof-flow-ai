@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { AgentHeader } from './AgentHeader';
 import { useApp } from '../context/AppContext';
 import { Send, Bot, Calendar, Sparkles, User, Phone, Mail } from 'lucide-react';
 import { detectLatestIntent, type AgentMessage } from '../lib/agentService';
@@ -370,54 +371,51 @@ export const Agent1Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 lg:space-y-8">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-black text-white">Agent 1: Website Lead Capture Chatbot</h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Real AI-powered chat. Ask anything about storm damage, insurance, or inspections — the assistant responds live and hands off to a booking form when you're ready to schedule.
-        </p>
-      </div>
+      <AgentHeader
+        title="Chatbot"
+        description="The chat your website visitors use. It answers storm and insurance questions, then opens a booking form when they are ready for an inspection."
+        aside={<span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">Live AI</span>}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:gap-6">
         {/* Chat Interface (7 cols) */}
-        <div className="lg:col-span-7 glass rounded-2xl overflow-hidden shadow-xl flex flex-col h-[560px]">
+        <div className="card flex h-[calc(100dvh-18rem)] min-h-[34rem] max-h-[56rem] min-w-0 flex-col overflow-hidden">
           {/* Top Chat Header */}
-          <div className="bg-slate-950/60 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
             <div className="flex items-center space-x-3">
-              <div className="bg-orange-500/10 p-2 rounded-lg relative">
+              <div className="relative rounded-lg bg-accent-500/10 p-2">
                 <Bot className="h-5 w-5 text-orange-500" />
                 <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-slate-900"></span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">RoofFlow Virtual Specialist</h3>
-                <p className="text-[10px] text-slate-400">AI assistant</p>
+                <h3 className="text-sm font-semibold text-ink">RoofFlow Virtual Specialist</h3>
+                <p className="text-xs text-ink-mute">AI assistant</p>
               </div>
             </div>
-            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded font-bold font-mono">
-              AGENT 1
-            </span>
+            <span className="text-xs text-ink-mute">Replies live</span>
           </div>
 
           {/* Chat Messages Log */}
-          <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/40 premium-scroll">
+          <div ref={scrollRef} className="premium-scroll flex-1 space-y-4 overflow-y-auto bg-black/10 p-4 sm:p-6">
             {messages.map((msg, index) => {
               const isAI = msg.sender === 'AI';
               return (
                 <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
-                  <div className="flex items-start space-x-2.5 max-w-md">
+                  <div className="flex max-w-[88%] items-start gap-2.5 sm:max-w-[75%]">
                     {isAI && (
                       <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
                         <Bot className="h-4 w-4 text-orange-500" />
                       </div>
                     )}
-                    <div className={`px-4 py-2.5 text-xs leading-relaxed ${
+                    <div className={`px-4 py-3 text-sm leading-relaxed ${
                       isAI
                         ? 'chat-bubble-ai rounded-tl-none'
                         : 'chat-bubble-user rounded-tr-none'
                     }`}>
                       <p>{msg.text}</p>
-                      <span className="text-[9px] opacity-40 block text-right mt-1.5 font-mono">
+                      <span className="mt-1.5 block text-right text-[11px] opacity-50">
                         {msg.timestamp}
                       </span>
                     </div>
@@ -441,7 +439,7 @@ export const Agent1Chatbot: React.FC = () => {
 
             {error && (
               <div className="flex justify-center">
-                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">{error}</span>
+                <span className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs text-red-400">{error}</span>
               </div>
             )}
 
@@ -463,7 +461,7 @@ export const Agent1Chatbot: React.FC = () => {
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
-                  {fieldErrors.name && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.name}</p>}
+                  {fieldErrors.name && <p role="alert" className="-mt-1 text-xs text-red-400">{fieldErrors.name}</p>}
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
@@ -476,7 +474,7 @@ export const Agent1Chatbot: React.FC = () => {
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
-                  {fieldErrors.phone && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.phone}</p>}
+                  {fieldErrors.phone && <p role="alert" className="-mt-1 text-xs text-red-400">{fieldErrors.phone}</p>}
                   <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                     <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <input
@@ -489,8 +487,8 @@ export const Agent1Chatbot: React.FC = () => {
                       className="flex-1 bg-transparent text-xs text-slate-100 focus:outline-none"
                     />
                   </div>
-                  {fieldErrors.email && <p role="alert" className="text-[10px] text-red-400 -mt-1">{fieldErrors.email}</p>}
-                  <label className="block text-[10px] text-slate-400">
+                  {fieldErrors.email && <p role="alert" className="-mt-1 text-xs text-red-400">{fieldErrors.email}</p>}
+                  <label className="block text-xs text-ink-mute">
                     Preferred inspection date and time
                     <input
                       type="datetime-local"
@@ -515,7 +513,7 @@ export const Agent1Chatbot: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                {formError && <p className="text-[10px] text-red-400">{formError}</p>}
+                {formError && <p className="text-xs text-red-400">{formError}</p>}
                 <button
                   onClick={() => void handleBookingSubmit()}
                   disabled={booking}
@@ -529,13 +527,13 @@ export const Agent1Chatbot: React.FC = () => {
 
           {/* Quick Replies Buttons */}
           {!showBookingForm && (
-            <div className="p-4 border-t border-slate-800/60 bg-[#0f172a]/40 overflow-x-auto whitespace-nowrap space-x-2 scrollbar-none flex shrink-0">
+            <div className="flex shrink-0 gap-2 overflow-x-auto whitespace-nowrap border-t border-line px-4 py-3 scrollbar-none sm:px-6">
               {quickReplies.map((reply, i) => (
                 <button
                   key={i}
                   onClick={() => handleSend(reply)}
                   disabled={isLoading}
-                  className="bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-[11px] text-slate-300 px-3.5 py-2.5 rounded-full transition shrink-0 disabled:opacity-50"
+                  className="shrink-0 rounded-full border border-line-strong bg-white/[0.04] px-3.5 py-2 text-xs text-ink-soft transition hover:bg-white/[0.08] disabled:opacity-50"
                 >
                   {reply}
                 </button>
@@ -544,7 +542,7 @@ export const Agent1Chatbot: React.FC = () => {
           )}
 
           {/* Input Form */}
-          <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex items-center space-x-3 shrink-0">
+          <div className="flex shrink-0 items-center gap-3 border-t border-line p-4 sm:px-6">
             <input
               type="text"
               placeholder="Ask anything about storm damage or inspections..."
@@ -565,34 +563,34 @@ export const Agent1Chatbot: React.FC = () => {
         </div>
 
         {/* Sidebar Simulator explanation (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="glass card-hover rounded-2xl p-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Sparkles className="h-4.5 w-4.5 text-accent-400" /> How This Works
+        <div className="min-w-0 space-y-4 lg:space-y-6">
+          <div className="card card-pad">
+            <h3 className="card-title flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-accent-400" /> How it works
             </h3>
-            <p className="text-xs text-slate-400 leading-relaxed mt-3">
+            <p className="mt-3 text-sm leading-relaxed text-ink-mute">
               This is a live AI assistant, not a scripted demo. It answers freely using your company info, and hands off to a real booking form once a visitor is ready to schedule.
             </p>
-            <div className="mt-4 space-y-3.5 text-xs text-slate-300">
+            <div className="mt-5 space-y-4 text-sm text-ink-soft">
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">1</div>
+                <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent-500/15 text-xs font-bold text-accent-300">1</div>
                 <div>
-                  <p className="font-bold text-white">Live AI Conversation</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Every reply is generated fresh — try asking something unusual.</p>
+                  <p className="font-semibold text-ink">Live AI Conversation</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-mute">Every reply is generated fresh — try asking something unusual.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">2</div>
+                <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent-500/15 text-xs font-bold text-accent-300">2</div>
                 <div>
-                  <p className="font-bold text-white">Booking Handoff</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
+                  <p className="font-semibold text-ink">Booking Handoff</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-mute">When the AI senses booking intent, it opens a real form instead of guessing your contact details from chat text.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-orange-500/10 text-orange-400 p-1 rounded-md font-mono font-bold text-[10px]">3</div>
+                <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent-500/15 text-xs font-bold text-accent-300">3</div>
                 <div>
-                  <p className="font-bold text-white">CRM Sync</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
+                  <p className="font-semibold text-ink">CRM Sync</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-mute">Submitted leads (with the full chat transcript) save straight to the CRM Board.</p>
                 </div>
               </div>
             </div>
@@ -609,10 +607,9 @@ export const Agent1Chatbot: React.FC = () => {
               </div>
             </div>
           )}
+          <AgentActivity actions={actionLog} />
         </div>
       </div>
-
-      <AgentActivity actions={actionLog} />
     </div>
   );
 };
