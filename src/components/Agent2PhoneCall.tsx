@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { AgentHeader } from './AgentHeader';
 import { useApp } from '../context/AppContext';
 import { Phone, PhoneOff, Mic, MicOff, Play, Volume2, VolumeX, Calendar, Sparkles, User, ShieldAlert, Send, AudioLines } from 'lucide-react';
 import { getAgentResponse, type AgentContext } from '../lib/agentService';
@@ -307,29 +308,23 @@ export const Agent2PhoneCall: React.FC = () => {
   const currentScriptStep = scriptSteps.find(s => s.step === currentStep);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 lg:space-y-8">
       {/* Header */}
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-xl font-black text-white">Agent 2: Inbound Call Voice Handler</h2>
-          <span role="status" className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold text-amber-300">
-            Demo - no real calls
-          </span>
-        </div>
-        <p className="text-xs text-slate-400 mt-1">
-          Interactive voice call simulation. Every AI line is generated live from your company settings — experience how the AI Voice Handler answers incoming homeowner calls, overcomes insurance pushbacks, and books inspections.
-        </p>
-      </div>
+      <AgentHeader
+        title="Phone call"
+        description="A practice call that runs in your browser, so you can hear how the AI would answer a homeowner calling after a storm. No phone line is connected yet."
+        aside={<span role="status" className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">Coming soon · demo only, no real calls</span>}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] lg:gap-6">
         {/* Telephone UI (5 cols) */}
-        <div className="lg:col-span-5 glass rounded-2xl p-4 shadow-xl flex flex-col items-center justify-center space-y-4">
+        <div className="card card-pad flex flex-col items-center justify-center space-y-4">
           <div className="text-center">
-            <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2.5 py-1 rounded-full font-bold font-mono uppercase tracking-wider">
+            <span className="rounded-full border border-accent-500/25 bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300">
               Inbound Line Simulator
             </span>
-            <h3 className="text-white font-extrabold text-base mt-3">Interactive Voice Console</h3>
-            <p className="text-slate-400 text-xs mt-1">Simulate incoming customer storm inquiries</p>
+            <h3 className="card-title mt-3">Voice console</h3>
+            <p className="card-sub">Simulate a homeowner calling in</p>
           </div>
 
           {/* Smartphone Render Frame */}
@@ -440,27 +435,27 @@ export const Agent2PhoneCall: React.FC = () => {
         </div>
 
         {/* Call Transcript Scroll View (7 cols) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="glass rounded-2xl p-4 h-[500px] flex flex-col justify-between">
+        <div className="min-w-0">
+          <div className="card card-pad flex h-[calc(100dvh-18rem)] min-h-[38rem] max-h-[60rem] flex-col justify-between">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 shrink-0">
-                <Sparkles className="h-4.5 w-4.5 text-orange-500" /> Call Transcript & Dialogue Log
+              <h3 className="card-title flex shrink-0 items-center gap-2 border-b border-line pb-3">
+                <Sparkles className="h-4 w-4 text-accent-400" /> Call transcript
               </h3>
 
               {/* Log view */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 premium-scroll">
+              <div className="premium-scroll flex-1 space-y-4 overflow-y-auto rounded-xl border border-line bg-black/10 p-4">
                 {dialogue.length > 0 ? (
                   dialogue.map((item, index) => {
                     const isAI = item.speaker === 'AI';
                     return (
                       <div key={index} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-slideUp`}>
-                        <div className={`max-w-md rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                        <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[75%] ${
                           isAI 
                             ? 'chat-bubble-ai rounded-tl-none' 
                             : 'chat-bubble-user rounded-tr-none'
                         }`}>
-                          <span className="text-[9px] opacity-40 font-black uppercase tracking-wider block mb-1">
-                            {isAI ? 'AI Agent Voice' : 'Homeowner Speech'}
+                          <span className="mb-1 block text-xs font-semibold opacity-60">
+                            {isAI ? 'AI agent' : 'Homeowner'}
                           </span>
                           <p>{item.text}</p>
                         </div>
@@ -481,7 +476,7 @@ export const Agent2PhoneCall: React.FC = () => {
                 {isListening && (
                   <div className="flex justify-end">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-red-400 italic font-semibold">Listening — speak now…</span>
+                      <span className="text-xs font-semibold italic text-red-400">Listening — speak now…</span>
                       <AudioLines className="h-4 w-4 text-red-400 animate-pulse" />
                     </div>
                   </div>
@@ -491,9 +486,9 @@ export const Agent2PhoneCall: React.FC = () => {
 
             {/* Telephone options select */}
             {callStatus === 'connected' && currentScriptStep && (
-              <div className="mt-6 border-t border-slate-800 pt-4 shrink-0 space-y-3">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <ShieldAlert className="h-3.5 w-3.5 text-orange-500" /> Select dialogue reply option:
+              <div className="mt-4 shrink-0 space-y-3 border-t border-line pt-4">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-mute">
+                  <ShieldAlert className="h-3.5 w-3.5 text-accent-400" /> Choose the homeowner's reply
                 </p>
                 <div className="grid grid-cols-1 gap-2">
                   {currentScriptStep.options.map((option, i) => (
@@ -501,7 +496,7 @@ export const Agent2PhoneCall: React.FC = () => {
                       key={i}
                       onClick={() => handleSelectOption(option)}
                       disabled={isGenerating}
-                      className="btn-ghost text-xs text-left px-4 py-2.5 justify-start disabled:opacity-50"
+                      className="btn-ghost justify-start px-4 py-2.5 text-left text-sm disabled:opacity-50"
                     >
                       {option.text}
                     </button>
@@ -517,7 +512,7 @@ export const Agent2PhoneCall: React.FC = () => {
                     onChange={e => setCustomReply(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCustomReply()}
                     disabled={isGenerating}
-                    className="flex-1 input-premium px-3 py-2 text-xs disabled:opacity-50"
+                    className="flex-1 input-premium px-3 py-2 text-sm disabled:opacity-50"
                   />
                   <button
                     onClick={handleCustomReply}
@@ -528,11 +523,11 @@ export const Agent2PhoneCall: React.FC = () => {
                   </button>
                 </div>
                 {voiceNotice && (
-                  <p className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                  <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                     {voiceNotice}
                   </p>
                 )}
-                <p className="text-[9px] text-slate-500">
+                <p className="text-xs text-ink-mute">
                   Free-form replies stay in the transcript — the script only advances via the options above.
                   {!sttSupported.current && ' Voice input needs Chrome, Edge, or Safari — type your replies here instead.'}
                 </p>
@@ -544,7 +539,7 @@ export const Agent2PhoneCall: React.FC = () => {
                 <Calendar className="h-5 w-5 text-accent-400" />
                 <div>
                   <h4 className="text-xs font-bold text-white">Call Completed! Lead Saved.</h4>
-                  <p className="text-[10px] text-slate-400">The inspection callback was scheduled. Lead profile has been added to the CRM Board.</p>
+                  <p className="text-xs text-ink-mute">The inspection callback was scheduled. Lead profile has been added to the CRM Board.</p>
                 </div>
               </div>
             )}
