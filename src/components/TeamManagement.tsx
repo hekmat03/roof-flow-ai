@@ -129,4 +129,142 @@ const TeamCard: React.FC<{ me: TeamMe }> = ({ me }) => {
       </h3>
 
       <div className="flex flex-wrap gap-2">
-        <input className={`${input} md:flex-1`} type="email" placeholder
+        <input className={`${input} md:flex-1`} type="email" placeholder="Teammate email" value={email} maxLength={254}
+          onChange={(e) => setEmail(e.target.value)} aria-label="Teammate email" />
+        <select className={`${input} md:w-36`} value={role} aria-label="Role"
+          onChange={(e) => setRole(e.target.value === 'admin' ? 'admin' : 'member')}>
+          <option value="member">Member</option>
+          {me.role === 'owner' && <option value="admin">Admin</option>}
+        </select>
+        <button className={primary} disabled={busy || !email.trim()} onClick={sendInvite}>
+          <UserPlus className="mr-1 inline h-3.5 w-3.5" /> Invite
+        </button>
+      </div>
+      <Note note={note} />
+
+      {link && (
+        <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 p-2">
+          <code className="min-w-0 flex-1 break-all text-[11px] text-slate-300">{link}</code>
+          <button className={ghost} aria-label="Copy invite link"
+            onClick={() => { void navigator.clipboard?.writeText(link).catch(() => undefined); }}>
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      <ul className="divide-y divide-slate-800">
+        {members.map((m) => {
+          const isSelf = m.user_id === me.userId;
+          const locked = isSelf || m.role === 'owner';
+          return (
+            <li key={m.user_id} className="flex flex-wrap items-center gap-2 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-white">{m.full_name || m.email || 'Unnamed user'}</p>
+                {m.full_name && m.email && <p className="truncate text-xs text-slate-500">{m.email}</p>}
+              </div>
+              <Badge>{ROLE_LABEL[m.role]}</Badge>
+              {m.disabled && <Badge tone="bad">Disabled</Badge>}
+              {!locked && (
+                <>
+                  {me.role === 'owner' && (
+                    <select className={`${input} w-28`} value={m.role === 'admin' ? 'admin' : 'member'} disabled={busy}
+                      aria-label={`Role for ${m.email ?? 'user'}`}
+                      onChange={(e) => void run(() => updateMember(m.user_id, { role: e.target.value === 'admin' ? 'admin' : 'member' }), 'Role updated.')}>
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  )}
+                  <button className={ghost} disabled={busy}
+                    onClick={() => void run(() => updateMember(m.user_id, { disabled: !m.disabled }), m.disabled ? 'Access restored.' : 'Access disabled.')}>
+                    {m.disabled ? <><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />Enable</> : <><Ban className="mr-1 inline h-3.5 w-3.5" />Disable</>}
+                  </button>
+                  <button className={ghost} disabled={busy} aria-label={`Remove ${m.email ?? 'user'}`}
+                    onClick={() => { if (window.confirm(`Remove ${m.email ?? 'this user'} from your team?`)) void run(() => removeMember(m.user_id), 'Member removed.'); }}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {invites.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-slate-400">Pending invitations</p>
+          <ul className="divide-y divide-slate-800">
+            {invites.map((inv) => (
+              <li key={inv.id} className="flex flex-wrap items-center gap-2 py-2">
+                <span className="min-w-0 flex-1 truncate text-sm text-slate-200">{inv.email}</span>
+                <Badge>{ROLE_LABEL[inv.role]}</Badge>
+                <span className="text-[11px] text-slate-500">expires {new Date(inv.expires_at).toLocaleDateString()}</span>
+                <button className={ghost} disabled={busy} aria-label={`Revoke invitation for ${inv.email}`}
+                  onClick={() => void run(() => revokeInvite(inv.id), 'Invitation revoked.')}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+};
+
+// -------------------------------------------------------------- platform admin
+
+const AdminCard: React.FC = () => {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(async (query: string) => {
+    const r = await getAdminUsers(query);
+    if (r.ok === false) { setNote({ ok: false, text: r.error }); return; }
+    setUsers(r.users);
+    setNote(null);
+  }, []);
+  useEffect(() => { void load(''); }, [load]);
+
+  const toggle = async (u: AdminUser) => {
+    setBusy(true);
+    const r = await setUserDisabled(u.user_id, !u.disabled);
+    setNote(r.ok ? { ok: true, text: u.disabled ? 'User enabled.' : 'User disabled.' } : { ok: false, text: r.error });
+    setBusy(false);
+    if (r.ok) await load(q);
+  };
+
+  return (
+    <section className="glass rounded-xl p-4 space-y-3" aria-label="Platform admin">
+      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <Shield className="h-4 w-4 text-orange-500" /> Platform admin
+        <span className="text-xs font-normal text-slate-500">({users.length} users)</span>
+      </h3>
+
+      <div className="flex gap-2 md:max-w-md">
+        <input className={input} placeholder="Search by email or name" value={q} maxLength={80}
+          onChange={(e) => setQ(e.target.value)} aria-label="Search users" />
+        <button className={ghost} disabled={busy} onClick={() => void load(q)}>Search</button>
+      </div>
+      <Note note={note} />
+
+      <ul className="divide-y divide-slate-800">
+        {users.map((u) => (
+          <li key={u.user_id} className="flex flex-wrap items-center gap-2 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm text-white">{u.full_name || u.email || 'Unnamed user'}</p>
+              <p className="truncate text-xs text-slate-500">{u.email ?? '—'} · {tenantName(u)}</p>
+            </div>
+            <Badge>{ROLE_LABEL[u.role]}</Badge>
+            <Badge>{u.current_plan ?? 'free'}</Badge>
+            {u.disabled && <Badge tone="bad">Disabled</Badge>}
+            <button className={ghost} disabled={busy} onClick={() => void toggle(u)}>
+              {u.disabled ? <><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />Enable</> : <><Ban className="mr-1 inline h-3.5 w-3.5" />Disable</>}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
