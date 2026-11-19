@@ -17,10 +17,15 @@ export const WebsiteEmbedCard: React.FC = () => {
     return () => { live = false; };
   }, []);
 
-  if (!result || result.state === 'signed-out') return null;
-
-  const key = result.state === 'ok' ? result.widgetKey : undefined;
+  const key = result?.state === 'ok' ? result.widgetKey : undefined;
   const snippet = key ? `<script src="${window.location.origin}/widget.js" data-key="${key}" async></script>` : '';
+
+  let status = 'Loading your website code…';
+  if (result) {
+    if (result.state === 'ok') status = 'Your company has no website code yet. Reload the page, or contact support if this keeps showing.';
+    else if (result.state === 'signed-out') status = 'Please log out and log in again to see your website code.';
+    else status = result.message ?? 'Your website code is not available right now. Please try again in a moment.';
+  }
 
   const copy = () => {
     if (!snippet) return;
@@ -56,9 +61,7 @@ export const WebsiteEmbedCard: React.FC = () => {
           </p>
         </>
       ) : (
-        <p className="text-xs text-slate-400">
-          {result.message ?? 'Your website code is not available yet. Please try again in a moment.'}
-        </p>
+        <p className="text-xs text-slate-400">{status}</p>
       )}
     </section>
   );
