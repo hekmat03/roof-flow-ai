@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AgentHeader } from './AgentHeader';
 import { useApp } from '../context/AppContext';
 import { cancelFollowup, fetchFollowupStatus, queueFollowups, sendTestEmail, type FollowupMessage, type FollowupStatus } from '../lib/followupsApi';
 import { makeFollowupEmailTemplates, type FollowupDay, type FollowupEmailDraft } from '../lib/followupTemplates';
@@ -71,14 +72,17 @@ export const Agent3EmailFollowups: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-ink">Agent 3: Email follow-ups</h1>
-      </header>
+    <div className="space-y-6 lg:space-y-8">
+      <AgentHeader
+        title="Email follow-ups"
+        description="Pick a lead, edit the four emails (day 1, 2, 4 and 7), and RoofFlow sends them for you."
+      />
 
       {followupStatus && !followupStatus.configured && <p role="status" className="text-xs text-amber-300">Email delivery is not configured. No emails will be sent until the email provider is set up.</p>}
 
-      <section className="glass rounded-xl p-4 space-y-3" aria-label="Email sequence setup">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6">
+      <section className="card card-pad min-w-0 space-y-4" aria-label="Email sequence setup">
+        <h2 className="card-title">Write the sequence</h2>
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-[14rem] flex-1 text-xs text-ink-soft">CRM lead with email
             <select value={activeLeadId} onChange={event => setSelectedLeadId(event.target.value)} className="input-premium mt-1 text-sm" disabled={!emailLeads.length}>
@@ -99,28 +103,29 @@ export const Agent3EmailFollowups: React.FC = () => {
             <textarea value={draftFor(selectedDay).body} onChange={event => updateDraft(selectedDay, 'body', event.target.value)} maxLength={5000} rows={4} className="input-premium mt-1 text-sm" />
           </label>
           <div className="rounded-lg bg-inset/60 p-3" aria-label="Email preview">
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-mute">Email preview</p>
+            <p className="mb-1 text-xs font-semibold text-ink-mute">Email preview</p>
             <p className="whitespace-pre-wrap text-xs text-ink-soft">{draftFor(selectedDay).body}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => void startSequence()} disabled={busy || !followupStatus?.businessAddressReady || !followupStatus?.configured} className="btn-accent px-4 py-2 text-xs disabled:opacity-40">{busy ? 'Please wait…' : 'Start sequence'}</button>
             {!followupStatus?.businessAddressReady && <p role="status" className="text-xs text-orange-300">Add your business mailing address to send email follow-ups. <button type="button" onClick={() => setActiveTab('config')} className="underline font-bold">Open Configuration</button></p>}
           </div>
-        </> : <p className="text-xs text-ink-mute">No leads with an email yet. Capture a lead in Agent 1 or add one in the CRM.</p>}
+        </> : <p className="text-xs text-ink-mute">No leads with an email yet. Capture a lead in the Chatbot or add one in the CRM.</p>}
 
         {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
         {notice && <p role="status" className="text-xs text-ink-soft">{notice}</p>}
       </section>
 
-      <section className="glass rounded-xl p-4" aria-label="Email follow-up queue">
-        <h2 className="mb-2 text-sm font-semibold text-ink">Email queue</h2>
+      <section className="card card-pad min-w-0" aria-label="Email follow-up queue">
+        <h2 className="card-title mb-3">Email queue</h2>
         {queue.filter(message => message.sequence_key?.startsWith('nurture:')).length === 0 ? <p className="text-xs text-ink-mute">No follow-up emails in the queue.</p> : <ul className="divide-y divide-line/70">{queue.filter(message => message.sequence_key?.startsWith('nurture:')).map(message => (
-          <li key={message.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+          <li key={message.id} className="flex flex-col items-start gap-1 py-3 text-xs">
             <span className="text-ink-soft">Day {message.step ?? '—'} · {message.to_email} · {new Date(message.send_at).toLocaleString()}</span>
             <span className="flex items-center gap-2"><span className="text-ink-mute capitalize">{message.status}</span>{message.status === 'pending' && <button type="button" disabled={busy} onClick={() => void cancel(message.id)} className="text-accent-300 underline">Cancel</button>}</span>
           </li>
         ))}</ul>}
       </section>
+      </div>
     </div>
   );
 };
