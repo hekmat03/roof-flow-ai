@@ -561,3 +561,6 @@ button.min-h-0, [role="button"].min-h-0 { min-height: 0; }
   }
   .card-hover:hover, .kpi:hover, .nav-item:hover, .btn-accent:hover, .btn-ghost:hover { transform: none; }
 }
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+}
