@@ -46,6 +46,18 @@ export interface AdminUser {
   tenants: { name: string | null } | { name: string | null }[] | null;
 }
 
+export interface AdminStats {
+  users: number;
+  disabledUsers: number;
+  newUsers7d: number;
+  workspaces: number;
+  leads: number;
+  leads7d: number;
+  byPlan: Record<string, number>;
+  payingCustomers: number;
+  mrrUsd: number;
+}
+
 export type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
 async function call<T>(
@@ -83,6 +95,7 @@ export const removeMember = (userId: string) => call<object>('remove-member', 'P
 export const saveFullName = (fullName: string) => call<{ fullName: string | null }>('profile', 'POST', { fullName });
 export const getAdminUsers = (q = '') =>
   call<{ users: AdminUser[] }>('admin-users', 'GET', undefined, q ? `?q=${encodeURIComponent(q)}` : '');
+export const getAdminStats = () => call<{ stats: AdminStats }>('admin-stats', 'GET');
 export const setUserDisabled = (userId: string, disabled: boolean) =>
   call<object>('admin-set-disabled', 'POST', { userId, disabled });
 
