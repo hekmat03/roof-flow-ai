@@ -20,6 +20,7 @@ import { ForgotPassword } from './components/auth/ForgotPassword';
 import { ResetPassword } from './components/auth/ResetPassword';
 import { AcceptInvite } from './components/auth/AcceptInvite';
 import { TeamManagement } from './components/TeamManagement';
+import { AdminPanel } from './components/AdminPanel';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Redirect } from './components/Redirect';
@@ -100,6 +101,12 @@ function Routes() {
       return <ResetPassword />;
     case '/invite':
       return <AcceptInvite />;
+    case '/admin':
+      return (
+        <ProtectedRoute>
+          <AdminPanel />
+        </ProtectedRoute>
+      );
     case '/app':
       return (
         <ProtectedRoute>
