@@ -2,9 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'node:crypto';
 import { adminClient, userFromRequest } from './_lib/supabaseAdmin.js';
 import { lookupTenant } from './_lib/tenant.js';
+import { ownerIdForTenant } from './_lib/team.js';
 import { appOrigin, createResendProvider, emailEnvelope, signUnsubscribeToken } from './_lib/email.js';
 import { scheduledSequenceTimes, sequenceEmailCopy } from './_lib/followups.js';
 import { EMAIL_MONTHLY_CAP, EMAIL_DAILY_CAP } from './_lib/limits.js';
+import { emailApiKey, emailFrom, emailBaseUrl } from './_lib/emailEnv.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,9 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const tenant = await lookupTenant(admin, user.id);
   if (tenant.ok === false) return json(res, tenant.status, { error: tenant.code });
   const cap = EMAIL_MONTHLY_CAP;
-  const provider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
-  const from = process.env.EMAIL_FROM?.trim();
-  const origin = appOrigin(process.env.APP_BASE_URL);
+  const provider = createResendProvider(emailApiKey());
+  const from = emailFrom();
+  const origin = appOrigin(emailBaseUrl());
   const configured = Boolean(provider && from && process.env.SESSION_SECRET && origin);
   const action = typeof req.body?.action === 'string' ? req.body.action : '';
 
@@ -60,7 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('id,lead_id,to_email,subject,send_at,status,attempts,last_error,sequence_key,step,created_at,sent_at')
         .eq('tenant_id', tenant.tenantId).order('created_at', { ascending: false }).limit(50);
       if (error) throw error;
-      return json(res, 200, { ok: true, configured, messages: data ?? [], businessAddressReady: businessAddress.length >= MIN_ADDRESS_LENGTH });
+      const ownerId = await ownerIdForTenant(admin, tenant.tenantId);
+      const auto = ownerId ? await admin.from('contractor_profiles').select('email_autofollowup').eq('user_id', ownerId).maybeSingle() : null;
+      const autoEnabled = auto?.data?.email_autofollowup === true;
+      return json(res, 200, { ok: true, configured, messages: data ?? [], businessAddressReady: businessAddress.length >= MIN_ADDRESS_LENGTH, autoEnabled });
     }
 
     if (action === 'cancel-estimate' && req.method === 'DELETE') {
@@ -85,6 +90,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
 
     const sessionSecret = process.env.SESSION_SECRET;
+
+    if (action === 'auto') {
+      if (typeof req.body?.enabled !== 'boolean') return json(res, 400, { error: 'invalid_enabled' });
+      if (req.body.enabled && businessAddress.length < MIN_ADDRESS_LENGTH) return json(res, 409, { error: 'Add your business mailing address first.', code: 'business_address_required' });
+      const ownerId = await ownerIdForTenant(admin, tenant.tenantId);
+      if (!ownerId) return json(res, 404, { error: 'profile_not_found' });
+      const { data: updated, error: autoError } = await admin.from('contractor_profiles')
+        .update({ email_autofollowup: req.body.enabled }).eq('user_id', ownerId).select('user_id').maybeSingle();
+      if (autoError) return json(res, 503, { error: 'Run migration 017 (email_autofollowup) in Supabase first.' });
+      if (!updated) return json(res, 404, { error: 'profile_not_found' });
+      return json(res, 200, { ok: true, autoEnabled: req.body.enabled });
+    }
 
     if (action === 'test') {
       if (!configured) return json(res, 503, { error: 'Email is not configured; the test was not sent.', code: 'email_not_configured', configured: false });
