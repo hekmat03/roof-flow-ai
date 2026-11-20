@@ -6,6 +6,7 @@ import { enforceRateLimit, rateLimitRpcAllowed, clientIp } from './_lib/rateLimi
 import { createResendProvider } from './_lib/email.js';
 import { ownerIdForTenant } from './_lib/team.js';
 import { sendLeadConfirmation } from './_lib/emailConfirm.js';
+import { emailApiKey, emailFrom, emailBaseUrl } from './_lib/emailEnv.js';
 
 function toWebRequest(req: VercelRequest): Request {
   const host = req.headers.host ?? 'localhost';
@@ -125,9 +126,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const admin = adminClient();
       if (!admin || !email) return;
       await sendLeadConfirmation({
-        provider: createResendProvider(process.env.EMAIL_PROVIDER_API_KEY),
-        from: process.env.EMAIL_FROM,
-        baseUrl: process.env.APP_BASE_URL,
+        provider: createResendProvider(emailApiKey()),
+        from: emailFrom(),
+        baseUrl: emailBaseUrl(),
         sessionSecret: process.env.SESSION_SECRET,
         lead: { id: leadId, tenantId, email },
         store: {
