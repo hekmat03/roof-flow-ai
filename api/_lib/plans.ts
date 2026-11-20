@@ -50,11 +50,11 @@ export const PLANS: Record<PlanId, Plan> = {
     name: 'Pro',
     priceMonthlyUsd: 39,
     conversationsPerMonth: 1000,
-    tagline: 'Every feature unlocked.',
+    tagline: 'Everything available today.',
     includes: [
       'Everything in Starter',
       '1,000 chats per month',
-      'All agents and features',
+      'Chatbot, CRM, email follow-ups and estimate follow-ups',
       'Scheduled email follow-ups (1,000 per month, 100 per day)',
     ],
     capabilities: { chatbot: true, crm: true, otherAgents: true, emailFollowups: true },
@@ -62,7 +62,7 @@ export const PLANS: Record<PlanId, Plan> = {
 };
 
 export const NOT_INCLUDED_ANY_PLAN: string[] = [
-  'Phone calls: Agent 2 is a simulation, no telephony provider is connected',
+  'Phone calls and SMS: coming soon. The Phone call agent is a browser demo; no phone line or text messaging is connected yet.',
 ];
 
 export const isPlanId = (v: unknown): v is PlanId =>
