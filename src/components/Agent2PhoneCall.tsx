@@ -308,7 +308,7 @@ export const Agent2PhoneCall: React.FC = () => {
   const currentScriptStep = scriptSteps.find(s => s.step === currentStep);
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-5 lg:space-y-0">
       {/* Header */}
       <AgentHeader
         title="Phone call"
@@ -316,9 +316,9 @@ export const Agent2PhoneCall: React.FC = () => {
         aside={<span role="status" className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">Coming soon · demo only, no real calls</span>}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[22rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-6">
         {/* Telephone UI (5 cols) */}
-        <div className="card card-pad flex flex-col items-center justify-center space-y-4">
+        <div className="card card-pad flex flex-col items-center justify-center space-y-4 lg:min-h-0 lg:overflow-hidden">
           <div className="text-center">
             <span className="rounded-full border border-accent-500/25 bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300">
               Inbound Line Simulator
@@ -328,7 +328,7 @@ export const Agent2PhoneCall: React.FC = () => {
           </div>
 
           {/* Smartphone Render Frame */}
-          <div className="w-full max-w-[280px] call-glass border-4 border-slate-700/50 rounded-[36px] p-4 shadow-2xl relative flex flex-col justify-between h-[440px] overflow-hidden call-screen-blur">
+          <div className="w-full max-w-[280px] call-glass border-4 border-slate-700/50 rounded-[36px] p-4 shadow-2xl relative flex flex-col justify-between h-[440px] lg:h-[min(440px,calc(100dvh-24rem))] lg:min-h-[20rem] overflow-hidden call-screen-blur">
             {/* Phone notch */}
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-4 bg-slate-800 rounded-full"></div>
 
@@ -435,8 +435,8 @@ export const Agent2PhoneCall: React.FC = () => {
         </div>
 
         {/* Call Transcript Scroll View (7 cols) */}
-        <div className="min-w-0">
-          <div className="card card-pad flex h-[calc(100dvh-18rem)] min-h-[38rem] max-h-[60rem] flex-col justify-between">
+        <div className="min-w-0 lg:min-h-0">
+          <div className="card card-pad flex h-[calc(100dvh-18rem)] min-h-[38rem] max-h-[60rem] flex-col justify-between lg:h-full lg:min-h-0 lg:max-h-none">
             <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
               <h3 className="card-title flex shrink-0 items-center gap-2 border-b border-line pb-3">
                 <Sparkles className="h-4 w-4 text-accent-400" /> Call transcript
