@@ -32,6 +32,7 @@ import { appOrigin, createResendProvider } from '../email.js';
 import { ownerUserId } from '../team.js';
 import { effectivePlan, getProfile } from '../billing.js';
 import { createEmailActions, type EmailActionStore } from '../emailActions.js';
+import { emailApiKey, emailFrom, emailBaseUrl } from '../emailEnv.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ai = aiConfig();
@@ -50,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       live: Boolean(apiKey),
       tools: true,
       storage: Boolean(db),
-      email: Boolean(process.env.EMAIL_PROVIDER_API_KEY && process.env.EMAIL_FROM && appOrigin(process.env.APP_BASE_URL) && process.env.SESSION_SECRET),
+      email: Boolean(emailApiKey() && emailFrom() && appOrigin(emailBaseUrl()) && process.env.SESSION_SECRET),
       model,
     });
   }
@@ -117,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   );
   const customerProvidedContacts = collectAllowedContacts(messages.filter((m) => m.role === 'user').map((m) => m.content));
 
-  const emailProvider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
+  const emailProvider = createResendProvider(emailApiKey());
   const emailStore: EmailActionStore | null = admin ? {
     async getProfile() {
       const { data, error } = await admin.from('contractor_profiles').select('company_name,email,business_address').eq('user_id', await ownerUserId(admin, guard.user.id)).maybeSingle();
@@ -182,8 +183,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ? effectivePlan(await getProfile(admin, await ownerUserId(admin, guard.user.id)).catch(() => null))
     : 'free';
   const emailActions = createEmailActions({
-    store: emailStore, provider: emailProvider, from: process.env.EMAIL_FROM, plan: emailPlan,
-    baseUrl: process.env.APP_BASE_URL, sessionSecret: process.env.SESSION_SECRET,
+    store: emailStore, provider: emailProvider, from: emailFrom(), plan: emailPlan,
+    baseUrl: emailBaseUrl(), sessionSecret: process.env.SESSION_SECRET,
     tenantId, sessionId: scopedSessionId(tenantId, sessionId),
   });
 
