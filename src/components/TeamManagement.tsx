@@ -43,11 +43,17 @@ export const TeamManagement: React.FC = () => {
   if (!me) return <div className="glass rounded-xl p-4 text-sm text-slate-400">Loading…</div>;
 
   return (
-    <div className="space-y-3">
-      <ProfileCard me={me} onSaved={loadMe} />
-      <AccountSecurity />
-      {me.canManage && <TeamCard me={me} />}
-      {me.platformAdmin && <AdminCard />}
+    <div className={`grid gap-3 lg:h-full lg:min-h-0 lg:grid-rows-[minmax(0,1fr)] ${me.canManage || me.platformAdmin ? 'lg:grid-cols-2' : ''}`}>
+      <div className="flex min-w-0 flex-col gap-3 lg:min-h-0">
+        <ProfileCard me={me} onSaved={loadMe} />
+        <AccountSecurity />
+      </div>
+      {(me.canManage || me.platformAdmin) && (
+        <div className="flex min-w-0 flex-col gap-3 lg:min-h-0">
+          {me.canManage && <TeamCard me={me} />}
+          {me.platformAdmin && <AdminCard />}
+        </div>
+      )}
     </div>
   );
 };
@@ -123,7 +129,7 @@ const TeamCard: React.FC<{ me: TeamMe }> = ({ me }) => {
   };
 
   return (
-    <section className="glass rounded-xl p-4 space-y-3" aria-label="Team">
+    <section className="glass flex min-h-0 flex-col rounded-xl p-4 space-y-3 lg:flex-1" aria-label="Team">
       <h3 className="text-sm font-bold text-white flex items-center gap-2">
         <Users className="h-4 w-4 text-orange-500" /> Team <span className="text-xs font-normal text-slate-500">({members.length + invites.length}/{limit})</span>
       </h3>
@@ -152,7 +158,7 @@ const TeamCard: React.FC<{ me: TeamMe }> = ({ me }) => {
         </div>
       )}
 
-      <ul className="divide-y divide-slate-800">
+      <ul className="divide-y divide-slate-800 lg:min-h-0 lg:flex-1 lg:overflow-y-auto premium-scroll">
         {members.map((m) => {
           const isSelf = m.user_id === me.userId;
           const locked = isSelf || m.role === 'owner';
@@ -236,7 +242,7 @@ const AdminCard: React.FC = () => {
   };
 
   return (
-    <section className="glass rounded-xl p-4 space-y-3" aria-label="Platform admin">
+    <section className="glass flex min-h-0 flex-col rounded-xl p-4 space-y-3 lg:flex-1" aria-label="Platform admin">
       <h3 className="text-sm font-bold text-white flex items-center gap-2">
         <Shield className="h-4 w-4 text-orange-500" /> Platform admin
         <span className="text-xs font-normal text-slate-500">({users.length} users)</span>
@@ -249,7 +255,7 @@ const AdminCard: React.FC = () => {
       </div>
       <Note note={note} />
 
-      <ul className="divide-y divide-slate-800">
+      <ul className="divide-y divide-slate-800 lg:min-h-0 lg:flex-1 lg:overflow-y-auto premium-scroll">
         {users.map((u) => (
           <li key={u.user_id} className="flex flex-wrap items-center gap-2 py-2">
             <div className="min-w-0 flex-1">
