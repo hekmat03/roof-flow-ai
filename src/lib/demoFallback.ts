@@ -6,15 +6,15 @@
 const RULES: Array<{ test: RegExp; reply: string }> = [
   {
     test: /\b(sms|texts?|texting|text message)/i,
-    reply: 'RoofFlow does not send text messages. The chat happens on your website, and you follow up yourself. On Starter and Pro you can also schedule follow-up emails.',
+    reply: 'RoofFlow does not send text messages yet; SMS is coming soon. The chat happens on your website, and you follow up yourself. On Starter and Pro you can also schedule follow-up emails.',
   },
   {
     test: /\b(phone call|voice|calls?|calling|telephon)/i,
-    reply: 'RoofFlow does not make or answer live phone calls. The voice agent is a practice simulator you talk to in the browser; no phone line is connected.',
+    reply: 'RoofFlow does not make or answer live phone calls yet; phone calls are coming soon. The voice agent is a practice simulator you talk to in the browser; no phone line is connected.',
   },
   {
     test: /\b(price|pricing|cost|plans?|free|starter|pro|credit card|subscription|cancel)\b/i,
-    reply: 'Free is $0 with 20 chats a month. Starter is $19 for 250 chats, the CRM board and email follow-ups. Pro is $39 for 1,000 chats and every feature. No credit card to start, and you can cancel any time.',
+    reply: 'Free is $0 with 20 chats a month. Starter is $19 for 250 chats, the CRM board and email follow-ups. Pro is $39 for 1,000 chats, the CRM board, and email and estimate follow-ups. No credit card to start, and you can cancel any time.', // CHANGED
   },
   {
     test: /how (does|do|is) .*work|how it works|lead response|respon(d|se)\b|what does (it|roofflow)( ai)? do/i,
