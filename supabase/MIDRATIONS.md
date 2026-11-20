@@ -3,8 +3,7 @@
 This is the only place that lists the SQL files and the order to run them. README, AUTH_SETUP, EMAIL_SETUP and DEPLOYMENT point here. `tests/migrations-docs.check.ts` fails if this list and the files in `supabase/` ever disagree.
 
 **Status of this document**
-- Migrations `schema.sql` and `001` to `015` were reviewed by reading every file.
-- **`016` has not been reviewed yet.** Add its row (see "Adding a migration" at the bottom) before you set up a new database.
+- Migrations `schema.sql` and `001` to `016` were reviewed by reading every file.
 - The order below was checked by a script that reads the files (`npm test`). It has **not** yet been run on a real, empty Supabase project. Do that once (see "Fresh install") and keep the result.
 
 ## How migrations work in this project
@@ -34,6 +33,7 @@ schema.sql
 013_tenant_column_guard.sql
 014_user_management.sql
 015_calendar_fix.sql
+016_enforce_tenant_not_null.sql
 <!-- MIGRATION-ORDER:END -->
 
 | Step | File | What it does | Needs first |
@@ -55,6 +55,7 @@ schema.sql
 | 13 | `013_tenant_column_guard.sql` | users cannot edit `widget_key` and other identity columns | 012 |
 | 14 | `014_user_management.sql` | `profiles.role/full_name/disabled`, `team_invites`, new `my_tenant()` | 013 |
 | 15 | `015_calendar_fix.sql` | corrects `calendar_connections` columns | 004 |
+| 16 | `016_enforce_tenant_not_null.sql` | makes `tenant_id` mandatory on `leads`, `messages`, `followups` and `inspection_requests`. **Read STEP 1 inside the file first:** rows with no company must be assigned or removed by hand before STEP 3 runs. On an empty database all counts are zero. | 007, 011 |
 
 The two `008_` files do not depend on each other; run either first, but both before 009. `014` replaces the `my_tenant()` function created by 001, so it must stay after 001.
 
