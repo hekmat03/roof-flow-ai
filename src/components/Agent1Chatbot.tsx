@@ -371,7 +371,7 @@ export const Agent1Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-5 lg:space-y-0">
       {/* Header */}
       <AgentHeader
         title="Chatbot"
@@ -379,9 +379,9 @@ export const Agent1Chatbot: React.FC = () => {
         aside={<span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">Live AI</span>}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_21rem] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6">
         {/* Chat Interface (7 cols) */}
-        <div className="card flex h-[calc(100dvh-18rem)] min-h-[34rem] max-h-[56rem] min-w-0 flex-col overflow-hidden">
+        <div className="card flex h-[calc(100dvh-18rem)] min-h-[34rem] max-h-[56rem] min-w-0 flex-col overflow-hidden lg:h-full lg:min-h-0 lg:max-h-none">
           {/* Top Chat Header */}
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
             <div className="flex items-center space-x-3">
@@ -563,7 +563,7 @@ export const Agent1Chatbot: React.FC = () => {
         </div>
 
         {/* Sidebar Simulator explanation (5 cols) */}
-        <div className="min-w-0 space-y-4 lg:space-y-6">
+        <div className="min-w-0 space-y-4 lg:min-h-0 lg:space-y-4 lg:overflow-y-auto premium-scroll">
           <div className="card card-pad">
             <h3 className="card-title flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-accent-400" /> How it works
