@@ -33,6 +33,16 @@ The full, ordered list (including `schema.sql` and every numbered file), what ea
 
 In short: run the files in the SQL Editor, one at a time, in the order given there, then run `supabase/verify_setup.sql`. Back up the target database first. This repository never applies migrations automatically. The legacy scripts `migration.sql` and `tenants.sql` must not be run, and the sample companies live in the optional `seed_demo.sql` (demo databases only).
 
+## Email follow-up agent
+
+The **Email follow-ups** tab sends a Day 1, 2, 4 and 7 email sequence to leads through Resend.
+
+- **Manual:** pick a lead, edit the four emails and press *Start sequence*.
+- **Automatic:** turn on the *Auto follow-up agent* switch. Every lead who confirms their email is enrolled in the sequence with the default copy. Requires migration `017_email_autofollowup.sql` and a business mailing address in Configuration.
+- **Safety rules:** a lead must have consented and confirmed their email (double opt-in). Every email carries an unsubscribe link, and unsubscribed or closed leads are skipped.
+- **Sending:** `/api/cron/send-followups` sends due emails (up to 20 per run). Vercel Hobby runs it once a day; for faster sending call it from an external scheduler with `Authorization: Bearer <CRON_SECRET>`.
+- **Resend free tier:** without a verified domain, mail only reaches your own account email. Verify a domain in Resend and set `EMAIL_FROM` to email real leads.
+
 ## Environment variables
 
 Copy `.env.example` to `.env.local` for local development. Never commit real credentials. The following names are defined there:
@@ -45,8 +55,8 @@ Copy `.env.example` to `.env.local` for local development. Never commit real cre
 | `AI_PROVIDER` / `GROQ_API_KEY` | Optional: `AI_PROVIDER=groq` switches to GroqCloud. |
 | `SUPABASE_URL` | Server-side Supabase URL. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase service-role key; required by privileged API operations. |
-| `EMAIL_PROVIDER_API_KEY` | Optional Resend API key; without it, no real email is sent. |
-| `EMAIL_FROM` | Optional verified sender, for example `RoofFlow <hello@yourdomain.com>`. |
+| `EMAIL_PROVIDER_API_KEY` | Optional Resend API key (`RESEND_API_KEY` also works); without it, no real email is sent. |
+| `EMAIL_FROM` | Verified sender, for example `RoofFlow <hello@yourdomain.com>`. If unset, falls back to Resend's `onboarding@resend.dev`, which only delivers to your own Resend account email. |
 | `CRON_SECRET` | Bearer secret required by the scheduled email worker. |
 | `VITE_SUPABASE_URL` | Supabase URL for the browser client. |
 | `VITE_SUPABASE_ANON_KEY` | Public anonymous key for the browser client; row-level security protects data. |
@@ -55,7 +65,7 @@ Copy `.env.example` to `.env.local` for local development. Never commit real cre
 | `GOOGLE_REDIRECT_URI` | OAuth callback URL; set it to this deployment's `/api/google/callback` URL. |
 | `SESSION_SECRET` | Secret used to sign OAuth state and unsubscribe tokens. |
 | `GOOGLE_TOKEN_ENCRYPTION_KEY` | Optional separate key for stored Google tokens; defaults to `SESSION_SECRET`. |
-| `APP_BASE_URL` | Public application URL used for redirects and unsubscribe links. |
+| `APP_BASE_URL` | Public application URL used for redirects and unsubscribe links. Falls back to the Vercel production URL if unset. |
 
 Email follow-up setup and the manual verification checklist are in [EMAIL_SETUP.md](EMAIL_SETUP.md).
 
