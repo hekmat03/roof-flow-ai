@@ -104,7 +104,7 @@ const PlanCard: React.FC<{
           </CheckRow>
         ))}
         {plan.id === 'pro' && (
-          <CheckRow ok>Agents 2-4 (simulation preview)</CheckRow>
+          <CheckRow ok={false}>Phone call agent and SMS: coming soon</CheckRow>
         )}
       </ul>
       <button
