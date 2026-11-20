@@ -31,6 +31,8 @@ interface NavItem {
   /** Shorter label for the mobile bottom bar. */
   short: string;
   icon: NavIcon;
+    /** Shows a "Soon" tag: the feature is a demo only and not live yet. */
+  soon?: boolean;
 }
 
 // Tab ids are unchanged; only the grouping and labels are new.
@@ -43,7 +45,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     label: 'AI agents',
     items: [
       { id: 'agent1', label: 'Chatbot', short: 'Chat', icon: MessageSquare },
-      { id: 'agent2', label: 'Phone call', short: 'Phone', icon: PhoneCall },
+       { id: 'agent2', label: 'Phone call', short: 'Phone', icon: PhoneCall, soon: true },
       { id: 'agent3', label: 'Email follow-ups', short: 'Email', icon: MessageSquarePlus },
       { id: 'agent4', label: 'Estimate follow-up', short: 'Estimate', icon: FileText },
     ],
@@ -186,7 +188,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           className={`h-[1.15rem] w-[1.15rem] shrink-0 ${isActive ? 'text-accent-400' : 'text-ink-mute'}`}
                           aria-hidden="true"
                         />
-                        <span className="truncate">{item.label}</span>
+                          <span className="truncate">{item.label}</span>
+                        {item.soon && (
+                          <span className="ml-auto shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Soon</span>
+                        )}
                       </button>
                     </li>
                   );
