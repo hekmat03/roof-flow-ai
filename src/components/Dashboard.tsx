@@ -24,11 +24,9 @@ export function statusPillClass(status: string): string {
 // Palette: the existing gold and cream, plus the four status colours already used by the pills.
 const GOLD = '#d4af37';
 const GOLD_SOFT = '#ecd38a';
-const CREAM = '#f5f3ee';
 const SKY = '#7dd3fc';
 const VIOLET = '#a78bfa';
 const GREEN = '#34d399';
-const ROSE = '#f87171';
 const STONE = '#9a968b';
 
 const STAGES: Array<{ status: Lead['status']; color: string }> = [
