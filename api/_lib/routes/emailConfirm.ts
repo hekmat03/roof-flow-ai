@@ -6,6 +6,8 @@ import { adminClient } from '../supabaseAdmin.js';
 import { escapeHtml, verifyLeadConfirmToken } from '../email.js';
 import { confirmLeadEmail, type ConfirmLeadStore } from '../emailConfirm.js';
 import { enforceRateLimit } from '../rateLimit.js';
+import { enrollConfirmedLead } from '../autoFollowup.js';
+import { verifyLeadConfirmToken as readConfirmToken } from '../email.js';
 
 const page = (title: string, body: string): string =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
@@ -62,6 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const outcome = await confirmLeadEmail(store, token, secret);
     if (outcome === 'invalid') return invalid();
+    if (outcome === 'confirmed' && secret) {
+      const payload = readConfirmToken(token, secret);
+      if (payload) await enrollConfirmedLead(admin, payload.tenantId, payload.leadId).catch((e) => console.error('auto-followup enroll failed:', e instanceof Error ? e.message : 'unknown'));
+    }
     return send(res, 200, page('Email confirmed', '<p>Thank you. Your email address is confirmed and you can close this page.</p>'));
   } catch (error) {
     console.error('confirm-email failed:', error instanceof Error ? error.message : 'unknown');
