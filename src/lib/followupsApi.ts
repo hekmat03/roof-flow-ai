@@ -6,7 +6,7 @@ export interface FollowupMessage {
   last_error: string | null; step: number | null; created_at: string; sent_at: string | null;
   sequence_key: string | null;
 }
-export interface FollowupStatus { configured: boolean; businessAddressReady: boolean; messages: FollowupMessage[] }
+export interface FollowupStatus { configured: boolean; businessAddressReady: boolean; autoEnabled?: boolean; messages: FollowupMessage[] }
 
 async function request<T>(method: string, body?: Record<string, unknown>): Promise<T> {
   const response = await fetch('/api/followups', {
@@ -26,3 +26,4 @@ export const queueFollowups = (action: 'sequence' | 'estimate', leadId: string, 
 export const sendTestEmail = () => request<{ ok: true }>('POST', { action: 'test' });
 export const cancelFollowup = (id: string) => request<{ ok: true }>('DELETE', { action: 'cancel', id });
 export const cancelEstimateFollowup = (leadId: string) => request<{ ok: true }>('DELETE', { action: 'cancel-estimate', leadId });
+export const setAutoFollowup = (enabled: boolean) => request<{ ok: true; autoEnabled: boolean }>('POST', { action: 'auto', enabled });
