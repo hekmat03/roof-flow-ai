@@ -34,6 +34,7 @@ schema.sql
 014_user_management.sql
 015_calendar_fix.sql
 016_enforce_tenant_not_null.sql
+017_email_autofollowup.sql
 <!-- MIGRATION-ORDER:END -->
 
 | Step | File | What it does | Needs first |
@@ -56,6 +57,7 @@ schema.sql
 | 14 | `014_user_management.sql` | `profiles.role/full_name/disabled`, `team_invites`, new `my_tenant()` | 013 |
 | 15 | `015_calendar_fix.sql` | corrects `calendar_connections` columns | 004 |
 | 16 | `016_enforce_tenant_not_null.sql` | makes `tenant_id` mandatory on `leads`, `messages`, `followups` and `inspection_requests`. **Read STEP 1 inside the file first:** rows with no company must be assigned or removed by hand before STEP 3 runs. On an empty database all counts are zero. | 007, 011 |
+| 17 | `017_email_autofollowup.sql` | adds `contractor_profiles.email_autofollowup` (auto follow-up switch) | 005 |
 
 The two `008_` files do not depend on each other; run either first, but both before 009. `014` replaces the `my_tenant()` function created by 001, so it must stay after 001.
 
