@@ -357,10 +357,10 @@ export const LandingPage: React.FC = () => {
                 </ul>
               </article>
               <article className="lp-honest-col lp-reveal">
-                <h3><span className="lp-tag lp-tag--no">Not offered</span></h3>
+                <h3><span className="lp-tag lp-tag--no">Not available yet</span></h3>
                 <ul>
-                  <li><X size={17} aria-hidden /> Text messages (SMS)</li>
-                  <li><X size={17} aria-hidden /> Live phone calls</li>
+                  <li><X size={17} aria-hidden /> Text messages (SMS): coming soon</li>
+                  <li><X size={17} aria-hidden /> Live phone calls: coming soon</li>
                   <li><X size={17} aria-hidden /> Checking that a phone number or email really belongs to the visitor</li>
                 </ul>
               </article>
@@ -380,7 +380,7 @@ export const LandingPage: React.FC = () => {
               </details>
               <details>
                 <summary>Does RoofFlow call or text homeowners?</summary>
-                <p>No. The chat happens on your website and you follow up yourself. You can also schedule follow-up emails. Text messages are not offered, and the voice agent is a browser simulator with no phone line behind it.</p>
+                <p>No. The chat happens on your website and you follow up yourself. You can also schedule follow-up emails. Text messages (SMS) and live phone calls are coming soon. Today the voice agent is a browser simulator with no phone line behind it.</p>
               </details>
               <details>
                 <summary>What does the homeowner agree to?</summary>
