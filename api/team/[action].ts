@@ -25,6 +25,7 @@ import {
 import { evaluateEnv } from '../_lib/envCheck.js';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { emailApiKey, emailFrom, emailBaseUrl } from '../_lib/emailEnv.js';
 
 const SETUP_ERROR = 'User management is not set up yet. Run supabase/014_user_management.sql in Supabase.';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -220,12 +221,12 @@ async function invite(req: VercelRequest, res: VercelResponse) {
   }).select('id,email,role,expires_at,created_at').single();
   if (error) throw error;
 
-  const origin = appOrigin(process.env.APP_BASE_URL) ?? appOrigin(`https://${req.headers.host ?? ''}`);
+  const origin = appOrigin(emailBaseUrl()) ?? appOrigin(`https://${req.headers.host ?? ''}`);
   const inviteUrl = origin ? `${origin}/invite?token=${encodeURIComponent(token)}` : null;
 
   let emailSent = false;
-  const provider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
-  const from = process.env.EMAIL_FROM?.trim();
+  const provider = createResendProvider(emailApiKey());
+  const from = emailFrom();
   if (provider && from && inviteUrl) {
     const { data: tenant } = await ctx.admin.from('tenants').select('name').eq('id', ctx.tenantId).maybeSingle();
     const company = typeof tenant?.name === 'string' && tenant.name ? tenant.name : 'a RoofFlow workspace';
