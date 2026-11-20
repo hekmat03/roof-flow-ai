@@ -3,6 +3,7 @@ import { adminClient } from '../_lib/supabaseAdmin.js';
 import { appOrigin, createResendProvider } from '../_lib/email.js';
 import { processDueMessages, type FollowupStore, type ScheduledMessage } from '../_lib/followups.js';
 import { hasCronAuthorization } from '../_lib/cronAuth.js';
+import { emailApiKey, emailFrom, emailBaseUrl } from '../_lib/emailEnv.js';
 
 export const config = { maxDuration: 60 };
 
@@ -21,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!hasCronAuthorization(req.headers.authorization, secret)) return res.status(401).json({ error: 'Unauthorized' });
   const admin = adminClient();
   if (!admin) return res.status(503).json({ error: 'Storage is not configured' });
-  const provider = createResendProvider(process.env.EMAIL_PROVIDER_API_KEY);
+  const provider = createResendProvider(emailApiKey());
   const store: FollowupStore = {
     async claimDue(_now, limit) {
       const { data, error } = await admin.rpc('claim_due_scheduled_messages', { p_limit: limit });
@@ -70,10 +71,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
   try {
     const result = await processDueMessages({
-      store, provider, from: process.env.EMAIL_FROM, baseUrl: process.env.APP_BASE_URL,
-      sessionSecret: process.env.SESSION_SECRET, limit: 5,
+      store, provider, from: emailFrom(), baseUrl: emailBaseUrl(),
+      sessionSecret: process.env.SESSION_SECRET, limit: 20,
     });
-    return res.status(200).json({ ok: true, ...result, configured: Boolean(provider && process.env.EMAIL_FROM && process.env.SESSION_SECRET && appOrigin(process.env.APP_BASE_URL)) });
+    return res.status(200).json({ ok: true, ...result, configured: Boolean(provider && emailFrom() && process.env.SESSION_SECRET && appOrigin(emailBaseUrl())) });
   } catch (error) {
     console.error('follow-up worker error:', error instanceof Error ? error.message : 'unknown');
     return res.status(503).json({ error: 'Follow-up worker unavailable' });
