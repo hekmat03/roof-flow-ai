@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AgentHeader } from './AgentHeader';
 import { useApp } from '../context/AppContext';
-import { cancelFollowup, fetchFollowupStatus, queueFollowups, sendTestEmail, type FollowupMessage, type FollowupStatus } from '../lib/followupsApi';
+import { cancelFollowup, fetchFollowupStatus, queueFollowups, sendTestEmail, setAutoFollowup, type FollowupMessage, type FollowupStatus } from '../lib/followupsApi';
 import { makeFollowupEmailTemplates, type FollowupDay, type FollowupEmailDraft } from '../lib/followupTemplates';
 
 const DAYS: FollowupDay[] = [1, 2, 4, 7];
@@ -64,6 +64,17 @@ export const Agent3EmailFollowups: React.FC = () => {
     finally { setBusy(false); }
   };
 
+  const toggleAuto = async () => {
+    if (!followupStatus || busy) return;
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const result = await setAutoFollowup(!followupStatus.autoEnabled);
+      setFollowupStatus({ ...followupStatus, autoEnabled: result.autoEnabled });
+      setNotice(result.autoEnabled ? 'Agent is ON. New leads get the 4-email sequence once they confirm their email.' : 'Agent is OFF. Nothing is sent automatically.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not change the setting.'); }
+    finally { setBusy(false); }
+  };
+
   const cancel = async (id: string) => {
     setBusy(true); setError(null);
     try { await cancelFollowup(id); await refreshQueue(); }
@@ -79,6 +90,18 @@ export const Agent3EmailFollowups: React.FC = () => {
       />
 
       {followupStatus && !followupStatus.configured && <p role="status" className="text-xs text-amber-300">Email delivery is not configured. No emails will be sent until the email provider is set up.</p>}
+
+      <section className="card card-pad flex flex-wrap items-center justify-between gap-3" aria-label="Email agent activation">
+        <div className="min-w-0">
+          <h2 className="card-title">Auto follow-up agent</h2>
+          <p className="card-sub">When ON, every lead who confirms their email is enrolled in the Day 1, 2, 4 and 7 emails automatically.</p>
+        </div>
+        <button type="button" role="switch" aria-checked={Boolean(followupStatus?.autoEnabled)} onClick={() => void toggleAuto()}
+          disabled={busy || !followupStatus?.configured || !followupStatus?.businessAddressReady}
+          className={`rounded-full px-4 py-2 text-xs font-bold disabled:opacity-40 ${followupStatus?.autoEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' : 'bg-white/5 text-ink-soft border border-line'}`}>
+          {followupStatus?.autoEnabled ? 'ON — tap to turn off' : 'OFF — tap to turn on'}
+        </button>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6">
       <section className="card card-pad min-w-0 space-y-4" aria-label="Email sequence setup">
@@ -121,6 +144,7 @@ export const Agent3EmailFollowups: React.FC = () => {
         {queue.filter(message => message.sequence_key?.startsWith('nurture:')).length === 0 ? <p className="text-xs text-ink-mute">No follow-up emails in the queue.</p> : <ul className="divide-y divide-line/70">{queue.filter(message => message.sequence_key?.startsWith('nurture:')).map(message => (
           <li key={message.id} className="flex flex-col items-start gap-1 py-3 text-xs">
             <span className="text-ink-soft">Day {message.step ?? '—'} · {message.to_email} · {new Date(message.send_at).toLocaleString()}</span>
+            {message.last_error && message.status !== 'sent' && <span className="text-red-400">{message.last_error}</span>}
             <span className="flex items-center gap-2"><span className="text-ink-mute capitalize">{message.status}</span>{message.status === 'pending' && <button type="button" disabled={busy} onClick={() => void cancel(message.id)} className="text-accent-300 underline">Cancel</button>}</span>
           </li>
         ))}</ul>}
