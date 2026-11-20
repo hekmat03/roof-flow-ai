@@ -110,6 +110,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const bottomItems = BOTTOM_TABS.map((id) => ALL_ITEMS.find((item) => item.id === id)).filter(
     (item): item is NavItem => Boolean(item),
   );
+  const fitScreen = ['agent1', 'agent2', 'team'].includes(activeTab);
   const bottomHasActive = bottomItems.some((item) => item.id === activeTab);
 
   return (
@@ -283,7 +284,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 overflow-y-auto premium-scroll px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-24 md:pb-8 outline-none"
+          className={`flex-1 overflow-y-auto premium-scroll px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-6 pb-24 md:pb-8 outline-none ${fitScreen ? 'lg:overflow-hidden' : ''}`}
         >
           <div className="max-w-7xl mx-auto h-full">{children}</div>
         </main>
